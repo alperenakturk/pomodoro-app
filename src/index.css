@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  /* Renk paleti: klasik domates zamanlayıcısının kendi malzemelerinden geliyor */
+  --color-pine: #2b3a2e;       /* ana zemin - domatesin sapı/yaprağı */
+  --color-pine-dark: #1f2a21;  /* daha koyu ton, vurgu için */
+  --color-tomato: #c84b31;     /* ana aksan - domatesin kendisi */
+  --color-tomato-dark: #a83a24;
+  --color-amber: #e8a33d;      /* mola rengi - sıcak amber */
+  --color-cream: #fbf8f1;      /* kadran yüzeyi - zamanlayıcının beyaz yüzü */
+  --color-sage: #8a9a8c;       /* ikincil/soluk metin */
+  --color-ink: #1f2a21;        /* ana metin rengi */
+
+  --font-display: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
