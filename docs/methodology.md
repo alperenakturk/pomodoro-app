@@ -154,7 +154,7 @@ Daily working list. Tasks are copied here from the Inventory each morning.
 | unplanned   | Boolean — added during the day, not from Inventory    |
 | urgent      | Boolean — added to Unplanned & Urgent section         |
 
-**Storage key:** `pomodoro_today`
+**Storage key:** `pomodoro_today_tasks`
 
 **Important:** Unplanned & Urgent tasks appear at the BOTTOM of Today's sheet,
 written bottom-up as they arrive.
@@ -165,17 +165,37 @@ written bottom-up as they arrive.
 
 The archive. Each completed day's data is stored here for reporting.
 
-| Field    | Description                                              |
-|----------|----------------------------------------------------------|
-| date     | ISO date string                                          |
-| time     | Start time of activity (HH:MM)                          |
-| type     | Category/type of activity                                |
-| activity | Description                                              |
-| estimate | Estimated Pomodoros                                      |
-| real     | Actual Pomodoros completed                               |
-| diff     | Estimation error (real − estimate)                       |
+| Field     | Description                                              |
+|-----------|-----------------------------------------------------------|
+| date      | ISO date string                                          |
+| time      | Start time of activity (HH:MM)                          |
+| type      | Category/type of activity (not yet implemented — no UI sets this) |
+| activity  | Description                                              |
+| estimate  | Estimated Pomodoros                                      |
+| real      | Actual Pomodoros completed                               |
+| diff      | Estimation error (real − estimate), or `null` if no estimate was set |
+| internal  | Internal interruption count accrued while working the task |
+| external  | External interruption count accrued while working the task |
+| unplanned | Boolean — carried over from the Today task (qualitative-error tracking) |
 
-**Storage key:** `pomodoro_records`
+**Storage key:** `pomodoro_activity_log`
+
+---
+
+### Ticks
+
+Lightweight per-event records used to power the Reports panel (daily/weekly
+pomodoro counts, interruption counts) without re-deriving them from the
+Records Sheet on every render.
+
+| Field     | Description                                              |
+|-----------|-----------------------------------------------------------|
+| id        | Unique identifier                                          |
+| type      | `pomodoro` \| `interruption-internal` \| `interruption-external` |
+| date      | ISO date string                                             |
+| timestamp | Full ISO timestamp                                          |
+
+**Storage key:** `pomodoro_ticks`
 
 ---
 
@@ -234,7 +254,10 @@ This is one of the key differentiators of this app vs. simple timer apps.
   (Measured by tracking unplanned tasks that emerge during the day.)
 
 **Implementation note:**
-- `diff` is never stored directly — it is always computed as `real - estimate` at display time.
+- `diff` is computed as `real - estimate` when the task finishes.
+- If a task had no estimate set, `diff` is stored as `null` rather than faked as
+  `0` — an un-estimated task has no estimation error to report, and forcing it
+  to `0` would misrepresent it as a perfect estimate.
 - The goal over time is to reduce |diff| across tasks (improvement tracking).
 
 ---

@@ -8,10 +8,18 @@ export function useInventory() {
     saveInventory(items)
   }, [items])
 
-  const addItem = useCallback((text, estimate) => {
+  const addItem = useCallback((text, estimate, options = {}) => {
     setItems((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), text, estimate: estimate || null },
+      {
+        id: crypto.randomUUID(),
+        text,
+        estimate: estimate || null,
+        notes: options.notes || '',
+        deadline: options.deadline || null,
+        unplanned: options.unplanned || false,
+        done: false,
+      },
     ])
   }, [])
 
@@ -19,5 +27,11 @@ export function useInventory() {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
-  return { items, addItem, removeItem }
+  const toggleDone = useCallback((id) => {
+    setItems((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i))
+    )
+  }, [])
+
+  return { items, addItem, removeItem, toggleDone }
 }

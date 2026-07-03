@@ -43,16 +43,31 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
       setSessionType(nextType)
       setSecondsLeft(DURATIONS[nextType])
     } else {
+      // Rule 3: the pomodoro count resets only when a long break ends.
+      if (sessionType === 'longBreak') setCompletedPomodoros(0)
       setSessionType('work')
       setSecondsLeft(DURATIONS.work)
     }
   }, [secondsLeft, isRunning, sessionType, completedPomodoros, onWorkComplete])
 
   const start = useCallback(() => setIsRunning(true), [])
-  const pause = useCallback(() => setIsRunning(false), [])
-  const reset = useCallback(() => {
+
+  // Rule 1: voiding only applies to a Pomodoro (work session) — it resets
+  // the timer as if it never started and writes no tick, so no X is recorded.
+  const voidPomodoro = useCallback(() => {
+    if (sessionType !== 'work') return
     setIsRunning(false)
-    setSecondsLeft(DURATIONS[sessionType])
+    setSecondsLeft(DURATIONS.work)
+  }, [sessionType])
+
+  // Breaks aren't Pomodoros, so ending one early is a "skip" straight to
+  // the next work session, not a "void".
+  const skipBreak = useCallback(() => {
+    if (sessionType === 'work') return
+    setIsRunning(false)
+    if (sessionType === 'longBreak') setCompletedPomodoros(0)
+    setSessionType('work')
+    setSecondsLeft(DURATIONS.work)
   }, [sessionType])
 
   const logInterruption = useCallback(
@@ -74,8 +89,8 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     isRunning,
     completedPomodoros,
     start,
-    pause,
-    reset,
+    voidPomodoro,
+    skipBreak,
     logInterruption,
   }
 }

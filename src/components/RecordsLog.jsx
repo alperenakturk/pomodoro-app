@@ -38,8 +38,7 @@ function RecordsLog() {
                   r.diff > 0 ? 'text-tomato' : r.diff < 0 ? 'text-amber' : ''
                 }
               >
-                Fark: {r.diff > 0 ? '+' : ''}
-                {r.diff}
+                Fark: {r.diff == null ? '-' : `${r.diff > 0 ? '+' : ''}${r.diff}`}
               </span>
             </div>
           </li>

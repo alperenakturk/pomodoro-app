@@ -60,7 +60,8 @@ export function useTodayTasks() {
     setTasks((prev) => {
       const task = prev.find((t) => t.id === id)
       if (task) {
-        const estimate = task.estimate || task.realized
+        // Tahmin girilmediyse fark hesaplanamaz — sahte bir 0 yerine null yazılır.
+        const diff = task.estimate != null ? task.realized - task.estimate : null
         addActivityRecord({
           id: crypto.randomUUID(),
           date: todayString(),
@@ -68,9 +69,10 @@ export function useTodayTasks() {
           activity: task.text,
           estimate: task.estimate,
           real: task.realized,
-          diff: task.realized - estimate,
+          diff,
           internal: task.internal,
           external: task.external,
+          unplanned: task.unplanned,
         })
       }
       return prev.map((t) => (t.id === id ? { ...t, done: true } : t))

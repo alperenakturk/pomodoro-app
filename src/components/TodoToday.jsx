@@ -1,5 +1,8 @@
 import { useState } from 'react'
 
+// Rule 4: tasks estimated above this should be broken down into sub-tasks.
+const MAX_RECOMMENDED_ESTIMATE = 7
+
 function EstimateBoxes({ estimate, realized }) {
   if (!estimate) {
     return <span className="text-sage text-xs">{realized} pom.</span>
@@ -40,6 +43,14 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
       />
       <span className={task.done ? 'line-through text-sage flex-1' : 'flex-1 text-ink'}>
         {task.text}
+        {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
+          <span
+            className="text-tomato ml-1"
+            title={`${MAX_RECOMMENDED_ESTIMATE}'den fazla — böl (Rule 4)`}
+          >
+            ⚠
+          </span>
+        )}
       </span>
       <EstimateBoxes estimate={task.estimate} realized={task.realized} />
       {!task.done && (
@@ -114,6 +125,12 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
           Ekle
         </button>
       </form>
+
+      {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
+        <p className="text-tomato text-xs font-sans mb-4 -mt-2">
+          {MAX_RECOMMENDED_ESTIMATE}'den fazla pomodoro — görevi alt görevlere böl (Rule 4).
+        </p>
+      )}
 
       <ul className="flex flex-col gap-1 mb-4">
         {planned.length === 0 && (

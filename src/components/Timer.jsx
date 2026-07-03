@@ -19,13 +19,19 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     isRunning,
     completedPomodoros,
     start,
-    pause,
-    reset,
+    voidPomodoro,
+    skipBreak,
     logInterruption,
   } = usePomodoro({ onWorkComplete, onInterruption })
 
   const isWork = sessionType === 'work'
   const accentClass = isWork ? 'text-tomato' : 'text-amber'
+
+  function handleVoid() {
+    if (window.confirm('Bu Pomodoro boşa çıkarılacak ve baştan sayılmayacak. Emin misin?')) {
+      voidPomodoro()
+    }
+  }
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -42,20 +48,33 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
       </p>
 
       <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={isRunning ? pause : start}
-          className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
-        >
-          {isRunning ? 'Durdur' : 'Başlat'}
-        </button>
-        <button
-          type="button"
-          onClick={reset}
-          className="font-sans px-7 py-3 rounded-full border border-sage text-ink text-sm tracking-wide"
-        >
-          Sıfırla
-        </button>
+        {!isRunning && (
+          <button
+            type="button"
+            onClick={start}
+            className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
+          >
+            Başlat
+          </button>
+        )}
+        {isRunning && isWork && (
+          <button
+            type="button"
+            onClick={handleVoid}
+            className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
+          >
+            Pomodoro'yu boşa çıkar
+          </button>
+        )}
+        {isRunning && !isWork && (
+          <button
+            type="button"
+            onClick={skipBreak}
+            className="font-sans px-7 py-3 rounded-full border border-sage text-ink text-sm tracking-wide"
+          >
+            Molayı atla
+          </button>
+        )}
       </div>
 
       {isWork && (

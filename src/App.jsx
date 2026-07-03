@@ -44,6 +44,7 @@ function App() {
             items={inventoryApi.items}
             addItem={inventoryApi.addItem}
             removeItem={inventoryApi.removeItem}
+            toggleDone={inventoryApi.toggleDone}
             onSendToToday={handleSendToToday}
           />
 

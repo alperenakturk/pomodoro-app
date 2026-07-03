@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { loadTicks, subscribeToChanges } from '../lib/storage'
+import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -17,10 +17,14 @@ function lastNDaysStrings(n) {
 
 function Reports() {
   const [ticks, setTicks] = useState(() => loadTicks())
+  const [activityLog, setActivityLog] = useState(() => loadActivityLog())
 
   // Polling yerine: veri her değiştiğinde anında haber al.
   useEffect(() => {
-    const unsubscribe = subscribeToChanges(() => setTicks(loadTicks()))
+    const unsubscribe = subscribeToChanges(() => {
+      setTicks(loadTicks())
+      setActivityLog(loadActivityLog())
+    })
     return unsubscribe
   }, [])
 
@@ -43,6 +47,11 @@ function Reports() {
     (t) => t.type === 'interruption-external' && last7.includes(t.date)
   ).length
 
+  // Qualitative error: plansız çıkıp gün içinde eklenen görevlerin sayısı.
+  const unplannedCount = activityLog.filter(
+    (r) => r.unplanned && last7.includes(r.date)
+  ).length
+
   return (
     <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
       <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
@@ -54,6 +63,9 @@ function Reports() {
         <Stat label="Son 7 gün" value={weekPomodoros} />
         <Stat label="İç kesinti (7g)" value={internalCount} />
         <Stat label="Dış kesinti (7g)" value={externalCount} />
+        <div className="col-span-2">
+          <Stat label="Plansız görev (7g)" value={unplannedCount} />
+        </div>
       </div>
     </div>
   )
