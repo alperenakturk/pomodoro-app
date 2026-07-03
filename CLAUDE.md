@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev       # start dev server (Vite HMR)
 npm run build     # production build
 npm run preview   # preview production build locally
-npm run lint      # run oxlint
+npm run lint      # run oxlint (whole project)
+npx oxlint src/hooks/usePomodoro.js   # lint a single file
 ```
 
 No test runner is configured.
@@ -47,5 +48,10 @@ Three hooks own all mutable state:
 ### Styling
 
 Tailwind CSS v4 loaded via `@tailwindcss/vite` plugin. Custom design tokens (colors like `bg-pine`, `text-tomato`, `text-cream`, `text-sage`, `text-ink`, `text-amber`) are defined in `src/index.css` as CSS custom properties and referenced throughout components.
+
+### Gotchas
+
+- `vite-plugin-pwa` is a devDependency but is **not** wired into `vite.config.js` — there is no service worker or manifest generation yet. Don't assume PWA/offline behavior exists.
+- In-app comments and some identifiers are in Turkish; code style otherwise follows standard React/JS conventions.
 
 For full methodology reference, see docs/methodology.md
