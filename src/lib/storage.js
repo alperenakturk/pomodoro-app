@@ -45,6 +45,25 @@ export function addActivityRecord(record) {
   notifyChange()
   return log
 }
+export function removeActivityRecord(id) {
+  const log = loadActivityLog().filter((r) => r.id !== id)
+  saveActivityLog(log)
+  notifyChange()
+  return log
+}
+export function updateActivityRecord(id, patch) {
+  const log = loadActivityLog().map((r) => (r.id === id ? { ...r, ...patch } : r))
+  saveActivityLog(log)
+  notifyChange()
+  return log
+}
+
+// Settings: kullanıcı tarafından ayarlanabilen tercihler (örn. long break'e
+// kaç pomodorodan sonra geçileceği)
+const SETTINGS_KEY = 'pomodoro_settings'
+const DEFAULT_SETTINGS = { cycleLength: 4 }
+export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
+export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
 
 // Ticks: her pomodoro/kesinti için hafif kayıt (günlük/haftalık raporlar için)
 const TICKS_KEY = 'pomodoro_ticks'

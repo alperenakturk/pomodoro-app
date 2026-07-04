@@ -15,6 +15,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
   const [notes, setNotes] = useState('')
+  const [type, setType] = useState('')
   const [deadline, setDeadline] = useState('')
   const [unplanned, setUnplanned] = useState(false)
 
@@ -23,12 +24,14 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
     if (!text.trim()) return
     addItem(text.trim(), estimate ? Number(estimate) : null, {
       notes: notes.trim(),
+      type: type.trim(),
       deadline: deadline || null,
       unplanned,
     })
     setText('')
     setEstimate('')
     setNotes('')
+    setType('')
     setDeadline('')
     setUnplanned(false)
   }
@@ -72,7 +75,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
         </button>
       </form>
 
-      <div className="flex gap-2 mb-4 items-center">
+      <div className="flex gap-2 mb-2 items-center">
         <input
           type="text"
           value={notes}
@@ -81,19 +84,35 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
           className={`flex-1 text-xs ${inputClass}`}
         />
         <input
+          type="text"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          placeholder="Category"
+          className={`w-24 text-xs ${inputClass}`}
+        />
+      </div>
+
+      <div className="flex gap-2 mb-4 items-center">
+        <input
           type="date"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
           className={`text-xs ${inputClass}`}
         />
-        <label className="flex items-center gap-1 text-sage text-xs font-sans whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={unplanned}
-            onChange={(e) => setUnplanned(e.target.checked)}
-          />
+        <button
+          type="button"
+          onClick={() => setUnplanned((prev) => !prev)}
+          aria-pressed={unplanned}
+          title="Mark as unplanned"
+          className={
+            'font-sans text-xs px-3 py-2 rounded-xl border whitespace-nowrap flex-shrink-0 ' +
+            (unplanned
+              ? 'bg-amber/20 border-amber/60 text-amber'
+              : 'border-cream/15 text-sage')
+          }
+        >
           U
-        </label>
+        </button>
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
@@ -131,6 +150,11 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
                   U
                 </span>
               )}
+              {item.type && (
+                <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5">
+                  {item.type}
+                </span>
+              )}
               {item.deadline && (
                 <span
                   className={
@@ -160,14 +184,20 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
               )}
               <button
                 type="button"
-                onClick={() => onSendToToday(item.text, item.estimate, item.id)}
+                onClick={() =>
+                  onSendToToday(item.text, item.estimate, item.id, item.unplanned, item.type)
+                }
                 className="text-tomato text-xs"
               >
                 Add to today
               </button>
               <button
                 type="button"
-                onClick={() => removeItem(item.id)}
+                onClick={() => {
+                  if (window.confirm('Bu görevi envanterden silmek istediğine emin misin?')) {
+                    removeItem(item.id)
+                  }
+                }}
                 className="text-sage text-xs"
               >
                 Delete

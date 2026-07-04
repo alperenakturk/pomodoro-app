@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { addTick, removeLastTick } from '../lib/storage'
+import { addTick, removeLastTick, loadSettings, saveSettings } from '../lib/storage'
+import { unlockAudio, playChime, requestNotificationPermission, notify } from '../lib/alert'
 
 const DURATIONS = {
   work: 25 * 60,
   shortBreak: 5 * 60,
   longBreak: 15 * 60,
 }
+
+export const DEFAULT_CYCLE_LENGTH = 4
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -18,6 +21,22 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [internalCount, setInternalCount] = useState(0)
   const [externalCount, setExternalCount] = useState(0)
+  // Rule 3: normalde her 4 pomodorodan sonra long break gelir, ama kullanıcı
+  // bu oranı kendi çalışma ritmine göre ayarlayabilir.
+  const [cycleLength, setCycleLengthState] = useState(
+    () => loadSettings().cycleLength
+  )
+
+  const setCycleLength = useCallback((n) => {
+    const value = Math.max(1, Math.round(n) || DEFAULT_CYCLE_LENGTH)
+    setCycleLengthState(value)
+    saveSettings({ cycleLength: value })
+  }, [])
+
+  const resetCycleLength = useCallback(() => {
+    setCycleLengthState(DEFAULT_CYCLE_LENGTH)
+    saveSettings({ cycleLength: DEFAULT_CYCLE_LENGTH })
+  }, [])
 
   useEffect(() => {
     if (!isRunning) return
@@ -27,32 +46,50 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     return () => clearInterval(intervalId)
   }, [isRunning])
 
+  // Bir work session'ının tamamlanma mantığı: hem zil çaldığında hem de
+  // kullanıcı "Pomodoro'yu bitir" ile erken tamamladığında aynı yolu izler.
+  const completeWork = useCallback(() => {
+    setIsRunning(false)
+    playChime()
+    const newCount = completedPomodoros + 1
+    setCompletedPomodoros(newCount)
+    addTick({
+      id: crypto.randomUUID(),
+      type: 'pomodoro',
+      date: todayString(),
+      timestamp: new Date().toISOString(),
+    })
+    onWorkComplete && onWorkComplete()
+    const nextType = newCount % cycleLength === 0 ? 'longBreak' : 'shortBreak'
+    notify(
+      'Pomodoro tamamlandı',
+      nextType === 'longBreak' ? 'Uzun mola zamanı.' : 'Kısa mola zamanı.'
+    )
+    setSessionType(nextType)
+    setSecondsLeft(DURATIONS[nextType])
+  }, [completedPomodoros, cycleLength, onWorkComplete])
+
+  const completeBreak = useCallback(() => {
+    setIsRunning(false)
+    playChime()
+    // Rule 3: the pomodoro count resets only when a long break ends.
+    if (sessionType === 'longBreak') setCompletedPomodoros(0)
+    notify('Mola bitti', 'Çalışmaya devam zamanı.')
+    setSessionType('work')
+    setSecondsLeft(DURATIONS.work)
+  }, [sessionType])
+
   useEffect(() => {
     if (secondsLeft !== 0 || !isRunning) return
-    setIsRunning(false)
+    if (sessionType === 'work') completeWork()
+    else completeBreak()
+  }, [secondsLeft, isRunning, sessionType, completeWork, completeBreak])
 
-    if (sessionType === 'work') {
-      const newCount = completedPomodoros + 1
-      setCompletedPomodoros(newCount)
-      addTick({
-        id: crypto.randomUUID(),
-        type: 'pomodoro',
-        date: todayString(),
-        timestamp: new Date().toISOString(),
-      })
-      onWorkComplete && onWorkComplete()
-      const nextType = newCount % 4 === 0 ? 'longBreak' : 'shortBreak'
-      setSessionType(nextType)
-      setSecondsLeft(DURATIONS[nextType])
-    } else {
-      // Rule 3: the pomodoro count resets only when a long break ends.
-      if (sessionType === 'longBreak') setCompletedPomodoros(0)
-      setSessionType('work')
-      setSecondsLeft(DURATIONS.work)
-    }
-  }, [secondsLeft, isRunning, sessionType, completedPomodoros, onWorkComplete])
-
-  const start = useCallback(() => setIsRunning(true), [])
+  const start = useCallback(() => {
+    unlockAudio()
+    requestNotificationPermission()
+    setIsRunning(true)
+  }, [])
 
   // Rule 1: voiding only applies to a Pomodoro (work session) — it resets
   // the timer as if it never started and writes no tick, so no X is recorded.
@@ -61,6 +98,14 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     setIsRunning(false)
     setSecondsLeft(DURATIONS.work)
   }, [sessionType])
+
+  // Kullanıcının bilinçli tercihiyle, zil beklenmeden pomodoro'yu tamamlanmış
+  // sayan çıkış yolu (Void'in aksine X alır). Timer.jsx bunu onay diyaloğu
+  // arkasına koyuyor.
+  const finishEarly = useCallback(() => {
+    if (sessionType !== 'work' || !isRunning) return
+    completeWork()
+  }, [sessionType, isRunning, completeWork])
 
   // Breaks aren't Pomodoros, so ending one early is a "skip" straight to
   // the next work session, not a "void".
@@ -71,6 +116,19 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     setSessionType('work')
     setSecondsLeft(DURATIONS.work)
   }, [sessionType])
+
+  // Kullanıcı istediği an work/short break/long break arasında manuel geçiş
+  // yapabilir. Bir work session'ından çıkılıyorsa bu bir void'dür (X yazılmaz) —
+  // onay Timer.jsx tarafında isteniyor.
+  const switchSession = useCallback(
+    (type) => {
+      if (type === sessionType) return
+      setIsRunning(false)
+      setSessionType(type)
+      setSecondsLeft(DURATIONS[type])
+    },
+    [sessionType]
+  )
 
   const logInterruption = useCallback(
     (kind) => {
@@ -107,9 +165,14 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     completedPomodoros,
     internalCount,
     externalCount,
+    cycleLength,
+    setCycleLength,
+    resetCycleLength,
     start,
     voidPomodoro,
+    finishEarly,
     skipBreak,
+    switchSession,
     logInterruption,
     undoInterruption,
   }

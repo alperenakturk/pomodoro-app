@@ -1,5 +1,143 @@
 import { useEffect, useState } from 'react'
-import { loadActivityLog, subscribeToChanges } from '../lib/storage'
+import {
+  loadActivityLog,
+  subscribeToChanges,
+  removeActivityRecord,
+  updateActivityRecord,
+} from '../lib/storage'
+
+const inputClass =
+  'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato px-2 py-1 text-xs font-sans'
+
+function recomputeDiff(estimate, real) {
+  return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
+}
+
+function RecordRow({ record, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [activity, setActivity] = useState(record.activity)
+  const [type, setType] = useState(record.type ?? '')
+  const [estimate, setEstimate] = useState(record.estimate ?? '')
+  const [real, setReal] = useState(record.real)
+
+  function handleSave() {
+    const nextEstimate = estimate === '' ? null : Number(estimate)
+    const nextReal = Number(real)
+    updateActivityRecord(record.id, {
+      activity: activity.trim() || record.activity,
+      type: type.trim(),
+      estimate: nextEstimate,
+      real: nextReal,
+      diff: recomputeDiff(nextEstimate, nextReal),
+    })
+    setEditing(false)
+  }
+
+  function handleCancel() {
+    setActivity(record.activity)
+    setType(record.type ?? '')
+    setEstimate(record.estimate ?? '')
+    setReal(record.real)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <li className="border-b border-cream/10 pb-2">
+        <div className="flex gap-2 mb-2">
+          <input
+            value={activity}
+            onChange={(e) => setActivity(e.target.value)}
+            className={`flex-1 ${inputClass}`}
+          />
+          <input
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            placeholder="Category"
+            className={`w-24 ${inputClass}`}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sage text-[10px] uppercase tracking-wide">Est.</label>
+          <input
+            type="number"
+            min="0"
+            value={estimate}
+            onChange={(e) => setEstimate(e.target.value)}
+            className={`w-14 ${inputClass}`}
+          />
+          <label className="text-sage text-[10px] uppercase tracking-wide">Real</label>
+          <input
+            type="number"
+            min="0"
+            value={real}
+            onChange={(e) => setReal(e.target.value)}
+            className={`w-14 ${inputClass}`}
+          />
+          <button
+            type="button"
+            onClick={handleSave}
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream ml-auto"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
+          >
+            Cancel
+          </button>
+        </div>
+      </li>
+    )
+  }
+
+  return (
+    <li className="border-b border-cream/10 pb-2">
+      <div className="flex justify-between text-cream">
+        <span>
+          {record.activity}
+          {record.type && (
+            <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2">
+              {record.type}
+            </span>
+          )}
+        </span>
+        <span className="text-sage text-xs">{record.date}</span>
+      </div>
+      <div className="text-sage text-xs flex gap-3 mt-1 items-center">
+        <span>Estimate: {record.estimate ?? '-'}</span>
+        <span>Actual: {record.real}</span>
+        <span
+          className={
+            record.diff > 0 ? 'text-tomato' : record.diff < 0 ? 'text-amber' : ''
+          }
+        >
+          Diff: {record.diff == null ? '-' : `${record.diff > 0 ? '+' : ''}${record.diff}`}
+        </span>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="ml-auto text-cream"
+          aria-label="edit record"
+          title="Edit"
+        >
+          ✎
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(record.id)}
+          className="text-sage"
+          aria-label="delete record"
+          title="Delete"
+        >
+          ✕
+        </button>
+      </div>
+    </li>
+  )
+}
 
 function RecordsLog() {
   const [log, setLog] = useState(() => loadActivityLog())
@@ -8,6 +146,12 @@ function RecordsLog() {
     const unsubscribe = subscribeToChanges(() => setLog(loadActivityLog()))
     return unsubscribe
   }, [])
+
+  function handleDelete(id) {
+    if (window.confirm('Bu kaydı silmek istediğine emin misin?')) {
+      removeActivityRecord(id)
+    }
+  }
 
   const recent = [...log].reverse().slice(0, 8)
 
@@ -25,23 +169,7 @@ function RecordsLog() {
 
       <ul className="flex flex-col gap-2 font-sans text-sm">
         {recent.map((r) => (
-          <li key={r.id} className="border-b border-cream/10 pb-2">
-            <div className="flex justify-between text-cream">
-              <span>{r.activity}</span>
-              <span className="text-sage text-xs">{r.date}</span>
-            </div>
-            <div className="text-sage text-xs flex gap-3 mt-1">
-              <span>Estimate: {r.estimate ?? '-'}</span>
-              <span>Actual: {r.real}</span>
-              <span
-                className={
-                  r.diff > 0 ? 'text-tomato' : r.diff < 0 ? 'text-amber' : ''
-                }
-              >
-                Diff: {r.diff == null ? '-' : `${r.diff > 0 ? '+' : ''}${r.diff}`}
-              </span>
-            </div>
-          </li>
+          <RecordRow key={r.id} record={r} onDelete={handleDelete} />
         ))}
       </ul>
     </div>

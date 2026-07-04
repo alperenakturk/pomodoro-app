@@ -25,7 +25,12 @@ export function useTodayTasks() {
       realized: 0,
       internal: 0,
       external: 0,
+      type: options.type || '',
       unplanned: options.unplanned || false,
+      // urgent: bugünün listesinde Unplanned & Urgent bölümünde mi gösterilecek.
+      // unplanned yalnızca "bu görev bugün, plan dışı ortaya çıktı" bilgisini taşır —
+      // ikisi kavramsal olarak ayrı (methodology.md'deki Today Tasks şemasına bkz).
+      urgent: options.urgent || false,
       done: false,
       inventoryId: options.inventoryId || null,
     }
@@ -55,29 +60,31 @@ export function useTodayTasks() {
   }, [])
 
   // Görev bitince Kayıtlar'a Tahmin/Gerçek/Fark satırı ekleniyor.
+  // addActivityRecord bilerek setTasks'in updater'ının DIŞINDA çağrılıyor —
+  // updater'lar saf olmalı; StrictMode onları geliştirmede 2 kez çalıştırıp
+  // bu yan etkiyi (localStorage yazımını) tekrarlayabilir.
   const finishTask = useCallback((id) => {
-    setTasks((prev) => {
-      const task = prev.find((t) => t.id === id)
-      if (task) {
-        // Tahmin girilmediyse fark hesaplanamaz — sahte bir 0 yerine null yazılır.
-        const diff = task.estimate != null ? task.realized - task.estimate : null
-        addActivityRecord({
-          id: crypto.randomUUID(),
-          date: todayString(),
-          time: nowTime(),
-          activity: task.text,
-          estimate: task.estimate,
-          real: task.realized,
-          diff,
-          internal: task.internal,
-          external: task.external,
-          unplanned: task.unplanned,
-        })
-      }
-      return prev.map((t) => (t.id === id ? { ...t, done: true } : t))
-    })
+    const task = tasks.find((t) => t.id === id)
+    if (task) {
+      // Tahmin girilmediyse fark hesaplanamaz — sahte bir 0 yerine null yazılır.
+      const diff = task.estimate != null ? task.realized - task.estimate : null
+      addActivityRecord({
+        id: crypto.randomUUID(),
+        date: todayString(),
+        time: nowTime(),
+        activity: task.text,
+        type: task.type || '',
+        estimate: task.estimate,
+        real: task.realized,
+        diff,
+        internal: task.internal,
+        external: task.external,
+        unplanned: task.unplanned,
+      })
+    }
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: true } : t)))
     setActiveTaskId((cur) => (cur === id ? null : cur))
-  }, [])
+  }, [tasks])
 
   return {
     tasks,

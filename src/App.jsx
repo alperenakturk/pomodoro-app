@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import Timer from './components/Timer'
@@ -12,8 +13,10 @@ function App() {
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
-  function handleSendToToday(text, estimate, inventoryId) {
-    todayApi.addTask(text, estimate, { inventoryId })
+  function handleSendToToday(text, estimate, inventoryId, unplanned, type) {
+    // Envanterden normal planlamayla gelen bir görev "urgent" değildir —
+    // Unplanned & Urgent bölümü sadece gün içinde aniden çıkan işler için.
+    todayApi.addTask(text, estimate, { inventoryId, unplanned, type })
   }
 
   // Görev bittiğinde, eğer envanterden geldiyse envanterden de siliyoruz
@@ -24,10 +27,21 @@ function App() {
     if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
   }
 
-  const today = new Date().toLocaleDateString('en-US', {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(new Date()), 30 * 1000)
+    return () => clearInterval(intervalId)
+  }, [])
+
+  const today = now.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+  })
+  const time = now.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
   })
 
   return (
@@ -39,7 +53,9 @@ function App() {
             Pomodoro Technique
           </p>
         </div>
-        <p className="text-sage text-xs font-sans">{today}</p>
+        <p className="text-sage text-xs font-sans">
+          {today} · {time}
+        </p>
       </header>
 
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-[380px_1fr_380px] gap-6 items-start">

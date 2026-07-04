@@ -169,7 +169,7 @@ The archive. Each completed day's data is stored here for reporting.
 |-----------|-----------------------------------------------------------|
 | date      | ISO date string                                          |
 | time      | Start time of activity (HH:MM)                          |
-| type      | Category/type of activity (not yet implemented — no UI sets this) |
+| type      | Category/type of activity (optional, free text; set via Inventory/Today add forms or edited directly in the Records Log) |
 | activity  | Description                                              |
 | estimate  | Estimated Pomodoros                                      |
 | real      | Actual Pomodoros completed                               |

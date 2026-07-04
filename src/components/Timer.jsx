@@ -1,4 +1,4 @@
-import { usePomodoro } from '../hooks/usePomodoro'
+import { usePomodoro, DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
 
 const LABELS = {
   work: 'Focus',
@@ -33,9 +33,14 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     completedPomodoros,
     internalCount,
     externalCount,
+    cycleLength,
+    setCycleLength,
+    resetCycleLength,
     start,
     voidPomodoro,
+    finishEarly,
     skipBreak,
+    switchSession,
     logInterruption,
     undoInterruption,
   } = usePomodoro({ onWorkComplete, onInterruption })
@@ -52,7 +57,9 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
   const dotY = 50 + RADIUS * Math.sin(angleRad)
 
   const filledDots =
-    completedPomodoros > 0 && completedPomodoros % 4 === 0 ? 4 : completedPomodoros % 4
+    completedPomodoros > 0 && completedPomodoros % cycleLength === 0
+      ? cycleLength
+      : completedPomodoros % cycleLength
 
   function handleVoid() {
     if (window.confirm('This Pomodoro will be voided and won\'t count. Are you sure?')) {
@@ -60,21 +67,48 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     }
   }
 
+  function handleFinishEarly() {
+    if (
+      window.confirm(
+        'Pomodoro Tekniği\'nde bir pomodoro bölünmez ve zili beklemeden bitirilmez — kalan süre normalde öğrendiklerini gözden geçirmek (overlearning) için kullanılır. Yine de bu pomodoroyu şimdi tamamlanmış say ve bitir?'
+      )
+    ) {
+      finishEarly()
+    }
+  }
+
+  function handleSwitch(type) {
+    if (type === sessionType) return
+    if (sessionType === 'work' && isRunning) {
+      if (
+        !window.confirm(
+          'Devam eden pomodoro tamamlanmadan bırakılacak ve void sayılacak (X almayacak). Yine de mola tipine geçilsin mi?'
+        )
+      ) {
+        return
+      }
+    }
+    switchSession(type)
+  }
+
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6">
       <div className="flex gap-2">
         {SESSION_ORDER.map((type) => (
-          <span
+          <button
             key={type}
+            type="button"
+            onClick={() => handleSwitch(type)}
+            title={sessionType === type ? undefined : `Switch to ${LABELS[type]}`}
             className={
               'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
               (sessionType === type
                 ? 'bg-tomato/15 border-tomato/60 text-tomato'
-                : 'border-cream/15 text-sage')
+                : 'border-cream/15 text-sage hover:border-cream/30')
             }
           >
             {LABELS[type]}
-          </span>
+          </button>
         ))}
       </div>
 
@@ -104,7 +138,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             {formatTime(secondsLeft)}
           </p>
           <div className="flex gap-2">
-            {Array.from({ length: 4 }, (_, i) => (
+            {Array.from({ length: cycleLength }, (_, i) => (
               <span
                 key={i}
                 className={
@@ -115,6 +149,30 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2 text-sage text-xs font-sans">
+        <label htmlFor="cycle-length">Long break every</label>
+        <input
+          id="cycle-length"
+          type="number"
+          min="1"
+          max="12"
+          value={cycleLength}
+          onChange={(e) => setCycleLength(Number(e.target.value))}
+          className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
+        />
+        <span>pomodoro</span>
+        {cycleLength !== DEFAULT_CYCLE_LENGTH && (
+          <button
+            type="button"
+            onClick={resetCycleLength}
+            className="underline decoration-dotted text-cream"
+            title={`Reset to default (${DEFAULT_CYCLE_LENGTH})`}
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       <div className="text-center">
@@ -141,6 +199,15 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
           >
             Void Pomodoro
+          </button>
+        )}
+        {isRunning && isWork && (
+          <button
+            type="button"
+            onClick={handleFinishEarly}
+            className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
+          >
+            Finish Pomodoro
           </button>
         )}
         {isRunning && !isWork && (

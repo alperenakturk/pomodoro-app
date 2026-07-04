@@ -10,9 +10,11 @@ npm run build     # production build
 npm run preview   # preview production build locally
 npm run lint      # run oxlint (whole project)
 npx oxlint src/hooks/usePomodoro.js   # lint a single file
+npm test          # run the Vitest suite once
+npm run test:watch # run Vitest in watch mode
 ```
 
-No test runner is configured.
+Tests run under Vitest with jsdom (config lives in the `test` block of `vite.config.js`). Hook tests use `@testing-library/react`'s `renderHook` and fake timers to drive the countdown without waiting on real time — see `src/hooks/usePomodoro.test.js` for the pattern. Browser-only side effects (audio, notifications) live in `src/lib/alert.js` and are mocked with `vi.mock` in tests, since jsdom doesn't implement `AudioContext`/`Notification`.
 
 ## Architecture
 
@@ -51,7 +53,7 @@ Tailwind CSS v4 loaded via `@tailwindcss/vite` plugin. Custom design tokens (col
 
 ### Gotchas
 
-- `vite-plugin-pwa` is a devDependency but is **not** wired into `vite.config.js` — there is no service worker or manifest generation yet. Don't assume PWA/offline behavior exists.
+- `vite-plugin-pwa` is wired into `vite.config.js` (`generateSW` strategy, `registerType: 'autoUpdate'`) — production builds emit a manifest and service worker, making the app installable and offline-capable. It only activates on `npm run build` + `npm run preview` (or a real deploy); `npm run dev` does not register a service worker unless `devOptions.enabled` is set.
 - In-app comments and some identifiers are in Turkish; code style otherwise follows standard React/JS conventions.
 
 For full methodology reference, see docs/methodology.md

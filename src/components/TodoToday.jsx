@@ -38,6 +38,14 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
         className={`truncate ${task.done ? 'line-through text-sage' : 'text-cream'}`}
       >
         {task.text}
+        {task.unplanned && (
+          <span className="text-amber text-xs font-semibold ml-1" title="Unplanned">
+            U
+          </span>
+        )}
+        {task.type && (
+          <span className="text-sage text-xs bg-cream/5 rounded px-1 ml-1">{task.type}</span>
+        )}
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
             className="text-tomato ml-1"
@@ -66,7 +74,11 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
       {task.done && <span />}
       <button
         type="button"
-        onClick={() => onRemove(task.id)}
+        onClick={() => {
+          if (window.confirm('Bu görevi silmek istediğine emin misin?')) {
+            onRemove(task.id)
+          }
+        }}
         className="text-sage text-xs leading-none"
         title="Delete task"
         aria-label="delete task"
@@ -80,23 +92,27 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
 function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, finishTask }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
+  const [type, setType] = useState('')
 
-  const planned = tasks.filter((t) => !t.unplanned)
-  const unplanned = tasks.filter((t) => t.unplanned)
+  // Bölüm ayrımı "urgent"a göre yapılıyor — "unplanned" sadece görevin kökenini
+  // (bugün plan dışı çıktığını) belirtir, hangi bölümde görüneceğini değil.
+  const planned = tasks.filter((t) => !t.urgent)
+  const urgentTasks = tasks.filter((t) => t.urgent)
 
   function handleAddPlanned(e) {
     e.preventDefault()
     if (!text.trim()) return
-    addTask(text.trim(), estimate ? Number(estimate) : null)
+    addTask(text.trim(), estimate ? Number(estimate) : null, { type: type.trim() })
     setText('')
     setEstimate('')
+    setType('')
   }
 
   function handleAddUnplanned(e) {
     e.preventDefault()
     const value = e.target.elements.unplannedText.value.trim()
     if (!value) return
-    addTask(value, null, { unplanned: true })
+    addTask(value, null, { unplanned: true, urgent: true })
     e.target.reset()
   }
 
@@ -135,6 +151,16 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
           Add
         </button>
       </form>
+
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          placeholder="Category (optional)"
+          className={`w-32 text-xs ${inputClass}`}
+        />
+      </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
         <p className="text-tomato text-xs font-sans mb-4 -mt-2">
@@ -190,7 +216,7 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
           </button>
         </form>
         <ul className="flex flex-col gap-1">
-          {unplanned.map((task) => (
+          {urgentTasks.map((task) => (
             <TaskRow
               key={task.id}
               task={task}

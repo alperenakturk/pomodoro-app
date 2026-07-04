@@ -16,6 +16,7 @@ export function useInventory() {
         text,
         estimate: estimate || null,
         notes: options.notes || '',
+        type: options.type || '',
         deadline: options.deadline || null,
         unplanned: options.unplanned || false,
         done: false,
