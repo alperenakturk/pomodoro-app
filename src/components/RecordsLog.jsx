@@ -9,7 +9,7 @@ import {
 import { activityLogToCSV, downloadFile } from '../lib/export'
 
 const inputClass =
-  'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato px-2 py-1 text-xs font-sans'
+  'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-2 py-1 text-xs font-sans'
 
 function recomputeDiff(estimate, real) {
   return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
@@ -50,26 +50,34 @@ function RecordRow({ record, onDelete }) {
           <input
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
+            aria-label="Activity name"
             className={`flex-1 ${inputClass}`}
           />
           <input
             value={type}
             onChange={(e) => setType(e.target.value)}
             placeholder="Category"
+            aria-label="Category"
             className={`w-24 ${inputClass}`}
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sage text-[10px] uppercase tracking-wide">Est.</label>
+          <label htmlFor={`est-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
+            Est.
+          </label>
           <input
+            id={`est-${record.id}`}
             type="number"
             min="0"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
             className={`w-14 ${inputClass}`}
           />
-          <label className="text-sage text-[10px] uppercase tracking-wide">Real</label>
+          <label htmlFor={`real-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
+            Real
+          </label>
           <input
+            id={`real-${record.id}`}
             type="number"
             min="0"
             value={real}
@@ -105,6 +113,11 @@ function RecordRow({ record, onDelete }) {
               {record.type}
             </span>
           )}
+          {record.pairWith && (
+            <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2">
+              with {record.pairWith}
+            </span>
+          )}
         </span>
         <span className="text-sage text-xs">{record.date}</span>
       </div>
@@ -118,6 +131,18 @@ function RecordRow({ record, onDelete }) {
         >
           Diff: {record.diff == null ? '-' : `${record.diff > 0 ? '+' : ''}${record.diff}`}
         </span>
+        {record.diffI != null && (
+          <span className={record.diffI > 0 ? 'text-tomato' : record.diffI < 0 ? 'text-amber' : ''}>
+            Diff I: {record.diffI > 0 ? '+' : ''}
+            {record.diffI}
+          </span>
+        )}
+        {record.diffII != null && (
+          <span className={record.diffII > 0 ? 'text-tomato' : record.diffII < 0 ? 'text-amber' : ''}>
+            Diff II: {record.diffII > 0 ? '+' : ''}
+            {record.diffII}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setEditing(true)}

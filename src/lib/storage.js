@@ -100,6 +100,11 @@ export function removeLastTick(type) {
   return ticks
 }
 
+// Timetable: gün içi pomodoro setleri için planlanan zaman blokları (örn. 09:00-11:00)
+const TIMETABLE_KEY = 'pomodoro_timetable'
+export const loadTimetable = () => loadJSON(TIMETABLE_KEY, [])
+export const saveTimetable = (blocks) => saveJSON(TIMETABLE_KEY, blocks)
+
 // Full backup of every storage key, for the export feature.
 export function exportAllData() {
   return {
@@ -109,5 +114,6 @@ export function exportAllData() {
     activityLog: loadActivityLog(),
     ticks: loadTicks(),
     settings: loadSettings(),
+    timetable: loadTimetable(),
   }
 }

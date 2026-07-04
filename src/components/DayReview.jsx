@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -15,6 +17,19 @@ function diffClass(diff) {
 }
 
 function DayReview({ ticks, activityLog, onClose }) {
+  const closeButtonRef = useRef(null)
+  const previouslyFocused = useRef(document.activeElement)
+
+  // Move focus into the modal on open, and back to whatever triggered it on
+  // close, so keyboard users don't lose their place in the page.
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+    const trigger = previouslyFocused.current
+    return () => {
+      trigger?.focus?.()
+    }
+  }, [])
+
   const today = todayString()
   const todaysTicks = ticks.filter((t) => t.date === today)
   const pomodoros = todaysTicks.filter((t) => t.type === 'pomodoro').length
@@ -37,17 +52,24 @@ function DayReview({ ticks, activityLog, onClose }) {
       onClick={onClose}
     >
       <div
-        className="bg-pine border border-cream/15 rounded-3xl px-8 py-8 shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="day-review-heading"
+        className="bg-pine border border-cream/15 rounded-3xl px-6 py-6 sm:px-8 sm:py-8 shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-6">
-          <p className="font-display text-cream font-bold text-sm tracking-widest uppercase">
+        <div className="flex items-start justify-between gap-3 mb-6">
+          <p
+            id="day-review-heading"
+            className="font-display text-cream font-bold text-sm tracking-widest uppercase"
+          >
             Today's Review — {today}
           </p>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="text-sage text-xl leading-none"
+            className="text-sage text-xl leading-none flex-shrink-0"
             aria-label="close review"
           >
             ×

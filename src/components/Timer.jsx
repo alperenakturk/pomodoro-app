@@ -148,7 +148,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
   })
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6">
+    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 sm:px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6">
       <div className="flex gap-2">
         {SESSION_ORDER.map((type) => (
           <button
@@ -168,7 +168,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
         ))}
       </div>
 
-      <div className="relative w-72 h-72">
+      <div className="relative w-60 h-60 sm:w-72 sm:h-72">
         <svg viewBox="0 0 100 100" className="w-full h-full">
           <circle cx="50" cy="50" r={RADIUS} fill="none" strokeWidth="1.5" className="stroke-cream/10" />
           <circle

@@ -307,15 +307,13 @@ WORK (25 min)
 
 ---
 
-## What This App Does NOT Implement (Known Gaps)
+## Planning Aids
 
-- Available Pomodoros calculator (how many Pomodoros fit in today's schedule)
-- Timetable / work-session planning (sets of 4 Pomodoros across the day)
-- Second/third estimate tracking (Diff I, Diff II for re-estimated tasks)
-- Task combination UI for sub-1-Pomodoro tasks
-- Team/pair Pomodoro support
-
-These are future enhancements. The core technique is fully implemented.
+- **Available Pomodoros calculator** (`AvailablePomodoros.jsx`) — enter hours available today, get an estimate of how many Pomodoros fit (simulating the work/break cycle), compared against the sum of today's task estimates.
+- **Timetable** (`Timetable.jsx`) — define time blocks for the day (e.g. 09:00–11:00), the currently active block is highlighted.
+- **Second/third estimate tracking (Diff I, Diff II)** — a running task can be re-estimated (up to twice) when it's taking longer than planned; Records shows Diff (vs. original estimate), Diff I and Diff II (vs. each re-estimate) side by side.
+- **Task combination** — select 2+ small Inventory tasks and combine them into one (Rule 5), summing their estimates.
+- **Pair/team Pomodoro (lightweight)** — an optional "pairing with" note on a Today task, carried through to Records. This is **not** real-time collaboration — the app has no backend or sync layer (it's a static site backed only by `localStorage`), so it can't show a partner's live timer or task state. True multi-user support would need a backend.
 
 ---
 

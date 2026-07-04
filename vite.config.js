@@ -14,6 +14,16 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Self-hosted fonts ship as woff2 (modern browsers) + woff (fallback)
+      // across several unicode subsets; only woff2 is precached, and only
+      // the subsets this app actually renders (latin + latin-ext, for the
+      // English UI and any Turkish task names) — Fontsource bundles
+      // cyrillic/greek/vietnamese too, which would otherwise triple the
+      // offline cache for glyphs the app never displays.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['**/*-cyrillic-*', '**/*-greek-*', '**/*-vietnamese-*'],
+      },
       manifest: {
         name: 'Pomodoro Technique',
         short_name: 'Pomodoro',

@@ -55,22 +55,22 @@ function App() {
 
   return (
     <div className={`min-h-screen bg-pine ${theme === 'light' ? 'light' : ''}`}>
-      <header className="border-b border-cream/10 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-cream/10 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-tomato" />
-          <p className="text-sage text-xs font-sans tracking-widest uppercase">
+          <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
+          <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
             Pomodoro Technique
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <p className="text-sage text-xs font-sans">
+          <p className="text-sage text-xs font-sans whitespace-nowrap">
             {today} · {time}
           </p>
           <button
             type="button"
             onClick={toggleTheme}
             title="Toggle light/dark theme"
-            className="text-sage text-xs font-sans border border-cream/15 rounded-full px-3 py-1"
+            className="text-sage text-xs font-sans border border-cream/15 rounded-full px-3 py-1 whitespace-nowrap"
           >
             {theme === 'light' ? 'Dark mode' : 'Light mode'}
           </button>
@@ -84,6 +84,8 @@ function App() {
             addItem={inventoryApi.addItem}
             removeItem={inventoryApi.removeItem}
             toggleDone={inventoryApi.toggleDone}
+            updateItem={inventoryApi.updateItem}
+            combineItems={inventoryApi.combineItems}
             onSendToToday={handleSendToToday}
           />
           <RecordsLog />
@@ -108,6 +110,8 @@ function App() {
             setActiveTaskId={todayApi.setActiveTaskId}
             addTask={todayApi.addTask}
             removeTask={todayApi.removeTask}
+            updateTask={todayApi.updateTask}
+            reestimateTask={todayApi.reestimateTask}
             finishTask={handleFinishTask}
           />
           <Reports />

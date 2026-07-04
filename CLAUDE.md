@@ -22,7 +22,7 @@ This is a Pomodoro timer app implementing the Pomodoro Technique (25-min work se
 
 ### Data flow
 
-All persistent state lives in `localStorage`. `src/lib/storage.js` is the single point of access — it exposes typed load/save helpers for four storage keys:
+All persistent state lives in `localStorage`. `src/lib/storage.js` is the single point of access — it exposes typed load/save helpers for five storage keys:
 
 | Key | Purpose |
 |-----|---------|
@@ -30,6 +30,9 @@ All persistent state lives in `localStorage`. `src/lib/storage.js` is the single
 | `pomodoro_today_tasks` | Tasks selected for today with realized/interruption counts |
 | `pomodoro_activity_log` | Completed-task records (estimate vs. actual) |
 | `pomodoro_ticks` | Lightweight per-pomodoro/interruption events for reports |
+| `pomodoro_settings` | User preferences: `cycleLength`, `theme`, `chimeStyle` |
+
+`patchSettings(partial)` merges into existing settings and must be used instead of `saveSettings` whenever a feature only owns one key of the settings object — otherwise it clobbers the others. `exportAllData()` bundles all five keys for the JSON backup download in `RecordsLog`.
 
 `storage.js` also owns a `pomodoro-data-changed` custom window event. Any write that should notify passive listeners (adding a tick, completing a task) dispatches this event. Components that read from storage but don't receive props — `RecordsLog` and `Reports` — subscribe with `subscribeToChanges()` to re-read when data changes.
 
@@ -51,11 +54,13 @@ Three hooks own all mutable state:
 
 Tailwind CSS v4 loaded via `@tailwindcss/vite` plugin. Custom design tokens (colors like `bg-pine`, `text-tomato`, `text-cream`, `text-sage`, `text-ink`, `text-amber`) are defined in `src/index.css` as CSS custom properties and referenced throughout components.
 
+Light theme works by inverting the `pine`/`cream`/`sage` token *values* under a `.light` class on the app root (see `src/index.css`) — components never branch on theme in JS; they just keep using `bg-pine`/`text-cream`/etc. and the CSS variables do the swap. Don't add a component-level light/dark conditional; add or adjust a token override in the `.light` block instead.
+
 ### Gotchas
 
 - `vite-plugin-pwa` is wired into `vite.config.js` (`generateSW` strategy, `registerType: 'autoUpdate'`) — production builds emit a manifest and service worker, making the app installable and offline-capable. It only activates on `npm run build` + `npm run preview` (or a real deploy); `npm run dev` does not register a service worker unless `devOptions.enabled` is set.
 - In-app comments and some identifiers are in Turkish; code style otherwise follows standard React/JS conventions.
 - All user-facing app text (buttons, confirm/alert dialogs, notifications, placeholders) must be in English — this is a hard requirement, unlike the Turkish code comments above.
-- Deployed to GitHub Pages via `.github/workflows/deploy.yml` on every push to `main`. `vite.config.js`'s `base` is only rewritten to `/pomodoro-app/` when the `GITHUB_PAGES` env var is set (the workflow sets it before `npm run build`), so local `dev`/`build`/`preview` stay unprefixed. GitHub Pages must have its Source set to "GitHub Actions" once in the repo settings (Settings → Pages) for the workflow's deploy step to succeed.
+- Deployed to GitHub Pages via `.github/workflows/deploy.yml` on every push to `main`. The workflow runs `npm run lint` and `npm test` before `npm run build`, so a failing test or lint error blocks the deploy. `vite.config.js`'s `base` is only rewritten to `/pomodoro-app/` when the `GITHUB_PAGES` env var is set (the workflow sets it before `npm run build`), so local `dev`/`build`/`preview` stay unprefixed. GitHub Pages must have its Source set to "GitHub Actions" once in the repo settings (Settings → Pages) for the workflow's deploy step to succeed.
 
 For full methodology reference, see docs/methodology.md
