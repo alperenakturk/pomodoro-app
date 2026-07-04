@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { usePomodoro, DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
 import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
+import Select from './Select'
 
 const CHIME_LABELS = {
   classic: 'Classic',
@@ -233,18 +234,13 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
 
       <div className="flex items-center gap-2 text-sage text-xs font-sans">
         <label htmlFor="chime-style">Sound</label>
-        <select
+        <Select
           id="chime-style"
           value={chimeStyle}
-          onChange={(e) => setChimeStyle(e.target.value)}
-          className="bg-cream/5 border border-cream/15 rounded-lg text-cream px-2 py-1"
-        >
-          {CHIME_STYLES.map((style) => (
-            <option key={style} value={style}>
-              {CHIME_LABELS[style]}
-            </option>
-          ))}
-        </select>
+          options={CHIME_STYLES}
+          labels={CHIME_LABELS}
+          onChange={setChimeStyle}
+        />
         <button
           type="button"
           onClick={() => {
