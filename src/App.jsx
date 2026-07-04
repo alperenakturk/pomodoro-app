@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
+import { loadSettings, patchSettings } from './lib/storage'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
@@ -10,6 +11,14 @@ import Reports from './components/Reports'
 function App() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
+
+  const [theme, setTheme] = useState(() => loadSettings().theme)
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    patchSettings({ theme: next })
+  }
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
@@ -45,7 +54,7 @@ function App() {
   })
 
   return (
-    <div className="min-h-screen bg-pine">
+    <div className={`min-h-screen bg-pine ${theme === 'light' ? 'light' : ''}`}>
       <header className="border-b border-cream/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-tomato" />
@@ -53,9 +62,19 @@ function App() {
             Pomodoro Technique
           </p>
         </div>
-        <p className="text-sage text-xs font-sans">
-          {today} · {time}
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-sage text-xs font-sans">
+            {today} · {time}
+          </p>
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title="Toggle light/dark theme"
+            className="text-sage text-xs font-sans border border-cream/15 rounded-full px-3 py-1"
+          >
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+          </button>
+        </div>
       </header>
 
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-[380px_1fr_380px] gap-6 items-start">

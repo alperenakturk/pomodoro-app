@@ -4,7 +4,9 @@ import {
   subscribeToChanges,
   removeActivityRecord,
   updateActivityRecord,
+  exportAllData,
 } from '../lib/storage'
+import { activityLogToCSV, downloadFile } from '../lib/export'
 
 const inputClass =
   'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato px-2 py-1 text-xs font-sans'
@@ -153,13 +155,45 @@ function RecordsLog() {
     }
   }
 
+  function handleExportCSV() {
+    downloadFile('pomodoro-records.csv', activityLogToCSV(log), 'text/csv')
+  }
+
+  function handleExportJSON() {
+    downloadFile(
+      'pomodoro-backup.json',
+      JSON.stringify(exportAllData(), null, 2),
+      'application/json'
+    )
+  }
+
   const recent = [...log].reverse().slice(0, 8)
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
-      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
-        Records Log
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
+          Records Log
+        </p>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="text-sage text-xs"
+            title="Export records as CSV"
+          >
+            CSV
+          </button>
+          <button
+            type="button"
+            onClick={handleExportJSON}
+            className="text-sage text-xs"
+            title="Export a full JSON backup of all data"
+          >
+            JSON
+          </button>
+        </div>
+      </div>
 
       {recent.length === 0 && (
         <p className="text-sage text-sm font-sans text-center py-2">

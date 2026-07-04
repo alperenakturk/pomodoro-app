@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { addTick, removeLastTick, loadSettings, saveSettings } from '../lib/storage'
+import { addTick, removeLastTick, loadSettings, patchSettings } from '../lib/storage'
 import { unlockAudio, playChime, requestNotificationPermission, notify } from '../lib/alert'
 
 const DURATIONS = {
@@ -30,12 +30,19 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   const setCycleLength = useCallback((n) => {
     const value = Math.max(1, Math.round(n) || DEFAULT_CYCLE_LENGTH)
     setCycleLengthState(value)
-    saveSettings({ cycleLength: value })
+    patchSettings({ cycleLength: value })
   }, [])
 
   const resetCycleLength = useCallback(() => {
     setCycleLengthState(DEFAULT_CYCLE_LENGTH)
-    saveSettings({ cycleLength: DEFAULT_CYCLE_LENGTH })
+    patchSettings({ cycleLength: DEFAULT_CYCLE_LENGTH })
+  }, [])
+
+  const [chimeStyle, setChimeStyleState] = useState(() => loadSettings().chimeStyle)
+
+  const setChimeStyle = useCallback((style) => {
+    setChimeStyleState(style)
+    patchSettings({ chimeStyle: style })
   }, [])
 
   useEffect(() => {
@@ -50,7 +57,7 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   // kullanıcı "Pomodoro'yu bitir" ile erken tamamladığında aynı yolu izler.
   const completeWork = useCallback(() => {
     setIsRunning(false)
-    playChime()
+    playChime(chimeStyle)
     const newCount = completedPomodoros + 1
     setCompletedPomodoros(newCount)
     addTick({
@@ -67,17 +74,17 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     )
     setSessionType(nextType)
     setSecondsLeft(DURATIONS[nextType])
-  }, [completedPomodoros, cycleLength, onWorkComplete])
+  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle])
 
   const completeBreak = useCallback(() => {
     setIsRunning(false)
-    playChime()
+    playChime(chimeStyle)
     // Rule 3: the pomodoro count resets only when a long break ends.
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
     notify('Break over', 'Time to get back to work.')
     setSessionType('work')
     setSecondsLeft(DURATIONS.work)
-  }, [sessionType])
+  }, [sessionType, chimeStyle])
 
   useEffect(() => {
     if (secondsLeft !== 0 || !isRunning) return
@@ -168,6 +175,8 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     cycleLength,
     setCycleLength,
     resetCycleLength,
+    chimeStyle,
+    setChimeStyle,
     start,
     voidPomodoro,
     finishEarly,

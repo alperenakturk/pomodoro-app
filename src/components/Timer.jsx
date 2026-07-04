@@ -1,4 +1,14 @@
+import { useEffect } from 'react'
 import { usePomodoro, DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
+import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
+
+const CHIME_LABELS = {
+  classic: 'Classic',
+  soft: 'Soft',
+  alert: 'Alert',
+}
+
+const DEFAULT_TITLE = 'Pomodoro Technique'
 
 const LABELS = {
   work: 'Focus',
@@ -36,6 +46,8 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     cycleLength,
     setCycleLength,
     resetCycleLength,
+    chimeStyle,
+    setChimeStyle,
     start,
     voidPomodoro,
     finishEarly,
@@ -44,6 +56,20 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     logInterruption,
     undoInterruption,
   } = usePomodoro({ onWorkComplete, onInterruption })
+
+  // Shows the live countdown in the tab title so it's visible without
+  // switching back to this tab; reverts to the default title when idle.
+  useEffect(() => {
+    document.title = isRunning
+      ? `${formatTime(secondsLeft)} · ${LABELS[sessionType]}`
+      : DEFAULT_TITLE
+  }, [isRunning, secondsLeft, sessionType])
+
+  useEffect(() => {
+    return () => {
+      document.title = DEFAULT_TITLE
+    }
+  }, [])
 
   const isWork = sessionType === 'work'
   const accentClass = isWork ? 'text-tomato' : 'text-amber'
@@ -90,6 +116,36 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     }
     switchSession(type)
   }
+
+  // Keyboard shortcuts. No dependency array — re-subscribing every render is
+  // cheap for a single window listener and guarantees the closures above
+  // always see the latest state instead of going stale.
+  useEffect(() => {
+    function handleKeyDown(e) {
+      const tag = e.target.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        if (!isRunning) start()
+        return
+      }
+      if (e.key === 'Escape' && isRunning && isWork) {
+        handleVoid()
+        return
+      }
+      if ((e.key === 'f' || e.key === 'F') && isRunning && isWork) {
+        handleFinishEarly()
+        return
+      }
+      if (e.key === '1') handleSwitch('work')
+      else if (e.key === '2') handleSwitch('shortBreak')
+      else if (e.key === '3') handleSwitch('longBreak')
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  })
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6">
@@ -175,6 +231,32 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
         )}
       </div>
 
+      <div className="flex items-center gap-2 text-sage text-xs font-sans">
+        <label htmlFor="chime-style">Sound</label>
+        <select
+          id="chime-style"
+          value={chimeStyle}
+          onChange={(e) => setChimeStyle(e.target.value)}
+          className="bg-cream/5 border border-cream/15 rounded-lg text-cream px-2 py-1"
+        >
+          {CHIME_STYLES.map((style) => (
+            <option key={style} value={style}>
+              {CHIME_LABELS[style]}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => {
+            unlockAudio()
+            playChime(chimeStyle)
+          }}
+          className="underline decoration-dotted text-cream"
+        >
+          Test
+        </button>
+      </div>
+
       <div className="text-center">
         <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">Current task</p>
         <p className="font-sans text-cream font-semibold">
@@ -220,6 +302,10 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
           </button>
         )}
       </div>
+
+      <p className="text-sage/60 text-[10px] font-sans tracking-wide" title="Keyboard shortcuts">
+        Space start · Esc void · F finish · 1/2/3 switch
+      </p>
 
       {isWork && (
         <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">

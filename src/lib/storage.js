@@ -61,9 +61,17 @@ export function updateActivityRecord(id, patch) {
 // Settings: kullanıcı tarafından ayarlanabilen tercihler (örn. long break'e
 // kaç pomodorodan sonra geçileceği)
 const SETTINGS_KEY = 'pomodoro_settings'
-const DEFAULT_SETTINGS = { cycleLength: 4 }
+const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic' }
 export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
 export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
+// Merges a partial update into existing settings — saveSettings overwrites
+// the whole object, so independent features (cycle length, theme, chime)
+// must go through this to avoid clobbering each other's keys.
+export function patchSettings(patch) {
+  const next = { ...loadSettings(), ...patch }
+  saveSettings(next)
+  return next
+}
 
 // Ticks: her pomodoro/kesinti için hafif kayıt (günlük/haftalık raporlar için)
 const TICKS_KEY = 'pomodoro_ticks'
@@ -90,4 +98,16 @@ export function removeLastTick(type) {
     }
   }
   return ticks
+}
+
+// Full backup of every storage key, for the export feature.
+export function exportAllData() {
+  return {
+    exportedAt: new Date().toISOString(),
+    inventory: loadInventory(),
+    todayTasks: loadTodayTasks(),
+    activityLog: loadActivityLog(),
+    ticks: loadTicks(),
+    settings: loadSettings(),
+  }
 }

@@ -15,6 +15,16 @@
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
+/* Light theme: swaps the background/foreground roles of pine and cream so
+   every existing bg-pine/text-cream/etc. utility keeps working unchanged —
+   only the token values differ. */
+.light {
+  --color-pine: #fbf8f1;
+  --color-pine-dark: #eee7d6;
+  --color-cream: #24312a;
+  --color-sage: #5c6b5e;
+}
+
 body {
   margin: 0;
 }

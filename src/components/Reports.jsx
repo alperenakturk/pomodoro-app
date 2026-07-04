@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
+import DayReview from './DayReview'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -18,6 +19,7 @@ function lastNDaysStrings(n) {
 function Reports() {
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
+  const [showReview, setShowReview] = useState(false)
 
   // Polling yerine: veri her değiştiğinde anında haber al.
   useEffect(() => {
@@ -64,9 +66,18 @@ function Reports() {
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
-      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
-        Reports
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
+          Reports
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowReview(true)}
+          className="text-tomato text-xs font-sans"
+        >
+          Review today
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 font-sans">
         <Stat label="Today" value={todayPomodoros} />
@@ -89,6 +100,80 @@ function Reports() {
           Estimation trend (last {recentDiffRecords.length || 0} tasks)
         </p>
         <DiffTrend records={recentDiffRecords} />
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-cream/10">
+        <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
+          Activity (last 13 weeks)
+        </p>
+        <ActivityHeatmap ticks={ticks} />
+      </div>
+
+      {showReview && (
+        <DayReview
+          ticks={ticks}
+          activityLog={activityLog}
+          onClose={() => setShowReview(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+const HEATMAP_WEEKS = 13
+
+function bucketClass(count) {
+  if (count === 0) return 'bg-cream/5'
+  if (count <= 2) return 'bg-tomato/25'
+  if (count <= 4) return 'bg-tomato/50'
+  if (count <= 6) return 'bg-tomato/75'
+  return 'bg-tomato'
+}
+
+function ActivityHeatmap({ ticks }) {
+  const totalDays = HEATMAP_WEEKS * 7
+  const days = []
+  for (let i = totalDays - 1; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    days.push(d.toISOString().slice(0, 10))
+  }
+
+  const countByDate = {}
+  for (const t of ticks) {
+    if (t.type !== 'pomodoro') continue
+    countByDate[t.date] = (countByDate[t.date] || 0) + 1
+  }
+
+  const columns = []
+  for (let col = 0; col < HEATMAP_WEEKS; col++) {
+    columns.push(days.slice(col * 7, col * 7 + 7))
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex gap-[3px]" role="img" aria-label="Daily Pomodoro activity, last 13 weeks">
+        {columns.map((col, ci) => (
+          <div key={ci} className="flex flex-col gap-[3px]">
+            {col.map((date) => {
+              const count = countByDate[date] || 0
+              return (
+                <span
+                  key={date}
+                  className={`w-2.5 h-2.5 rounded-sm ${bucketClass(count)}`}
+                  title={`${date}: ${count} pomodoro${count === 1 ? '' : 's'}`}
+                />
+              )
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1 text-sage text-[10px] font-sans">
+        <span>Less</span>
+        {[0, 1, 3, 5, 7].map((count) => (
+          <span key={count} className={`w-2.5 h-2.5 rounded-sm ${bucketClass(count)}`} />
+        ))}
+        <span>More</span>
       </div>
     </div>
   )
