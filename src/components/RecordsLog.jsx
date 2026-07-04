@@ -148,7 +148,7 @@ function RecordsLog() {
   }, [])
 
   function handleDelete(id) {
-    if (window.confirm('Bu kaydı silmek istediğine emin misin?')) {
+    if (window.confirm('Delete this record?')) {
       removeActivityRecord(id)
     }
   }

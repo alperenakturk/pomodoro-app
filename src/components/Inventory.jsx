@@ -194,7 +194,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
               <button
                 type="button"
                 onClick={() => {
-                  if (window.confirm('Bu görevi envanterden silmek istediğine emin misin?')) {
+                  if (window.confirm('Delete this task from the inventory?')) {
                     removeItem(item.id)
                   }
                 }}

@@ -55,5 +55,7 @@ Tailwind CSS v4 loaded via `@tailwindcss/vite` plugin. Custom design tokens (col
 
 - `vite-plugin-pwa` is wired into `vite.config.js` (`generateSW` strategy, `registerType: 'autoUpdate'`) — production builds emit a manifest and service worker, making the app installable and offline-capable. It only activates on `npm run build` + `npm run preview` (or a real deploy); `npm run dev` does not register a service worker unless `devOptions.enabled` is set.
 - In-app comments and some identifiers are in Turkish; code style otherwise follows standard React/JS conventions.
+- All user-facing app text (buttons, confirm/alert dialogs, notifications, placeholders) must be in English — this is a hard requirement, unlike the Turkish code comments above.
+- Deployed to GitHub Pages via `.github/workflows/deploy.yml` on every push to `main`. `vite.config.js`'s `base` is only rewritten to `/pomodoro-app/` when the `GITHUB_PAGES` env var is set (the workflow sets it before `npm run build`), so local `dev`/`build`/`preview` stay unprefixed. GitHub Pages must have its Source set to "GitHub Actions" once in the repo settings (Settings → Pages) for the workflow's deploy step to succeed.
 
 For full methodology reference, see docs/methodology.md

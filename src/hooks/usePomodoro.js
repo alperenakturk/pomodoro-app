@@ -62,8 +62,8 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     onWorkComplete && onWorkComplete()
     const nextType = newCount % cycleLength === 0 ? 'longBreak' : 'shortBreak'
     notify(
-      'Pomodoro tamamlandı',
-      nextType === 'longBreak' ? 'Uzun mola zamanı.' : 'Kısa mola zamanı.'
+      'Pomodoro complete',
+      nextType === 'longBreak' ? 'Time for a long break.' : 'Time for a short break.'
     )
     setSessionType(nextType)
     setSecondsLeft(DURATIONS[nextType])
@@ -74,7 +74,7 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     playChime()
     // Rule 3: the pomodoro count resets only when a long break ends.
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
-    notify('Mola bitti', 'Çalışmaya devam zamanı.')
+    notify('Break over', 'Time to get back to work.')
     setSessionType('work')
     setSecondsLeft(DURATIONS.work)
   }, [sessionType])

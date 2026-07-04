@@ -70,7 +70,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
   function handleFinishEarly() {
     if (
       window.confirm(
-        'Pomodoro Tekniği\'nde bir pomodoro bölünmez ve zili beklemeden bitirilmez — kalan süre normalde öğrendiklerini gözden geçirmek (overlearning) için kullanılır. Yine de bu pomodoroyu şimdi tamamlanmış say ve bitir?'
+        "In the Pomodoro Technique, a Pomodoro isn't split and shouldn't be finished before it rings — the remaining time is meant for overlearning (reviewing what you did). Finish this Pomodoro early anyway and count it as complete?"
       )
     ) {
       finishEarly()
@@ -82,7 +82,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     if (sessionType === 'work' && isRunning) {
       if (
         !window.confirm(
-          'Devam eden pomodoro tamamlanmadan bırakılacak ve void sayılacak (X almayacak). Yine de mola tipine geçilsin mi?'
+          "The current Pomodoro will be abandoned before it rings and voided (it won't count). Switch to the break anyway?"
         )
       ) {
         return

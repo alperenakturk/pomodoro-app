@@ -5,6 +5,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages serves this as a project site at /pomodoro-app/, not at the
+  // domain root — only rewrite the base when the CI workflow builds for Pages,
+  // so local dev/build/preview keep working unprefixed.
+  base: process.env.GITHUB_PAGES ? '/pomodoro-app/' : '/',
   plugins: [
     react(),
     tailwindcss(),

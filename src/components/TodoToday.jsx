@@ -75,7 +75,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
       <button
         type="button"
         onClick={() => {
-          if (window.confirm('Bu görevi silmek istediğine emin misin?')) {
+          if (window.confirm('Delete this task?')) {
             onRemove(task.id)
           }
         }}
