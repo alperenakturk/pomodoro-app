@@ -6,6 +6,14 @@ function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
+// A re-estimated task's original diff is stale once it's been revised —
+// judge estimation accuracy against the most recent commitment (Diff II if
+// it exists, else Diff I, else the original diff), matching the point of
+// re-estimating in the first place.
+function effectiveDiff(record) {
+  return record.diffII ?? record.diffI ?? record.diff
+}
+
 function lastNDaysStrings(n) {
   const days = []
   for (let i = 0; i < n; i++) {
@@ -56,13 +64,13 @@ function Reports() {
 
   // Quantitative error trend: tahmin/gerçek farkının zamanla küçülüp
   // küçülmediğini görmek için son tahminli kayıtlar ve 7 günlük ortalama |fark|.
-  const recordsWithDiff = activityLog.filter((r) => r.diff != null)
+  const recordsWithDiff = activityLog.filter((r) => effectiveDiff(r) != null)
   const recentDiffRecords = recordsWithDiff.slice(-10)
   const diffRecords7d = recordsWithDiff.filter((r) => last7.includes(r.date))
   const avgAbsDiff7d =
     diffRecords7d.length === 0
       ? null
-      : diffRecords7d.reduce((sum, r) => sum + Math.abs(r.diff), 0) / diffRecords7d.length
+      : diffRecords7d.reduce((sum, r) => sum + Math.abs(effectiveDiff(r)), 0) / diffRecords7d.length
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
@@ -192,11 +200,11 @@ function DiffTrend({ records }) {
   const height = 64
   const baseline = height / 2
   const maxHalf = baseline - 12
-  const maxAbs = Math.max(1, ...records.map((r) => Math.abs(r.diff)))
+  const maxAbs = Math.max(1, ...records.map((r) => Math.abs(effectiveDiff(r))))
   const barWidth = Math.min(20, width / records.length - 4)
   const gap = (width - barWidth * records.length) / (records.length + 1)
   const maxIndex = records.reduce(
-    (best, r, i) => (Math.abs(r.diff) > Math.abs(records[best].diff) ? i : best),
+    (best, r, i) => (Math.abs(effectiveDiff(r)) > Math.abs(effectiveDiff(records[best])) ? i : best),
     0
   )
 
@@ -205,18 +213,21 @@ function DiffTrend({ records }) {
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Estimation diff per task">
         <line x1="0" y1={baseline} x2={width} y2={baseline} className="stroke-cream/15" strokeWidth="1" />
         {records.map((r, i) => {
+          const diff = effectiveDiff(r)
           const x = gap + i * (barWidth + gap)
-          const magnitude = Math.abs(r.diff)
-          const isPositive = r.diff > 0
-          const barHeight = r.diff === 0 ? 2 : Math.max(3, (magnitude / maxAbs) * maxHalf)
-          const y = r.diff === 0 ? baseline - 1 : isPositive ? baseline - barHeight : baseline
-          const colorClass = r.diff === 0 ? 'fill-sage/50' : isPositive ? 'fill-tomato' : 'fill-amber'
+          const magnitude = Math.abs(diff)
+          const isPositive = diff > 0
+          const barHeight = diff === 0 ? 2 : Math.max(3, (magnitude / maxAbs) * maxHalf)
+          const y = diff === 0 ? baseline - 1 : isPositive ? baseline - barHeight : baseline
+          const colorClass = diff === 0 ? 'fill-sage/50' : isPositive ? 'fill-tomato' : 'fill-amber'
           const showLabel = i === maxIndex && magnitude > 0
 
           return (
             <g key={r.id}>
               <rect x={x} y={y} width={barWidth} height={barHeight} rx="2" className={colorClass}>
-                <title>{`${r.activity}: ${r.diff > 0 ? '+' : ''}${r.diff}`}</title>
+                <title>{`${r.activity}: ${diff > 0 ? '+' : ''}${diff}${
+                  r.diffI != null ? ' (re-estimated)' : ''
+                }`}</title>
               </rect>
               {showLabel && (
                 <text
@@ -226,7 +237,7 @@ function DiffTrend({ records }) {
                   className="fill-cream"
                   style={{ fontSize: 9 }}
                 >
-                  {r.diff > 0 ? `+${r.diff}` : r.diff}
+                  {diff > 0 ? `+${diff}` : diff}
                 </text>
               )}
             </g>

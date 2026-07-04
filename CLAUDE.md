@@ -14,7 +14,7 @@ npm test          # run the Vitest suite once
 npm run test:watch # run Vitest in watch mode
 ```
 
-Tests run under Vitest with jsdom (config lives in the `test` block of `vite.config.js`). Hook tests use `@testing-library/react`'s `renderHook` and fake timers to drive the countdown without waiting on real time — see `src/hooks/usePomodoro.test.js` for the pattern. Browser-only side effects (audio, notifications) live in `src/lib/alert.js` and are mocked with `vi.mock` in tests, since jsdom doesn't implement `AudioContext`/`Notification`.
+Tests run under Vitest with jsdom (config lives in the `test` block of `vite.config.js`). Hook tests use `@testing-library/react`'s `renderHook` and fake timers to drive the countdown without waiting on real time — see `src/hooks/usePomodoro.test.js` for the pattern. Browser-only side effects (audio, notifications) live in `src/lib/alert.js` and are mocked with `vi.mock` in tests, since jsdom doesn't implement `AudioContext`/`Notification`. Pure calculation helpers used by a component (e.g. `countAvailablePomodoros` in `src/lib/pomodoroMath.js`, `isCurrentBlock` in `src/lib/timetable.js`) live in their own `src/lib/*.js` file rather than being exported from the component — co-exporting a plain function from a component file breaks Fast Refresh (oxlint's `only-export-components` warns on this).
 
 ## Architecture
 
@@ -38,17 +38,18 @@ All persistent state lives in `localStorage`. `src/lib/storage.js` is the single
 
 ### Hook layer
 
-Three hooks own all mutable state:
+Four hooks own all mutable state:
 
-- **`useInventory`** — CRUD for the Inventory list; auto-saves to localStorage on every change.
-- **`useTodayTasks`** — manages today's task list: realized pomodoro count, internal/external interruption counters, active task selection. Calling `finishTask` writes a record to the activity log and marks the task done.
-- **`usePomodoro`** — pure timer state machine (work → shortBreak/longBreak cycle). After every 4 completed pomodoros it automatically switches to a long break. It writes a tick on each completed work session and interruption.
+- **`useInventory`** — CRUD for the Inventory list; auto-saves to localStorage on every change. Also owns `combineItems` (Rule 5: merge 2+ small tasks into one, summing estimates).
+- **`useTodayTasks`** — manages today's task list: realized pomodoro count, internal/external interruption counters, active task selection, re-estimates (`reestimateTask`, up to `reestimate1`/`reestimate2`). Calling `finishTask` writes a record (with `diff`/`diffI`/`diffII`) to the activity log and marks the task done.
+- **`usePomodoro`** — pure timer state machine (work → shortBreak/longBreak cycle). After every `cycleLength` completed pomodoros (user-configurable, default 4) it automatically switches to a long break. It writes a tick on each completed work session and interruption.
+- **`useTimetable`** — today's planned time blocks (`Timetable.jsx`); blocks are stamped with the date they were created and pruned on load if they're from a previous day.
 
 ### Component wiring
 
-`App.jsx` instantiates `useInventory` and `useTodayTasks`, then passes their data down as props. `usePomodoro` is instantiated inside `Timer` (it's timer-local state). The two hooks never talk to each other directly — `App` bridges them: when a task from Inventory is sent to Today it stores the source `inventoryId` on the today-task, and when that task is finished `App` also removes it from Inventory.
+`App.jsx` instantiates `useInventory` and `useTodayTasks`, then passes their data down as props. `usePomodoro` is instantiated inside `Timer` (it's timer-local state). `useTimetable` is instantiated inside `TodoToday` (not `App`) so its block totals can feed `AvailablePomodoros`' suggested-hours button. The hooks never talk to each other directly — `App`/`TodoToday` bridge them: when a task from Inventory is sent to Today it stores the source `inventoryId` on the today-task, and when that task is finished `App` also removes it from Inventory.
 
-`RecordsLog` and `Reports` receive no props and read storage directly on mount and on `pomodoro-data-changed` events.
+`RecordsLog` and `Reports` receive no props and read storage directly on mount and on `pomodoro-data-changed` events. `Reports` also renders `DayReview` (an end-of-day summary modal) and reads `diffII ?? diffI ?? diff` (see `effectiveDiff` in `Reports.jsx`) so a re-estimated task's stats reflect its latest commitment, not the stale original estimate.
 
 ### Styling
 

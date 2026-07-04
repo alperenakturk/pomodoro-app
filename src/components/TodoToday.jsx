@@ -1,6 +1,13 @@
 import { useState } from 'react'
+import { useTimetable } from '../hooks/useTimetable'
 import AvailablePomodoros from './AvailablePomodoros'
 import Timetable from './Timetable'
+
+function blockMinutes(block) {
+  const [sh, sm] = block.start.split(':').map(Number)
+  const [eh, em] = block.end.split(':').map(Number)
+  return Math.max(0, eh * 60 + em - (sh * 60 + sm))
+}
 
 // Rule 4: tasks estimated above this should be broken down into sub-tasks.
 const MAX_RECOMMENDED_ESTIMATE = 7
@@ -27,6 +34,8 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
   const [text, setText] = useState(task.text)
   const [estimate, setEstimate] = useState(task.estimate ?? '')
   const [type, setType] = useState(task.type ?? '')
+  const [reestimating, setReestimating] = useState(false)
+  const [reestimateValue, setReestimateValue] = useState('')
 
   function handleSave() {
     if (!text.trim()) return
@@ -43,6 +52,20 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
     setEstimate(task.estimate ?? '')
     setType(task.type ?? '')
     setEditing(false)
+  }
+
+  function openReestimate() {
+    const current = task.reestimate2 ?? task.reestimate1 ?? task.estimate
+    setReestimateValue(current != null ? String(current) : '')
+    setReestimating(true)
+  }
+
+  function submitReestimate(e) {
+    e.preventDefault()
+    const value = Number(reestimateValue)
+    if (!Number.isFinite(value) || value <= 0) return
+    onReestimate(task.id, value)
+    setReestimating(false)
   }
 
   if (editing) {
@@ -91,6 +114,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
   }
 
   return (
+    <>
     <li className={`${ROW_GRID} font-sans text-sm rounded-xl px-2 py-2 ${isActive ? 'bg-tomato/10' : ''}`}>
       <button
         type="button"
@@ -136,7 +160,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
       ) : (
         <button
           type="button"
-          onClick={() => onReestimate(task.id)}
+          onClick={openReestimate}
           className="text-sage text-xs text-right hover:text-tomato"
           aria-label="re-estimate task"
           title={
@@ -190,6 +214,36 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
         ✕
       </button>
     </li>
+    {reestimating && (
+      <li className="flex items-center gap-2 px-2 py-2 -mt-1 mb-1 bg-tomato/5 border border-tomato/20 rounded-xl">
+        <form onSubmit={submitReestimate} className="flex items-center gap-2 flex-1 flex-wrap">
+          <span className="text-sage text-xs">Re-estimate "{task.text}":</span>
+          <input
+            type="number"
+            min="1"
+            autoFocus
+            value={reestimateValue}
+            onChange={(e) => setReestimateValue(e.target.value)}
+            aria-label="New estimate"
+            className={`w-16 text-xs ${inputClass}`}
+          />
+          <button
+            type="submit"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => setReestimating(false)}
+            className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
+          >
+            Cancel
+          </button>
+        </form>
+      </li>
+    )}
+    </>
   )
 }
 
@@ -213,6 +267,10 @@ function TodoToday({
   const planned = tasks.filter((t) => !t.urgent)
   const urgentTasks = tasks.filter((t) => t.urgent)
   const plannedTotal = tasks.reduce((sum, t) => sum + (t.estimate || 0), 0)
+
+  const timetable = useTimetable()
+  const timetableHours =
+    timetable.blocks.reduce((sum, b) => sum + blockMinutes(b), 0) / 60
 
   function handleAddPlanned(e) {
     e.preventDefault()
@@ -241,8 +299,12 @@ function TodoToday({
         Today's Tasks
       </p>
 
-      <AvailablePomodoros plannedTotal={plannedTotal} />
-      <Timetable />
+      <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={timetableHours} />
+      <Timetable
+        blocks={timetable.blocks}
+        addBlock={timetable.addBlock}
+        removeBlock={timetable.removeBlock}
+      />
 
       <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4 items-end">
         <input

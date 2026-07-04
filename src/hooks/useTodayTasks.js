@@ -61,26 +61,18 @@ export function useTodayTasks() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   }, [])
 
-  // window.prompt is a side effect, so it's read from `tasks` here and kept
-  // out of the setTasks updater (same reasoning as finishTask below).
-  const reestimateTask = useCallback(
-    (id) => {
-      const task = tasks.find((t) => t.id === id)
-      if (!task) return
-      const currentGuess = task.reestimate2 ?? task.reestimate1 ?? task.estimate
-      const promptText =
-        `This task was estimated at ${task.estimate ?? '?'} pomodoro(s)` +
-        (task.reestimate1 != null ? `, last re-estimated to ${task.reestimate1}` : '') +
-        '. How many pomodoros do you think it needs now?'
-      const input = window.prompt(promptText, currentGuess != null ? String(currentGuess) : '')
-      if (input == null) return
-      const value = Number(input)
-      if (!Number.isFinite(value) || value <= 0) return
-      const slot = task.reestimate1 == null ? 'reestimate1' : 'reestimate2'
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, [slot]: value } : t)))
-    },
-    [tasks]
-  )
+  // Takes the new value directly (collected by an inline form in TaskRow)
+  // rather than prompting itself, so this stays a pure updater.
+  const reestimateTask = useCallback((id, value) => {
+    if (!Number.isFinite(value) || value <= 0) return
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t
+        const slot = t.reestimate1 == null ? 'reestimate1' : 'reestimate2'
+        return { ...t, [slot]: value }
+      })
+    )
+  }, [])
 
   const addInterruption = useCallback((id, kind, delta = 1) => {
     setTasks((prev) =>

@@ -145,7 +145,10 @@ Daily working list. Tasks are copied here from the Inventory each morning.
 | id          | Unique identifier                                     |
 | inventoryId | Reference to source task in Inventory                 |
 | title       | Task description (copied from Inventory)              |
-| estimate    | Estimated Pomodoros for today                         |
+| type        | Optional free-text category                           |
+| estimate    | Estimated Pomodoros for today (the original commitment) |
+| reestimate1 | Optional first re-estimate, set when the task is running long |
+| reestimate2 | Optional second re-estimate                            |
 | real        | Actual Pomodoros completed (auto-incremented)         |
 | diff        | real − estimate (auto-calculated)                     |
 | internal    | Count of internal interruptions (apostrophe `'`)      |
@@ -153,6 +156,7 @@ Daily working list. Tasks are copied here from the Inventory each morning.
 | done        | Boolean — task completed today                        |
 | unplanned   | Boolean — added during the day, not from Inventory    |
 | urgent      | Boolean — added to Unplanned & Urgent section         |
+| pairWith    | Optional free-text note of who this is being worked on with (no real-time sync — see Planning Aids) |
 
 **Storage key:** `pomodoro_today_tasks`
 
@@ -165,18 +169,28 @@ written bottom-up as they arrive.
 
 The archive. Each completed day's data is stored here for reporting.
 
-| Field     | Description                                              |
-|-----------|-----------------------------------------------------------|
-| date      | ISO date string                                          |
-| time      | Start time of activity (HH:MM)                          |
-| type      | Category/type of activity (optional, free text; set via Inventory/Today add forms or edited directly in the Records Log) |
-| activity  | Description                                              |
-| estimate  | Estimated Pomodoros                                      |
-| real      | Actual Pomodoros completed                               |
-| diff      | Estimation error (real − estimate), or `null` if no estimate was set |
-| internal  | Internal interruption count accrued while working the task |
-| external  | External interruption count accrued while working the task |
-| unplanned | Boolean — carried over from the Today task (qualitative-error tracking) |
+| Field       | Description                                              |
+|-------------|-----------------------------------------------------------|
+| date        | ISO date string                                          |
+| time        | Start time of activity (HH:MM)                          |
+| type        | Category/type of activity (optional, free text; set via Inventory/Today add forms or edited directly in the Records Log) |
+| activity    | Description                                              |
+| estimate    | Original estimated Pomodoros                             |
+| reestimate1 | Optional first re-estimate carried over from the Today task, or `null` |
+| reestimate2 | Optional second re-estimate carried over from the Today task, or `null` |
+| real        | Actual Pomodoros completed                               |
+| diff        | Estimation error vs. the original estimate (real − estimate), or `null` if no estimate was set |
+| diffI       | Estimation error vs. `reestimate1` (real − reestimate1), or `null` if never re-estimated |
+| diffII      | Estimation error vs. `reestimate2` (real − reestimate2), or `null` if never re-estimated a second time |
+| internal    | Internal interruption count accrued while working the task |
+| external    | External interruption count accrued while working the task |
+| unplanned   | Boolean — carried over from the Today task (qualitative-error tracking) |
+| pairWith    | Optional free-text note of who this was worked on with     |
+
+Reports aggregates (average estimation error, the estimation-trend chart) use
+whichever of `diffII`, `diffI`, `diff` is most recent for a record — the point
+of re-estimating is to judge accuracy against the latest commitment, not the
+now-stale original guess.
 
 **Storage key:** `pomodoro_activity_log`
 

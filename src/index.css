@@ -17,16 +17,24 @@
 
 /* Light theme: swaps the background/foreground roles of pine and cream so
    every existing bg-pine/text-cream/etc. utility keeps working unchanged —
-   only the token values differ. */
+   only the token values differ. Pine is warmed toward a peachy cream (rather
+   than neutral off-white) so the light theme still reads as "tomato" — the
+   tomato/amber accent tokens themselves are untouched. */
 .light {
-  --color-pine: #fbf8f1;
-  --color-pine-dark: #eee7d6;
+  --color-pine: #fdf0e6;
+  --color-pine-dark: #f5ddc9;
   --color-cream: #24312a;
   --color-sage: #5c6b5e;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
+  /* Tells the browser to render native form controls (select, checkbox,
+     scrollbars) for a dark UI by default — without this, some browsers
+     paint native control backgrounds light regardless of our CSS, which
+     swallows light-colored text set on them (e.g. the sound-style select). */
+  color-scheme: dark;
 }
 
 #root {

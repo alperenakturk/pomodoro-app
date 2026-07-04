@@ -1,28 +1,8 @@
 import { useState } from 'react'
 import { loadSettings } from '../lib/storage'
+import { countAvailablePomodoros } from '../lib/pomodoroMath'
 
-const WORK_MIN = 25
-const SHORT_BREAK_MIN = 5
-const LONG_BREAK_MIN = 15
-
-// Simulates work/break cycles to see how many full Pomodoros fit in the
-// available time — the "how many Pomodoros are actually available today"
-// planning step the methodology calls for before filling Today's Tasks.
-function countAvailablePomodoros(availableMinutes, cycleLength) {
-  let remaining = availableMinutes
-  let count = 0
-  while (remaining >= WORK_MIN) {
-    remaining -= WORK_MIN
-    count++
-    const isLongBreak = count % cycleLength === 0
-    const breakLen = isLongBreak ? LONG_BREAK_MIN : SHORT_BREAK_MIN
-    if (remaining < breakLen) break
-    remaining -= breakLen
-  }
-  return count
-}
-
-function AvailablePomodoros({ plannedTotal }) {
+function AvailablePomodoros({ plannedTotal, suggestedHours = 0 }) {
   const [hours, setHours] = useState('')
   const cycleLength = loadSettings().cycleLength
 
@@ -30,10 +10,11 @@ function AvailablePomodoros({ plannedTotal }) {
     hours === '' ? null : countAvailablePomodoros(Math.max(0, Number(hours) * 60), cycleLength)
 
   const overPlanned = available != null && plannedTotal > available
+  const roundedSuggestion = Math.round(suggestedHours * 2) / 2
 
   return (
     <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 mb-4 font-sans">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <label htmlFor="available-hours" className="text-sage text-xs whitespace-nowrap">
           Hours available today
         </label>
@@ -47,6 +28,16 @@ function AvailablePomodoros({ plannedTotal }) {
           placeholder="e.g. 6"
           className="w-16 bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-2 py-1 text-xs"
         />
+        {roundedSuggestion > 0 && String(roundedSuggestion) !== hours && (
+          <button
+            type="button"
+            onClick={() => setHours(String(roundedSuggestion))}
+            className="text-sage text-xs underline decoration-dotted hover:text-tomato"
+            title="Fill in from today's timetable blocks"
+          >
+            Use timetable ({roundedSuggestion}h)
+          </button>
+        )}
       </div>
       {available != null && (
         <p className="text-xs mt-2">

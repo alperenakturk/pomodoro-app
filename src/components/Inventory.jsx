@@ -217,8 +217,14 @@ function Inventory({
   }
 
   function handleCombine() {
-    combineItems([...selectedIds])
-    setSelectedIds(new Set())
+    if (
+      window.confirm(
+        `Combine ${selectedIds.size} tasks into one? The originals will be replaced and this can't be undone.`
+      )
+    ) {
+      combineItems([...selectedIds])
+      setSelectedIds(new Set())
+    }
   }
 
   function handleAdd(e) {

@@ -1,16 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useTimetable } from '../hooks/useTimetable'
+import { isCurrentBlock } from '../lib/timetable'
 
 function currentTimeString(date) {
   return date.toTimeString().slice(0, 5)
 }
 
-function isCurrentBlock(block, now) {
-  return block.start <= now && now <= block.end
-}
-
-function Timetable() {
-  const { blocks, addBlock, removeBlock } = useTimetable()
+function Timetable({ blocks, addBlock, removeBlock }) {
   const [start, setStart] = useState('')
   const [end, setEnd] = useState('')
   const [label, setLabel] = useState('')
