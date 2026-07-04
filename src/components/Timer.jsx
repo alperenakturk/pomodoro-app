@@ -1,9 +1,9 @@
 import { usePomodoro } from '../hooks/usePomodoro'
 
 const LABELS = {
-  work: 'Çalışma',
-  shortBreak: 'Kısa mola',
-  longBreak: 'Uzun mola',
+  work: 'Work',
+  shortBreak: 'Short break',
+  longBreak: 'Long break',
 }
 
 function formatTime(totalSeconds) {
@@ -18,17 +18,20 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     secondsLeft,
     isRunning,
     completedPomodoros,
+    internalCount,
+    externalCount,
     start,
     voidPomodoro,
     skipBreak,
     logInterruption,
+    undoInterruption,
   } = usePomodoro({ onWorkComplete, onInterruption })
 
   const isWork = sessionType === 'work'
   const accentClass = isWork ? 'text-tomato' : 'text-amber'
 
   function handleVoid() {
-    if (window.confirm('Bu Pomodoro boşa çıkarılacak ve baştan sayılmayacak. Emin misin?')) {
+    if (window.confirm('This Pomodoro will be voided and won\'t count. Are you sure?')) {
       voidPomodoro()
     }
   }
@@ -36,11 +39,11 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
   return (
     <div className="flex flex-col items-center gap-6">
       <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
-        {LABELS[sessionType]} - Tamamlanan: {completedPomodoros}
+        {LABELS[sessionType]} - Completed: {completedPomodoros}
       </p>
 
       <p className="font-sans text-sm text-ink min-h-5 text-center">
-        {activeTask ? activeTask.text : 'Aktif görev seçilmedi'}
+        {activeTask ? activeTask.text : 'No active task selected'}
       </p>
 
       <p className="font-display text-7xl text-ink tracking-tight tabular-nums">
@@ -54,7 +57,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             onClick={start}
             className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
           >
-            Başlat
+            Start
           </button>
         )}
         {isRunning && isWork && (
@@ -63,7 +66,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             onClick={handleVoid}
             className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
           >
-            Pomodoro'yu boşa çıkar
+            Void Pomodoro
           </button>
         )}
         {isRunning && !isWork && (
@@ -72,29 +75,51 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
             onClick={skipBreak}
             className="font-sans px-7 py-3 rounded-full border border-sage text-ink text-sm tracking-wide"
           >
-            Molayı atla
+            Skip break
           </button>
         )}
       </div>
 
       {isWork && (
         <div className="flex flex-col items-center gap-2 pt-4 border-t border-sage/30 w-full">
-          <p className="text-sage text-xs font-sans">Bir kesinti mi oldu?</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => logInterruption('internal')}
-              className="font-sans px-4 py-2 rounded-full border border-sage text-ink text-xs"
-            >
-              İç kesinti
-            </button>
-            <button
-              type="button"
-              onClick={() => logInterruption('external')}
-              className="font-sans px-4 py-2 rounded-full border border-sage text-ink text-xs"
-            >
-              Dış kesinti
-            </button>
+          <p className="text-sage text-xs font-sans">Had an interruption?</p>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => logInterruption('internal')}
+                className="font-sans px-4 py-2 rounded-full border border-sage text-ink text-xs"
+              >
+                Internal interruption ({internalCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => undoInterruption('internal')}
+                disabled={internalCount === 0}
+                className="font-sans w-6 h-6 rounded-full border border-sage text-ink text-xs disabled:opacity-30"
+                aria-label="undo internal interruption"
+              >
+                -1
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => logInterruption('external')}
+                className="font-sans px-4 py-2 rounded-full border border-sage text-ink text-xs"
+              >
+                External interruption ({externalCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => undoInterruption('external')}
+                disabled={externalCount === 0}
+                className="font-sans w-6 h-6 rounded-full border border-sage text-ink text-xs disabled:opacity-30"
+                aria-label="undo external interruption"
+              >
+                -1
+              </button>
+            </div>
           </div>
         </div>
       )}

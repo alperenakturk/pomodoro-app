@@ -55,16 +55,16 @@ function Reports() {
   return (
     <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
       <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Raporlar
+        Reports
       </p>
 
       <div className="grid grid-cols-2 gap-3 font-sans">
-        <Stat label="Bugün" value={todayPomodoros} />
-        <Stat label="Son 7 gün" value={weekPomodoros} />
-        <Stat label="İç kesinti (7g)" value={internalCount} />
-        <Stat label="Dış kesinti (7g)" value={externalCount} />
+        <Stat label="Today" value={todayPomodoros} />
+        <Stat label="Last 7 days" value={weekPomodoros} />
+        <Stat label="Internal interruptions (7d)" value={internalCount} />
+        <Stat label="External interruptions (7d)" value={externalCount} />
         <div className="col-span-2">
-          <Stat label="Plansız görev (7g)" value={unplannedCount} />
+          <Stat label="Unplanned tasks (7d)" value={unplannedCount} />
         </div>
       </div>
     </div>

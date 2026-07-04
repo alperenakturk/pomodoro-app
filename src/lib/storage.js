@@ -57,3 +57,18 @@ export function addTick(tick) {
   notifyChange()
   return ticks
 }
+
+// Kesinti butonuna yanlışlıkla basılırsa geri almak için: aynı türden en
+// son tick'i siler.
+export function removeLastTick(type) {
+  const ticks = loadTicks()
+  for (let i = ticks.length - 1; i >= 0; i--) {
+    if (ticks[i].type === type) {
+      ticks.splice(i, 1)
+      saveTicks(ticks)
+      notifyChange()
+      break
+    }
+  }
+  return ticks
+}

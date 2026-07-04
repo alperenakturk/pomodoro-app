@@ -39,14 +39,14 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
           'w-4 h-4 rounded-full border flex-shrink-0 ' +
           (isActive ? 'bg-tomato border-tomato' : 'border-sage')
         }
-        aria-label="aktif görev yap"
+        aria-label="make active task"
       />
       <span className={task.done ? 'line-through text-sage flex-1' : 'flex-1 text-ink'}>
         {task.text}
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
             className="text-tomato ml-1"
-            title={`${MAX_RECOMMENDED_ESTIMATE}'den fazla — böl (Rule 4)`}
+            title={`More than ${MAX_RECOMMENDED_ESTIMATE} — break it up (Rule 4)`}
           >
             ⚠
           </span>
@@ -59,7 +59,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
           onClick={() => onFinish(task.id)}
           className="text-tomato text-xs"
         >
-          Bitir
+          Finish
         </button>
       )}
       <button
@@ -67,7 +67,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
         onClick={() => onRemove(task.id)}
         className="text-sage text-xs"
       >
-        Sil
+        Delete
       </button>
     </li>
   )
@@ -99,43 +99,49 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
   return (
     <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
       <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Bugünün görevleri
+        Today's tasks
       </p>
 
-      <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4">
+      <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4 items-end">
         <input
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Yeni görev..."
-          className="flex-1 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          placeholder="New task..."
+          className="flex-1 min-w-0 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
         />
-        <input
-          type="number"
-          min="1"
-          value={estimate}
-          onChange={(e) => setEstimate(e.target.value)}
-          placeholder="pom."
-          className="w-16 font-sans text-sm px-2 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
-        />
+        <div className="flex flex-col gap-1">
+          <label htmlFor="today-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
+            Est.
+          </label>
+          <input
+            id="today-estimate"
+            type="number"
+            min="1"
+            value={estimate}
+            onChange={(e) => setEstimate(e.target.value)}
+            placeholder="# pomodoros"
+            className="w-20 font-sans text-sm px-2 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          />
+        </div>
         <button
           type="submit"
           className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream"
         >
-          Ekle
+          Add
         </button>
       </form>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
         <p className="text-tomato text-xs font-sans mb-4 -mt-2">
-          {MAX_RECOMMENDED_ESTIMATE}'den fazla pomodoro — görevi alt görevlere böl (Rule 4).
+          More than {MAX_RECOMMENDED_ESTIMATE} pomodoros — break the task into sub-tasks (Rule 4).
         </p>
       )}
 
       <ul className="flex flex-col gap-1 mb-4">
         {planned.length === 0 && (
           <li className="text-sage text-sm font-sans text-center py-2">
-            Henüz görev yok.
+            No tasks yet.
           </li>
         )}
         {planned.map((task) => (
@@ -151,20 +157,20 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
       </ul>
 
       <p className="text-sage text-xs font-sans uppercase tracking-wide mb-2">
-        Plansız ve acil
+        Unplanned & urgent
       </p>
       <form onSubmit={handleAddUnplanned} className="flex gap-2 mb-2">
         <input
           name="unplannedText"
           type="text"
-          placeholder="Aniden çıkan iş..."
+          placeholder="Sudden task..."
           className="flex-1 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
         />
         <button
           type="submit"
           className="font-sans text-sm px-4 py-2 rounded-xl border border-sage text-ink"
         >
-          Ekle
+          Add
         </button>
       </form>
       <ul className="flex flex-col gap-1">

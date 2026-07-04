@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { addTick } from '../lib/storage'
+import { addTick, removeLastTick } from '../lib/storage'
 
 const DURATIONS = {
   work: 25 * 60,
@@ -16,6 +16,8 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   const [secondsLeft, setSecondsLeft] = useState(DURATIONS.work)
   const [isRunning, setIsRunning] = useState(false)
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
+  const [internalCount, setInternalCount] = useState(0)
+  const [externalCount, setExternalCount] = useState(0)
 
   useEffect(() => {
     if (!isRunning) return
@@ -78,9 +80,24 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
         date: todayString(),
         timestamp: new Date().toISOString(),
       })
-      onInterruption && onInterruption(kind)
+      if (kind === 'internal') setInternalCount((c) => c + 1)
+      else setExternalCount((c) => c + 1)
+      onInterruption && onInterruption(kind, 1)
     },
     [onInterruption]
+  )
+
+  // Yanlışlıkla eklenen bir kesintiyi geri alır — sayaç 0'ın altına inmez.
+  const undoInterruption = useCallback(
+    (kind) => {
+      const count = kind === 'internal' ? internalCount : externalCount
+      if (count <= 0) return
+      removeLastTick(kind === 'internal' ? 'interruption-internal' : 'interruption-external')
+      if (kind === 'internal') setInternalCount((c) => c - 1)
+      else setExternalCount((c) => c - 1)
+      onInterruption && onInterruption(kind, -1)
+    },
+    [internalCount, externalCount, onInterruption]
   )
 
   return {
@@ -88,9 +105,12 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     secondsLeft,
     isRunning,
     completedPomodoros,
+    internalCount,
+    externalCount,
     start,
     voidPomodoro,
     skipBreak,
     logInterruption,
+    undoInterruption,
   }
 }

@@ -33,8 +33,8 @@ function App() {
             onWorkComplete={() => {
               if (todayApi.activeTaskId) todayApi.incrementRealized(todayApi.activeTaskId)
             }}
-            onInterruption={(kind) => {
-              if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind)
+            onInterruption={(kind, delta) => {
+              if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind, delta)
             }}
           />
         </div>

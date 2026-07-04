@@ -44,13 +44,12 @@ export function useTodayTasks() {
     )
   }, [])
 
-  const addInterruption = useCallback((id, kind) => {
+  const addInterruption = useCallback((id, kind, delta = 1) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t
-        return kind === 'internal'
-          ? { ...t, internal: t.internal + 1 }
-          : { ...t, external: t.external + 1 }
+        const key = kind === 'internal' ? 'internal' : 'external'
+        return { ...t, [key]: Math.max(0, t[key] + delta) }
       })
     )
   }, [])

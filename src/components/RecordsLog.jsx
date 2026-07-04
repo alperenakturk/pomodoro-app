@@ -14,12 +14,12 @@ function RecordsLog() {
   return (
     <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
       <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Kayıtlar
+        Records
       </p>
 
       {recent.length === 0 && (
         <p className="text-sage text-sm font-sans text-center py-2">
-          Henüz tamamlanmış görev yok.
+          No completed tasks yet.
         </p>
       )}
 
@@ -31,14 +31,14 @@ function RecordsLog() {
               <span className="text-sage text-xs">{r.date}</span>
             </div>
             <div className="text-sage text-xs flex gap-3 mt-1">
-              <span>Tahmin: {r.estimate ?? '-'}</span>
-              <span>Gerçek: {r.real}</span>
+              <span>Estimate: {r.estimate ?? '-'}</span>
+              <span>Actual: {r.real}</span>
               <span
                 className={
                   r.diff > 0 ? 'text-tomato' : r.diff < 0 ? 'text-amber' : ''
                 }
               >
-                Fark: {r.diff == null ? '-' : `${r.diff > 0 ? '+' : ''}${r.diff}`}
+                Diff: {r.diff == null ? '-' : `${r.diff > 0 ? '+' : ''}${r.diff}`}
               </span>
             </div>
           </li>
