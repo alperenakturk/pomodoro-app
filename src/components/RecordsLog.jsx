@@ -12,9 +12,9 @@ function RecordsLog() {
   const recent = [...log].reverse().slice(0, 8)
 
   return (
-    <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
-      <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Records
+    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
+        Records Log
       </p>
 
       {recent.length === 0 && (
@@ -25,8 +25,8 @@ function RecordsLog() {
 
       <ul className="flex flex-col gap-2 font-sans text-sm">
         {recent.map((r) => (
-          <li key={r.id} className="border-b border-sage/20 pb-2">
-            <div className="flex justify-between text-ink">
+          <li key={r.id} className="border-b border-cream/10 pb-2">
+            <div className="flex justify-between text-cream">
               <span>{r.activity}</span>
               <span className="text-sage text-xs">{r.date}</span>
             </div>

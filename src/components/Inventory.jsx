@@ -3,6 +3,9 @@ import { useState } from 'react'
 // Rule 4: tasks estimated above this should be broken down into sub-tasks.
 const MAX_RECOMMENDED_ESTIMATE = 7
 
+const inputClass =
+  'bg-cream/5 border border-cream/15 rounded-xl text-cream placeholder:text-sage/50 outline-none focus:border-tomato px-3 py-2 text-sm font-sans'
+
 function isOverdue(deadline) {
   if (!deadline) return false
   return deadline < new Date().toISOString().slice(0, 10)
@@ -31,10 +34,13 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
   }
 
   return (
-    <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
-      <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Inventory
-      </p>
+    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
+          Activity Inventory
+        </p>
+        <span className="text-sage text-xs font-sans">{items.length} items</span>
+      </div>
 
       <form onSubmit={handleAdd} className="flex gap-2 mb-4 items-end">
         <input
@@ -42,7 +48,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="New task..."
-          className="flex-1 min-w-0 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          className={`flex-1 min-w-0 ${inputClass}`}
         />
         <div className="flex flex-col gap-1">
           <label htmlFor="inventory-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
@@ -55,7 +61,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
             placeholder="# pomodoros"
-            className="w-20 font-sans text-sm px-2 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+            className={`w-20 px-2 ${inputClass}`}
           />
         </div>
         <button
@@ -72,13 +78,13 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Note (optional)"
-          className="flex-1 font-sans text-xs px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          className={`flex-1 text-xs ${inputClass}`}
         />
         <input
           type="date"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
-          className="font-sans text-xs px-2 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          className={`text-xs ${inputClass}`}
         />
         <label className="flex items-center gap-1 text-sage text-xs font-sans whitespace-nowrap">
           <input
@@ -105,7 +111,7 @@ function Inventory({ items, addItem, removeItem, toggleDone, onSendToToday }) {
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-col gap-1 font-sans text-sm text-ink border-b border-sage/10 pb-2 last:border-0"
+            className="flex flex-col gap-1 font-sans text-sm text-cream border-b border-cream/10 pb-2 last:border-0"
           >
             <div className="flex items-center gap-2">
               <button

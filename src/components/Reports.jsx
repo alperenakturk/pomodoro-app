@@ -53,8 +53,8 @@ function Reports() {
   ).length
 
   return (
-    <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
-      <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
+    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
         Reports
       </p>
 
@@ -73,8 +73,8 @@ function Reports() {
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-pine/5 rounded-xl px-3 py-3 text-center">
-      <p className="font-display text-2xl text-ink">{value}</p>
+    <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 text-center">
+      <p className="font-display text-2xl text-cream">{value}</p>
       <p className="text-sage text-xs mt-1">{label}</p>
     </div>
   )

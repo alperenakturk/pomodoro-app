@@ -3,35 +3,27 @@ import { useState } from 'react'
 // Rule 4: tasks estimated above this should be broken down into sub-tasks.
 const MAX_RECOMMENDED_ESTIMATE = 7
 
-function EstimateBoxes({ estimate, realized }) {
-  if (!estimate) {
-    return <span className="text-sage text-xs">{realized} pom.</span>
-  }
-  const total = Math.max(estimate, realized)
-  const boxes = Array.from({ length: total }, (_, i) => i < realized)
-  return (
-    <span className="flex gap-1">
-      {boxes.map((filled, i) => (
-        <span
-          key={i}
-          className={
-            'w-3 h-3 rounded-sm border ' +
-            (filled ? 'bg-tomato border-tomato' : 'border-sage/50')
-          }
-        />
-      ))}
-    </span>
-  )
+const inputClass =
+  'bg-cream/5 border border-cream/15 rounded-xl text-cream placeholder:text-sage/50 outline-none focus:border-tomato px-3 py-2 text-sm font-sans'
+
+const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_26px_26px_26px_16px_16px] gap-1.5 items-center'
+
+function diffOf(task) {
+  return task.estimate != null ? task.realized - task.estimate : null
+}
+
+function diffClass(diff) {
+  if (diff == null) return 'text-sage'
+  if (diff > 0) return 'text-tomato'
+  if (diff < 0) return 'text-amber'
+  return 'text-cream'
 }
 
 function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
+  const diff = diffOf(task)
+
   return (
-    <li
-      className={
-        'flex items-center gap-2 font-sans text-sm rounded-xl px-2 py-2 ' +
-        (isActive ? 'bg-tomato/10' : '')
-      }
-    >
+    <li className={`${ROW_GRID} font-sans text-sm rounded-xl px-2 py-2 ${isActive ? 'bg-tomato/10' : ''}`}>
       <button
         type="button"
         onClick={() => onSelect(task.id)}
@@ -41,7 +33,10 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
         }
         aria-label="make active task"
       />
-      <span className={task.done ? 'line-through text-sage flex-1' : 'flex-1 text-ink'}>
+      <span
+        title={task.text}
+        className={`truncate ${task.done ? 'line-through text-sage' : 'text-cream'}`}
+      >
         {task.text}
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
@@ -52,22 +47,31 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove }) {
           </span>
         )}
       </span>
-      <EstimateBoxes estimate={task.estimate} realized={task.realized} />
+      <span className="text-sage text-xs text-right">{task.estimate ?? '-'}</span>
+      <span className="text-sage text-xs text-right">{task.realized}</span>
+      <span className={`text-xs text-right ${diffClass(diff)}`}>
+        {diff == null ? '-' : `${diff > 0 ? '+' : ''}${diff}`}
+      </span>
       {!task.done && (
         <button
           type="button"
           onClick={() => onFinish(task.id)}
-          className="text-tomato text-xs"
+          className="text-tomato text-xs leading-none"
+          title="Finish task"
+          aria-label="finish task"
         >
-          Finish
+          ✓
         </button>
       )}
+      {task.done && <span />}
       <button
         type="button"
         onClick={() => onRemove(task.id)}
-        className="text-sage text-xs"
+        className="text-sage text-xs leading-none"
+        title="Delete task"
+        aria-label="delete task"
       >
-        Delete
+        ✕
       </button>
     </li>
   )
@@ -97,9 +101,9 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
   }
 
   return (
-    <div className="bg-cream rounded-3xl px-6 py-6 shadow-xl w-full h-full">
-      <p className="font-display text-tomato text-xs tracking-widest uppercase mb-4">
-        Today's tasks
+    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
+        Today's Tasks
       </p>
 
       <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4 items-end">
@@ -108,7 +112,7 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="New task..."
-          className="flex-1 min-w-0 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+          className={`flex-1 min-w-0 ${inputClass}`}
         />
         <div className="flex flex-col gap-1">
           <label htmlFor="today-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
@@ -121,7 +125,7 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
             placeholder="# pomodoros"
-            className="w-20 font-sans text-sm px-2 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
+            className={`w-20 px-2 ${inputClass}`}
           />
         </div>
         <button
@@ -137,6 +141,16 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
           More than {MAX_RECOMMENDED_ESTIMATE} pomodoros — break the task into sub-tasks (Rule 4).
         </p>
       )}
+
+      <div className={`${ROW_GRID} px-2 mb-1`}>
+        <span />
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide">Task</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Est.</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Real</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Diff</span>
+        <span />
+        <span />
+      </div>
 
       <ul className="flex flex-col gap-1 mb-4">
         {planned.length === 0 && (
@@ -156,35 +170,38 @@ function TodoToday({ tasks, activeTaskId, setActiveTaskId, addTask, removeTask, 
         ))}
       </ul>
 
-      <p className="text-sage text-xs font-sans uppercase tracking-wide mb-2">
-        Unplanned & urgent
-      </p>
-      <form onSubmit={handleAddUnplanned} className="flex gap-2 mb-2">
-        <input
-          name="unplannedText"
-          type="text"
-          placeholder="Sudden task..."
-          className="flex-1 font-sans text-sm px-3 py-2 rounded-xl border border-sage/40 text-ink outline-none focus:border-tomato"
-        />
-        <button
-          type="submit"
-          className="font-sans text-sm px-4 py-2 rounded-xl border border-sage text-ink"
-        >
-          Add
-        </button>
-      </form>
-      <ul className="flex flex-col gap-1">
-        {unplanned.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            isActive={task.id === activeTaskId}
-            onSelect={setActiveTaskId}
-            onFinish={finishTask}
-            onRemove={removeTask}
+      <div className="bg-tomato/5 border border-tomato/20 rounded-2xl p-3">
+        <p className="flex items-center gap-2 text-tomato text-xs font-sans uppercase tracking-wide mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-tomato" />
+          Unplanned &amp; Urgent
+        </p>
+        <form onSubmit={handleAddUnplanned} className="flex gap-2 mb-2">
+          <input
+            name="unplannedText"
+            type="text"
+            placeholder="Sudden task..."
+            className={`flex-1 ${inputClass}`}
           />
-        ))}
-      </ul>
+          <button
+            type="submit"
+            className="font-sans text-sm px-4 py-2 rounded-xl border border-cream/20 text-cream"
+          >
+            Add
+          </button>
+        </form>
+        <ul className="flex flex-col gap-1">
+          {unplanned.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              isActive={task.id === activeTaskId}
+              onSelect={setActiveTaskId}
+              onFinish={finishTask}
+              onRemove={removeTask}
+            />
+          ))}
+        </ul>
+      </div>
     </div>
   )
 }

@@ -24,10 +24,37 @@ function App() {
     if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
   }
 
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+
   return (
-    <div className="min-h-screen bg-pine p-6">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
-        <div className="bg-cream rounded-3xl px-10 py-10 shadow-2xl text-center lg:sticky lg:top-6">
+    <div className="min-h-screen bg-pine">
+      <header className="border-b border-cream/10 px-6 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-tomato" />
+          <p className="text-sage text-xs font-sans tracking-widest uppercase">
+            Pomodoro Technique
+          </p>
+        </div>
+        <p className="text-sage text-xs font-sans">{today}</p>
+      </header>
+
+      <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-[380px_1fr_380px] gap-6 items-start">
+        <div className="flex flex-col gap-6">
+          <Inventory
+            items={inventoryApi.items}
+            addItem={inventoryApi.addItem}
+            removeItem={inventoryApi.removeItem}
+            toggleDone={inventoryApi.toggleDone}
+            onSendToToday={handleSendToToday}
+          />
+          <RecordsLog />
+        </div>
+
+        <div className="flex justify-center lg:sticky lg:top-6">
           <Timer
             activeTask={activeTask}
             onWorkComplete={() => {
@@ -39,15 +66,7 @@ function App() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Inventory
-            items={inventoryApi.items}
-            addItem={inventoryApi.addItem}
-            removeItem={inventoryApi.removeItem}
-            toggleDone={inventoryApi.toggleDone}
-            onSendToToday={handleSendToToday}
-          />
-
+        <div className="flex flex-col gap-6">
           <TodoToday
             tasks={todayApi.tasks}
             activeTaskId={todayApi.activeTaskId}
@@ -56,8 +75,6 @@ function App() {
             removeTask={todayApi.removeTask}
             finishTask={handleFinishTask}
           />
-
-          <RecordsLog />
           <Reports />
         </div>
       </div>
