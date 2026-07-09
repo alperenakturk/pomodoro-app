@@ -9,24 +9,51 @@ import {
 import { activityLogToCSV, downloadFile } from '../lib/export'
 import { compactInputClass as inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
+import CategorySelect from './CategorySelect'
+import CategoryTagPicker from './CategoryTagPicker'
 
 function recomputeDiff(estimate, real) {
   return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
 }
 
-function RecordRow({ record, onDelete }) {
+function CategoryTag({ category }) {
+  return (
+    <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2 inline-flex items-center gap-1">
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: category.color }}
+        aria-hidden="true"
+      />
+      {category.name}
+    </span>
+  )
+}
+
+function CategoryTags({ categoryIds, categories }) {
+  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
+  return (
+    <>
+      {resolved.map((category) => (
+        <CategoryTag key={category.id} category={category} />
+      ))}
+    </>
+  )
+}
+
+function RecordRow({ record, categories, onDelete }) {
   const [editing, setEditing] = useState(false)
   const [activity, setActivity] = useState(record.activity)
-  const [type, setType] = useState(record.type ?? '')
+  const [categoryIds, setCategoryIds] = useState(record.categoryIds ?? [])
   const [estimate, setEstimate] = useState(record.estimate ?? '')
   const [real, setReal] = useState(record.real)
+  const [notesExpanded, setNotesExpanded] = useState(false)
 
   function handleSave() {
     const nextEstimate = estimate === '' ? null : Number(estimate)
     const nextReal = Number(real)
     updateActivityRecord(record.id, {
       activity: activity.trim() || record.activity,
-      type: type.trim(),
+      categoryIds,
       estimate: nextEstimate,
       real: nextReal,
       diff: recomputeDiff(nextEstimate, nextReal),
@@ -38,7 +65,7 @@ function RecordRow({ record, onDelete }) {
 
   function handleCancel() {
     setActivity(record.activity)
-    setType(record.type ?? '')
+    setCategoryIds(record.categoryIds ?? [])
     setEstimate(record.estimate ?? '')
     setReal(record.real)
     setEditing(false)
@@ -54,13 +81,7 @@ function RecordRow({ record, onDelete }) {
             aria-label="Activity name"
             className={`flex-1 ${inputClass}`}
           />
-          <input
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="Category"
-            aria-label="Category"
-            className={`w-24 ${inputClass}`}
-          />
+          <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={`est-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
@@ -109,19 +130,24 @@ function RecordRow({ record, onDelete }) {
       <div className="flex justify-between text-cream">
         <span>
           {record.activity}
-          {record.type && (
-            <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2">
-              {record.type}
-            </span>
-          )}
-          {record.pairWith && (
-            <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2">
-              with {record.pairWith}
-            </span>
+          <CategoryTags categoryIds={record.categoryIds} categories={categories} />
+          {record.notes && (
+            <button
+              type="button"
+              onClick={() => setNotesExpanded((prev) => !prev)}
+              className="text-sage text-xs ml-2 hover:text-cream"
+              aria-expanded={notesExpanded}
+              title={notesExpanded ? 'Hide description' : 'Show description'}
+            >
+              {notesExpanded ? '📝▾' : '📝'}
+            </button>
           )}
         </span>
         <span className="text-sage text-xs">{record.date}</span>
       </div>
+      {notesExpanded && record.notes && (
+        <p className="text-sage text-xs whitespace-pre-wrap mt-1">{record.notes}</p>
+      )}
       <div className="text-sage text-xs flex gap-3 mt-1 items-center">
         <span>Estimate: {record.estimate ?? '-'}</span>
         <span>Actual: {record.real}</span>
@@ -155,8 +181,12 @@ function RecordRow({ record, onDelete }) {
   )
 }
 
-function RecordsLog() {
+function RecordsLog({ categories = [] }) {
   const [log, setLog] = useState(() => loadActivityLog())
+  const [dateFilter, setDateFilter] = useState('')
+  // undefined = no category filter ("all"); null = filter to uncategorized
+  // only — those two must stay distinct, see CategorySelect's allowAll note.
+  const [categoryFilter, setCategoryFilter] = useState(undefined)
 
   useEffect(() => {
     const unsubscribe = subscribeToChanges(() => setLog(loadActivityLog()))
@@ -170,7 +200,7 @@ function RecordsLog() {
   }
 
   function handleExportCSV() {
-    downloadFile('pomodoro-records.csv', activityLogToCSV(log), 'text/csv')
+    downloadFile('pomodoro-records.csv', activityLogToCSV(log, categories), 'text/csv')
   }
 
   function handleExportJSON() {
@@ -181,7 +211,25 @@ function RecordsLog() {
     )
   }
 
-  const recent = [...log].reverse().slice(0, 8)
+  const filtersActive = dateFilter !== '' || categoryFilter !== undefined
+  // categoryFilter is one of: undefined (no filter), null ("Uncategorized"
+  // only — records with an empty categoryIds array), or a category id (match
+  // if that id is ANY of the record's tags, since a record can carry several).
+  const filtered = log.filter((r) => {
+    if (dateFilter !== '' && r.date !== dateFilter) return false
+    if (categoryFilter === undefined) return true
+    if (categoryFilter === null) return r.categoryIds.length === 0
+    return r.categoryIds.includes(categoryFilter)
+  })
+  // With no filters, cap at the 8 most recent so the log doesn't grow
+  // unbounded; once the user has deliberately narrowed it down (item 5:
+  // date + category, AND logic), show every match instead of just the tail.
+  const recent = filtersActive ? [...filtered].reverse() : [...filtered].reverse().slice(0, 8)
+
+  function clearFilters() {
+    setDateFilter('')
+    setCategoryFilter(undefined)
+  }
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
@@ -209,15 +257,42 @@ function RecordsLog() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          aria-label="Filter by date"
+          className={inputClass}
+        />
+        <CategorySelect
+          categories={categories}
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          allowAll
+          allLabel="All categories"
+          className="w-32"
+        />
+        {filtersActive && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-sage text-xs underline decoration-dotted"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {recent.length === 0 && (
         <p className="text-sage text-sm font-sans text-center py-2">
-          No completed tasks yet.
+          {filtersActive ? 'No records match these filters.' : 'No completed tasks yet.'}
         </p>
       )}
 
       <ul className="flex flex-col gap-2 font-sans text-sm">
         {recent.map((r) => (
-          <RecordRow key={r.id} record={r} onDelete={handleDelete} />
+          <RecordRow key={r.id} record={r} categories={categories} onDelete={handleDelete} />
         ))}
       </ul>
     </div>

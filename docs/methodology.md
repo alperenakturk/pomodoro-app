@@ -122,15 +122,16 @@ until they fill a full Pomodoro.
 
 The master backlog of all tasks. Tasks live here until done or deleted.
 
-| Field    | Description                                              |
-|----------|----------------------------------------------------------|
-| id       | Unique identifier                                        |
-| title    | Task description                                         |
-| estimate | Number of Pomodoros estimated (integer, ≥ 1)             |
-| notes    | Optional notes                                           |
-| unplanned| Boolean — was this task unplanned? (marked "U")          |
-| deadline | Optional date string                                     |
-| done     | Boolean — completed and crossed out                      |
+| Field      | Description                                              |
+|------------|----------------------------------------------------------|
+| id         | Unique identifier                                        |
+| title      | Task description                                         |
+| estimate   | Number of Pomodoros estimated (integer, ≥ 1)             |
+| notes      | Optional long-text description (collapsed in the list view, expand on click) |
+| categoryId | Reference to a user-defined Category, or `null` (see Categories below) |
+| unplanned  | Boolean — was this task unplanned? (marked "U")          |
+| deadline   | Optional date string                                     |
+| done       | Boolean — completed and crossed out                      |
 
 **Storage key:** `pomodoro_inventory`
 
@@ -145,7 +146,8 @@ Daily working list. Tasks are copied here from the Inventory each morning.
 | id          | Unique identifier                                     |
 | inventoryId | Reference to source task in Inventory                 |
 | title       | Task description (copied from Inventory)              |
-| type        | Optional free-text category                           |
+| categoryId  | Reference to a user-defined Category, or `null` — carried over when copied from Inventory |
+| notes       | Optional long-text description — carried over when copied from Inventory |
 | estimate    | Estimated Pomodoros for today (the original commitment) |
 | reestimate1 | Optional first re-estimate, set when the task is running long |
 | reestimate2 | Optional second re-estimate                            |
@@ -156,7 +158,6 @@ Daily working list. Tasks are copied here from the Inventory each morning.
 | done        | Boolean — task completed today                        |
 | unplanned   | Boolean — added during the day, not from Inventory    |
 | urgent      | Boolean — added to Unplanned & Urgent section         |
-| pairWith    | Optional free-text note of who this is being worked on with (no real-time sync — see Planning Aids) |
 
 **Storage key:** `pomodoro_today_tasks`
 
@@ -173,8 +174,9 @@ The archive. Each completed day's data is stored here for reporting.
 |-------------|-----------------------------------------------------------|
 | date        | ISO date string                                          |
 | time        | Start time of activity (HH:MM)                          |
-| type        | Category/type of activity (optional, free text; set via Inventory/Today add forms or edited directly in the Records Log) |
+| categoryId  | Reference to a user-defined Category, or `null` — carried over from the Today task |
 | activity    | Description                                              |
+| notes       | Optional long-text description, carried over from the Today task |
 | estimate    | Original estimated Pomodoros                             |
 | reestimate1 | Optional first re-estimate carried over from the Today task, or `null` |
 | reestimate2 | Optional second re-estimate carried over from the Today task, or `null` |
@@ -185,7 +187,6 @@ The archive. Each completed day's data is stored here for reporting.
 | internal    | Internal interruption count accrued while working the task |
 | external    | External interruption count accrued while working the task |
 | unplanned   | Boolean — carried over from the Today task (qualitative-error tracking) |
-| pairWith    | Optional free-text note of who this was worked on with     |
 
 Reports aggregates (average estimation error, the estimation-trend chart) use
 whichever of `diffII`, `diffI`, `diff` is most recent for a record — the point
@@ -193,6 +194,24 @@ of re-estimating is to judge accuracy against the latest commitment, not the
 now-stale original guess.
 
 **Storage key:** `pomodoro_activity_log`
+
+---
+
+### Categories
+
+User-defined labels (name + a color from a small curated palette) that
+replace what used to be a free-text "type" field on Inventory/Today/Records.
+Deleting a category doesn't cascade — tasks/records referencing it just fall
+back to showing "no category"/"Uncategorized," the same graceful handling
+already needed for legacy data saved before Categories existed.
+
+| Field | Description                          |
+|-------|---------------------------------------|
+| id    | Unique identifier                     |
+| name  | Category name                         |
+| color | Hex color, from the curated palette   |
+
+**Storage key:** `pomodoro_categories`
 
 ---
 
@@ -327,7 +346,7 @@ WORK (25 min)
 - **Timetable** (`Timetable.jsx`) — define time blocks for the day (e.g. 09:00–11:00), the currently active block is highlighted.
 - **Second/third estimate tracking (Diff I, Diff II)** — a running task can be re-estimated (up to twice) when it's taking longer than planned; Records shows Diff (vs. original estimate), Diff I and Diff II (vs. each re-estimate) side by side.
 - **Task combination** — select 2+ small Inventory tasks and combine them into one (Rule 5), summing their estimates.
-- **Pair/team Pomodoro (lightweight)** — an optional "pairing with" note on a Today task, carried through to Records. This is **not** real-time collaboration — the app has no backend or sync layer (it's a static site backed only by `localStorage`), so it can't show a partner's live timer or task state. True multi-user support would need a backend.
+- **Categories** (Settings tab) — user-defined name + color labels for Inventory/Today/Records tasks, replacing the old free-text "type" field; see the Categories data-model section above.
 
 ---
 

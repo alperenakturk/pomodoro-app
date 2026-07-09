@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
+import { useCategories } from './hooks/useCategories'
 import { loadSettings, patchSettings } from './lib/storage'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
@@ -14,6 +15,7 @@ import SettingsTab from './components/SettingsTab'
 function App() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
+  const categoriesApi = useCategories()
   const [activeTab, setActiveTab] = useState('timer')
 
   const [theme, setTheme] = useState(() => loadSettings().theme)
@@ -26,10 +28,17 @@ function App() {
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
-  function handleSendToToday(text, estimate, inventoryId, unplanned, type) {
-    // Envanterden normal planlamayla gelen bir görev "urgent" değildir —
-    // Unplanned & Urgent bölümü sadece gün içinde aniden çıkan işler için.
-    todayApi.addTask(text, estimate, { inventoryId, unplanned, type })
+  // Envanterden normal planlamayla gelen bir görev "urgent" değildir —
+  // Unplanned & Urgent bölümü sadece gün içinde aniden çıkan işler için.
+  // Category tags and notes carry over from the Inventory item, per the
+  // request that copying a task to Today shouldn't lose either.
+  function handleSendToToday(item) {
+    todayApi.addTask(item.text, item.estimate, {
+      inventoryId: item.id,
+      unplanned: item.unplanned,
+      categoryIds: item.categoryIds,
+      notes: item.notes,
+    })
   }
 
   // Görev bittiğinde, eğer envanterden geldiyse envanterden de siliyoruz
@@ -114,6 +123,7 @@ function App() {
             updateItem={inventoryApi.updateItem}
             combineItems={inventoryApi.combineItems}
             onSendToToday={handleSendToToday}
+            categories={categoriesApi.categories}
           />
           <TodoToday
             tasks={todayApi.tasks}
@@ -124,14 +134,15 @@ function App() {
             updateTask={todayApi.updateTask}
             reestimateTask={todayApi.reestimateTask}
             finishTask={handleFinishTask}
+            categories={categoriesApi.categories}
           />
         </div>
 
         <div
           className={activeTab === 'reports' ? 'max-w-3xl mx-auto flex flex-col gap-6' : 'hidden'}
         >
-          <Reports todayTasks={todayApi.tasks} />
-          <RecordsLog />
+          <Reports todayTasks={todayApi.tasks} categories={categoriesApi.categories} />
+          <RecordsLog categories={categoriesApi.categories} />
         </div>
 
         <div className={activeTab === 'settings' ? '' : 'hidden'}>
@@ -139,6 +150,10 @@ function App() {
             cycleLength={pomodoro.cycleLength}
             setCycleLength={pomodoro.setCycleLength}
             resetCycleLength={pomodoro.resetCycleLength}
+            categories={categoriesApi.categories}
+            addCategory={categoriesApi.addCategory}
+            updateCategory={categoriesApi.updateCategory}
+            removeCategory={categoriesApi.removeCategory}
             chimeStyle={pomodoro.chimeStyle}
             setChimeStyle={pomodoro.setChimeStyle}
             theme={theme}

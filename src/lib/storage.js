@@ -31,6 +31,15 @@ export function subscribeToChanges(callback) {
 // the same default the "add" helper would have used, so consumers never
 // have to guard against `undefined` on a field that "should" always exist.
 
+// Categories moved from a single categoryId to a categoryIds array (tags,
+// not a single pick). Old data only ever had `categoryId` (string or null) —
+// wrap it into a one-element array (or [] if null) rather than losing it.
+function normalizeCategoryIds(record) {
+  if (Array.isArray(record.categoryIds)) return record.categoryIds
+  if (record.categoryId != null) return [record.categoryId]
+  return []
+}
+
 // Activity Inventory: ana görev havuzu
 const INVENTORY_KEY = 'pomodoro_inventory'
 function normalizeInventoryItem(item) {
@@ -39,7 +48,7 @@ function normalizeInventoryItem(item) {
     text: item.text,
     estimate: item.estimate ?? null,
     notes: item.notes ?? '',
-    type: item.type ?? '',
+    categoryIds: normalizeCategoryIds(item),
     deadline: item.deadline ?? null,
     unplanned: item.unplanned ?? false,
     done: item.done ?? false,
@@ -58,8 +67,8 @@ function normalizeTodayTask(task) {
     realized: task.realized ?? 0,
     internal: task.internal ?? 0,
     external: task.external ?? 0,
-    type: task.type ?? '',
-    pairWith: task.pairWith ?? '',
+    categoryIds: normalizeCategoryIds(task),
+    notes: task.notes ?? '',
     unplanned: task.unplanned ?? false,
     urgent: task.urgent ?? false,
     done: task.done ?? false,
@@ -79,8 +88,8 @@ function normalizeActivityRecord(record) {
     date: record.date,
     time: record.time ?? '',
     activity: record.activity,
-    type: record.type ?? '',
-    pairWith: record.pairWith ?? '',
+    categoryIds: normalizeCategoryIds(record),
+    notes: record.notes ?? '',
     estimate: record.estimate ?? null,
     reestimate1: record.reestimate1 ?? null,
     reestimate2: record.reestimate2 ?? null,
@@ -179,6 +188,22 @@ function normalizeTimetableBlock(block) {
 export const loadTimetable = () => loadJSON(TIMETABLE_KEY, []).map(normalizeTimetableBlock)
 export const saveTimetable = (blocks) => saveJSON(TIMETABLE_KEY, blocks)
 
+// Categories: kullanıcı tanımlı, isim + renk. Inventory/Today/Records'taki
+// eski serbest metin "type" alanının yerini alıyor — bkz. normalizeInventoryItem
+// vb. Bir kategori silinirse referans veren kayıtlar sadece "kategorisiz"
+// görünür (cascade delete yok); bu da eski/silinmiş bir categoryId'yi eski
+// serbest-metin type değeriyle aynı şekilde ele almamızı sağlıyor.
+const CATEGORIES_KEY = 'pomodoro_categories'
+function normalizeCategory(category) {
+  return {
+    id: category.id,
+    name: category.name,
+    color: category.color ?? null,
+  }
+}
+export const loadCategories = () => loadJSON(CATEGORIES_KEY, []).map(normalizeCategory)
+export const saveCategories = (categories) => saveJSON(CATEGORIES_KEY, categories)
+
 // Timer state: sayfa yenilenince devam eden pomodoro'nun kaybolmaması için
 // sessionType/secondsLeft/isRunning'in anlık görüntüsü.
 const TIMER_STATE_KEY = 'pomodoro_timer_state'
@@ -216,6 +241,9 @@ export function clearTicks() {
 export function clearTimerState() {
   localStorage.removeItem(TIMER_STATE_KEY)
 }
+export function clearCategories() {
+  localStorage.removeItem(CATEGORIES_KEY)
+}
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
@@ -227,6 +255,7 @@ export function resetAllData() {
   localStorage.removeItem(ACTIVITY_LOG_KEY)
   localStorage.removeItem(TICKS_KEY)
   localStorage.removeItem(TIMER_STATE_KEY)
+  localStorage.removeItem(CATEGORIES_KEY)
   localStorage.removeItem(SETTINGS_KEY)
 }
 
@@ -240,6 +269,7 @@ export function exportAllData() {
     ticks: loadTicks(),
     settings: loadSettings(),
     timetable: loadTimetable(),
+    categories: loadCategories(),
   }
 }
 
@@ -255,6 +285,7 @@ const SYNCED_KEYS = [
   SETTINGS_KEY,
   TICKS_KEY,
   TIMETABLE_KEY,
+  CATEGORIES_KEY,
 ]
 
 window.addEventListener('storage', (e) => {

@@ -5,6 +5,7 @@ import { diffClass, diffLabel } from '../lib/diffHelpers'
 import AvailablePomodoros from './AvailablePomodoros'
 import Timetable from './Timetable'
 import UnplannedCapture from './UnplannedCapture'
+import CategoryTagPicker from './CategoryTagPicker'
 
 function blockMinutes(block) {
   const [sh, sm] = block.start.split(':').map(Number)
@@ -18,21 +19,48 @@ function diffOf(task) {
   return task.estimate != null ? task.realized - task.estimate : null
 }
 
-function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onReestimate }) {
+function CategoryTag({ category }) {
+  return (
+    <span className="text-sage text-xs bg-cream/5 rounded px-1 ml-1 inline-flex items-center gap-1">
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: category.color }}
+        aria-hidden="true"
+      />
+      {category.name}
+    </span>
+  )
+}
+
+function CategoryTags({ categoryIds, categories }) {
+  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
+  return (
+    <>
+      {resolved.map((category) => (
+        <CategoryTag key={category.id} category={category} />
+      ))}
+    </>
+  )
+}
+
+function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onUpdate, onReestimate }) {
   const diff = diffOf(task)
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(task.text)
   const [estimate, setEstimate] = useState(task.estimate ?? '')
-  const [type, setType] = useState(task.type ?? '')
+  const [categoryIds, setCategoryIds] = useState(task.categoryIds ?? [])
+  const [notes, setNotes] = useState(task.notes ?? '')
   const [reestimating, setReestimating] = useState(false)
   const [reestimateValue, setReestimateValue] = useState('')
+  const [notesExpanded, setNotesExpanded] = useState(false)
 
   function handleSave() {
     if (!text.trim()) return
     onUpdate(task.id, {
       text: text.trim(),
       estimate: estimate === '' ? null : Number(estimate),
-      type: type.trim(),
+      categoryIds,
+      notes: notes.trim(),
     })
     setEditing(false)
   }
@@ -40,7 +68,8 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
   function handleCancel() {
     setText(task.text)
     setEstimate(task.estimate ?? '')
-    setType(task.type ?? '')
+    setCategoryIds(task.categoryIds ?? [])
+    setNotes(task.notes ?? '')
     setEditing(false)
   }
 
@@ -81,12 +110,11 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
             aria-label="Estimate"
             className={`w-16 text-xs ${inputClass}`}
           />
-          <input
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="Category"
-            aria-label="Category"
-            className={`w-28 text-xs ${inputClass}`}
+          <CategoryTagPicker
+            categories={categories}
+            value={categoryIds}
+            onChange={setCategoryIds}
+            className="w-36"
           />
           <button
             type="button"
@@ -103,6 +131,14 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
             Cancel
           </button>
         </div>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Description (optional)"
+          aria-label="Description"
+          rows={3}
+          className={`text-xs resize-y ${inputClass}`}
+        />
       </li>
     )
   }
@@ -132,16 +168,17 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
             U
           </span>
         )}
-        {task.type && (
-          <span className="text-sage text-xs bg-cream/5 rounded px-1 ml-1">{task.type}</span>
-        )}
-        {task.pairWith && (
-          <span
-            className="text-sage text-xs bg-cream/5 rounded px-1 ml-1"
-            title="No real-time sync — just a note of who you're working with"
+        <CategoryTags categoryIds={task.categoryIds} categories={categories} />
+        {task.notes && (
+          <button
+            type="button"
+            onClick={() => setNotesExpanded((prev) => !prev)}
+            className="text-sage text-xs ml-1 hover:text-cream"
+            aria-expanded={notesExpanded}
+            title={notesExpanded ? 'Hide description' : 'Show description'}
           >
-            with {task.pairWith}
-          </span>
+            {notesExpanded ? '📝▾' : '📝'}
+          </button>
         )}
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
@@ -213,6 +250,11 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
         ✕
       </button>
     </li>
+    {notesExpanded && task.notes && (
+      <li className="px-2 pb-2 -mt-1">
+        <p className="text-sage text-xs whitespace-pre-wrap pl-6">{task.notes}</p>
+      </li>
+    )}
     {reestimating && (
       <li className="flex items-center gap-2 px-2 py-2 -mt-1 mb-1 bg-tomato/5 border border-tomato/20 rounded-xl">
         <form onSubmit={submitReestimate} className="flex items-center gap-2 flex-1 flex-wrap">
@@ -255,11 +297,12 @@ function TodoToday({
   updateTask,
   reestimateTask,
   finishTask,
+  categories,
 }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
-  const [type, setType] = useState('')
-  const [pairWith, setPairWith] = useState('')
+  const [categoryIds, setCategoryIds] = useState([])
+  const [notes, setNotes] = useState('')
 
   // Bölüm ayrımı "urgent"a göre yapılıyor — "unplanned" sadece görevin kökenini
   // (bugün plan dışı çıktığını) belirtir, hangi bölümde görüneceğini değil.
@@ -275,13 +318,13 @@ function TodoToday({
     e.preventDefault()
     if (!text.trim()) return
     addTask(text.trim(), estimate ? Number(estimate) : null, {
-      type: type.trim(),
-      pairWith: pairWith.trim(),
+      categoryIds,
+      notes: notes.trim(),
     })
     setText('')
     setEstimate('')
-    setType('')
-    setPairWith('')
+    setCategoryIds([])
+    setNotes('')
   }
 
   return (
@@ -329,23 +372,15 @@ function TodoToday({
       </form>
 
       <div className="flex gap-2 mb-4">
-        <input
-          type="text"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          placeholder="Category (optional)"
-          aria-label="Category (optional)"
-          className={`w-32 text-xs ${inputClass}`}
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Description (optional)"
+          aria-label="Description"
+          rows={2}
+          className={`flex-1 text-xs resize-y ${inputClass}`}
         />
-        <input
-          type="text"
-          value={pairWith}
-          onChange={(e) => setPairWith(e.target.value)}
-          placeholder="Pairing with (optional)"
-          aria-label="Pairing with (optional)"
-          title="No real-time sync — just a note of who you're working with"
-          className={`w-36 text-xs ${inputClass}`}
-        />
+        <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
@@ -375,6 +410,7 @@ function TodoToday({
           <TaskRow
             key={task.id}
             task={task}
+            categories={categories}
             isActive={task.id === activeTaskId}
             onSelect={setActiveTaskId}
             onFinish={finishTask}
@@ -396,6 +432,7 @@ function TodoToday({
             <TaskRow
               key={task.id}
               task={task}
+              categories={categories}
               isActive={task.id === activeTaskId}
               onSelect={setActiveTaskId}
               onFinish={finishTask}

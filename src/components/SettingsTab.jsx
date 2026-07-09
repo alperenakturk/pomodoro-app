@@ -6,9 +6,11 @@ import {
   clearActivityLog,
   clearTicks,
   clearTimerState,
+  clearCategories,
   resetAllData,
 } from '../lib/storage'
 import Select from './Select'
+import CategoryManager from './CategoryManager'
 
 const CHIME_LABELS = {
   classic: 'Classic',
@@ -53,6 +55,12 @@ const RESET_CATEGORIES = [
       'This will reset the saved timer state (useful if a Pomodoro looks stuck after a refresh). This cannot be undone. Continue?',
     action: clearTimerState,
   },
+  {
+    label: 'Categories',
+    confirmText:
+      'This will permanently delete all your Categories. Tasks and records using them will show as uncategorized. This cannot be undone. Continue?',
+    action: clearCategories,
+  },
 ]
 
 function handleCategoryDelete(category) {
@@ -65,7 +73,7 @@ function handleCategoryDelete(category) {
 function handleFactoryReset() {
   if (
     window.confirm(
-      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?"
+      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?"
     )
   ) {
     resetAllData()
@@ -81,6 +89,10 @@ function SettingsTab({
   setChimeStyle,
   theme,
   onToggleTheme,
+  categories,
+  addCategory,
+  updateCategory,
+  removeCategory,
 }) {
   return (
     <div className="max-w-md mx-auto">
@@ -163,6 +175,13 @@ function SettingsTab({
           <span className="italic">Coming soon</span>
         </div>
       </div>
+
+      <CategoryManager
+        categories={categories}
+        addCategory={addCategory}
+        updateCategory={updateCategory}
+        removeCategory={removeCategory}
+      />
 
       <div className="bg-black/20 border border-tomato/30 rounded-3xl px-6 py-6 shadow-lg w-full mt-6">
         <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1">

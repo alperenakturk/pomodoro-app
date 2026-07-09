@@ -27,6 +27,18 @@ describe('useTodayTasks', () => {
     })
   })
 
+  it('defaults categoryIds/notes to []/empty, and accepts multiple tags via options', () => {
+    const { result } = renderHook(() => useTodayTasks())
+    act(() => result.current.addTask('Write report', 2))
+    expect(result.current.tasks[0]).toMatchObject({ categoryIds: [], notes: '' })
+    expect(result.current.tasks[0].pairWith).toBeUndefined()
+
+    act(() =>
+      result.current.addTask('Fix bug', 1, { categoryIds: ['cat1', 'cat2'], notes: 'See ticket #42' })
+    )
+    expect(result.current.tasks[1]).toMatchObject({ categoryIds: ['cat1', 'cat2'], notes: 'See ticket #42' })
+  })
+
   describe('reestimateTask', () => {
     it('fills reestimate1 first, then reestimate2', () => {
       const { result } = renderHook(() => useTodayTasks())
@@ -72,6 +84,21 @@ describe('useTodayTasks', () => {
   })
 
   describe('finishTask', () => {
+    it('carries all category tags and notes into the archived Activity Log record', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() =>
+        result.current.addTask('Task A', 2, { categoryIds: ['cat1', 'cat2'], notes: 'Some detail' })
+      )
+      const id = result.current.tasks[0].id
+
+      act(() => result.current.finishTask(id))
+
+      const [record] = loadActivityLog()
+      expect(record).toMatchObject({ categoryIds: ['cat1', 'cat2'], notes: 'Some detail' })
+      expect(record.pairWith).toBeUndefined()
+      expect(record.type).toBeUndefined()
+    })
+
     it('records diff, diffI and diffII against each successive estimate', () => {
       const { result } = renderHook(() => useTodayTasks())
       act(() => result.current.addTask('Task A', 2))

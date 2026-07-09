@@ -114,6 +114,49 @@ export function takeLast(records, limit) {
   return records.slice(-limit)
 }
 
+// Pomodoros completed per category, for the Reports category-breakdown
+// chart. Ticks (the raw pomodoro events) don't carry a category — only a
+// finished Activity Log record does — so this sums `real` per category
+// across finished tasks, which only counts pomodoros from tasks that have
+// actually been finished, not ones still in progress. That's a real
+// limitation of the existing data model, not something fixable here without
+// adding new tracking.
+//
+// A task can carry multiple category tags (categoryIds is an array). Its
+// pomodoros count fully toward EACH assigned category — intentionally not
+// split N ways — since a task tagged "Coding" + "Client Work" really did
+// spend all of its pomodoros on both at once, not half on each. A record
+// with no tags, or whose tags don't resolve to a real category (deleted, or
+// legacy data), buckets into "Uncategorized" rather than being dropped.
+export function pomodorosByCategory(records, categories) {
+  const byId = new Map(categories.map((c) => [c.id, c]))
+  const totals = new Map()
+
+  function addTo(key, name, color, amount) {
+    const existing = totals.get(key)
+    if (existing) {
+      existing.total += amount
+    } else {
+      totals.set(key, { id: key, name, color, total: amount })
+    }
+  }
+
+  for (const r of records) {
+    const resolvedCategories = (r.categoryIds ?? []).map((id) => byId.get(id)).filter(Boolean)
+    if (resolvedCategories.length === 0) {
+      addTo('uncategorized', 'Uncategorized', null, r.real || 0)
+    } else {
+      for (const category of resolvedCategories) {
+        addTo(category.id, category.name, category.color, r.real || 0)
+      }
+    }
+  }
+
+  return [...totals.values()]
+    .filter((bucket) => bucket.total > 0)
+    .sort((a, b) => b.total - a.total)
+}
+
 // True once there's at least one tick/record, but every single one of them
 // is dated today — i.e. no historical data exists yet, so the Today/Week/
 // Month/Year filters are all aggregating the exact same one day and can

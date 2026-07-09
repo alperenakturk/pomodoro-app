@@ -26,11 +26,8 @@ export function useTodayTasks() {
       realized: 0,
       internal: 0,
       external: 0,
-      type: options.type || '',
-      // Lightweight pair/team pomodoro support: no real-time sync (this app
-      // has no backend), just a note of who else this task is being worked
-      // with, carried through to the Records log for history.
-      pairWith: options.pairWith || '',
+      categoryIds: options.categoryIds || [],
+      notes: options.notes || '',
       unplanned: options.unplanned || false,
       // urgent: bugünün listesinde Unplanned & Urgent bölümünde mi gösterilecek.
       // unplanned yalnızca "bu görev bugün, plan dışı ortaya çıktı" bilgisini taşır —
@@ -111,8 +108,8 @@ export function useTodayTasks() {
         date: todayString(),
         time: nowTime(),
         activity: task.text,
-        type: task.type || '',
-        pairWith: task.pairWith || '',
+        categoryIds: task.categoryIds || [],
+        notes: task.notes || '',
         estimate: task.estimate,
         reestimate1: task.reestimate1 ?? null,
         reestimate2: task.reestimate2 ?? null,

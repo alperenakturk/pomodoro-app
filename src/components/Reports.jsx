@@ -18,6 +18,7 @@ import {
   trendDirection,
   takeLast,
   hasNoHistoryYet,
+  pomodorosByCategory,
 } from '../lib/reportsMath'
 import DayReview from './DayReview'
 
@@ -177,6 +178,44 @@ function InterruptionTrendsSection({ activityLog, period }) {
   )
 }
 
+function CategoryBreakdownSection({ activityLog, categories, period }) {
+  const periodRecords = recordsInDates(activityLog, datesForPeriod(period))
+  const buckets = pomodorosByCategory(periodRecords, categories)
+  const maxTotal = Math.max(1, ...buckets.map((b) => b.total))
+
+  if (buckets.length === 0) {
+    return (
+      <p className="text-sage text-xs font-sans text-center py-2">
+        No pomodoros logged against finished tasks in this period.
+      </p>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-1.5 font-sans">
+      {buckets.map((bucket) => (
+        <li key={bucket.id} className="flex items-center gap-2 text-xs">
+          <span className="text-cream truncate w-24 flex-shrink-0" title={bucket.name}>
+            {bucket.name}
+          </span>
+          <span className="flex-1 h-2 bg-cream/5 rounded-full overflow-hidden">
+            <span
+              className="block h-full rounded-full"
+              style={{
+                width: `${(bucket.total / maxTotal) * 100}%`,
+                backgroundColor: bucket.color ?? 'var(--color-sage)',
+              }}
+            />
+          </span>
+          <span className="text-sage w-16 text-right flex-shrink-0">
+            {bucket.total} pom.
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function LongTermSection({ ticks, activityLog }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -224,7 +263,7 @@ function LongTermSection({ ticks, activityLog }) {
   )
 }
 
-function Reports({ todayTasks = [] }) {
+function Reports({ todayTasks = [], categories = [] }) {
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
@@ -295,6 +334,13 @@ function Reports({ todayTasks = [] }) {
           Interruption Trends
         </p>
         <InterruptionTrendsSection activityLog={activityLog} period={period} />
+      </section>
+
+      <section className="mb-6 pt-4 border-t border-cream/10">
+        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+          Pomodoros by Category
+        </p>
+        <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
       </section>
 
       <section className="pt-4 border-t border-cream/10">

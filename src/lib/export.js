@@ -2,8 +2,7 @@ const CSV_COLUMNS = [
   'date',
   'time',
   'activity',
-  'type',
-  'pairWith',
+  'category',
   'estimate',
   'reestimate1',
   'reestimate2',
@@ -14,6 +13,7 @@ const CSV_COLUMNS = [
   'internal',
   'external',
   'unplanned',
+  'notes',
 ]
 
 function escapeCSVField(value) {
@@ -21,10 +21,20 @@ function escapeCSVField(value) {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-export function activityLogToCSV(records) {
+// categoryIds are UUIDs, useless to a human reading the CSV in a spreadsheet —
+// resolve them to a "; "-joined list of category names (or '' if
+// uncategorized, or a tag's category was since deleted) instead of exporting
+// the raw ids.
+export function activityLogToCSV(records, categories = []) {
+  const nameById = new Map(categories.map((c) => [c.id, c.name]))
   const lines = [CSV_COLUMNS.join(',')]
   for (const record of records) {
-    lines.push(CSV_COLUMNS.map((col) => escapeCSVField(record[col])).join(','))
+    const category = (record.categoryIds ?? [])
+      .map((id) => nameById.get(id))
+      .filter(Boolean)
+      .join('; ')
+    const row = { ...record, category }
+    lines.push(CSV_COLUMNS.map((col) => escapeCSVField(row[col])).join(','))
   }
   return lines.join('\n')
 }

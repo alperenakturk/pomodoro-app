@@ -1,18 +1,56 @@
 import { useState } from 'react'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
+import CategoryTagPicker from './CategoryTagPicker'
 
 function isOverdue(deadline) {
   if (!deadline) return false
   return deadline < new Date().toISOString().slice(0, 10)
 }
 
-function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem, selected, onToggleSelect }) {
+function CategoryTag({ category }) {
+  return (
+    <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 flex items-center gap-1">
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ backgroundColor: category.color }}
+        aria-hidden="true"
+      />
+      {category.name}
+    </span>
+  )
+}
+
+function CategoryTags({ categoryIds, categories }) {
+  // Deleted/legacy ids just fail to resolve here — no cascading update
+  // needed, the task simply drops that tag from display.
+  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
+  if (resolved.length === 0) return null
+  return (
+    <>
+      {resolved.map((category) => (
+        <CategoryTag key={category.id} category={category} />
+      ))}
+    </>
+  )
+}
+
+function InventoryRow({
+  item,
+  categories,
+  onSendToToday,
+  removeItem,
+  toggleDone,
+  updateItem,
+  selected,
+  onToggleSelect,
+}) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(item.text)
   const [estimate, setEstimate] = useState(item.estimate ?? '')
   const [notes, setNotes] = useState(item.notes ?? '')
-  const [type, setType] = useState(item.type ?? '')
+  const [categoryIds, setCategoryIds] = useState(item.categoryIds ?? [])
   const [deadline, setDeadline] = useState(item.deadline ?? '')
+  const [notesExpanded, setNotesExpanded] = useState(false)
 
   function handleSave() {
     if (!text.trim()) return
@@ -20,7 +58,7 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
       text: text.trim(),
       estimate: estimate === '' ? null : Number(estimate),
       notes: notes.trim(),
-      type: type.trim(),
+      categoryIds,
       deadline: deadline || null,
     })
     setEditing(false)
@@ -30,7 +68,7 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
     setText(item.text)
     setEstimate(item.estimate ?? '')
     setNotes(item.notes ?? '')
-    setType(item.type ?? '')
+    setCategoryIds(item.categoryIds ?? [])
     setDeadline(item.deadline ?? '')
     setEditing(false)
   }
@@ -54,12 +92,11 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
             aria-label="Estimate"
             className={`w-16 text-xs ${inputClass}`}
           />
-          <input
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="Category"
-            aria-label="Category"
-            className={`w-24 text-xs ${inputClass}`}
+          <CategoryTagPicker
+            categories={categories}
+            value={categoryIds}
+            onChange={setCategoryIds}
+            className="w-36"
           />
           <input
             type="date"
@@ -69,12 +106,13 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
             className={`text-xs ${inputClass}`}
           />
         </div>
-        <input
+        <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Note (optional)"
-          aria-label="Note"
-          className={`text-xs ${inputClass}`}
+          placeholder="Description (optional)"
+          aria-label="Description"
+          rows={3}
+          className={`text-xs resize-y ${inputClass}`}
         />
         <div className="flex gap-2">
           <button
@@ -124,8 +162,17 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
             U
           </span>
         )}
-        {item.type && (
-          <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5">{item.type}</span>
+        <CategoryTags categoryIds={item.categoryIds} categories={categories} />
+        {item.notes && (
+          <button
+            type="button"
+            onClick={() => setNotesExpanded((prev) => !prev)}
+            className="text-sage text-xs hover:text-cream"
+            aria-expanded={notesExpanded}
+            title={notesExpanded ? 'Hide description' : 'Show description'}
+          >
+            {notesExpanded ? '📝▾' : '📝'}
+          </button>
         )}
         {item.deadline && (
           <span
@@ -154,7 +201,7 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
         )}
         <button
           type="button"
-          onClick={() => onSendToToday(item.text, item.estimate, item.id, item.unplanned, item.type)}
+          onClick={() => onSendToToday(item)}
           className="text-tomato text-xs"
         >
           Add to today
@@ -180,7 +227,9 @@ function InventoryRow({ item, onSendToToday, removeItem, toggleDone, updateItem,
           Delete
         </button>
       </div>
-      {item.notes && <p className="text-sage text-xs italic pl-6">{item.notes}</p>}
+      {notesExpanded && item.notes && (
+        <p className="text-sage text-xs whitespace-pre-wrap pl-6">{item.notes}</p>
+      )}
     </li>
   )
 }
@@ -193,11 +242,12 @@ function Inventory({
   updateItem,
   combineItems,
   onSendToToday,
+  categories,
 }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
   const [notes, setNotes] = useState('')
-  const [type, setType] = useState('')
+  const [categoryIds, setCategoryIds] = useState([])
   const [deadline, setDeadline] = useState('')
   const [unplanned, setUnplanned] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
@@ -227,14 +277,14 @@ function Inventory({
     if (!text.trim()) return
     addItem(text.trim(), estimate ? Number(estimate) : null, {
       notes: notes.trim(),
-      type: type.trim(),
+      categoryIds,
       deadline: deadline || null,
       unplanned,
     })
     setText('')
     setEstimate('')
     setNotes('')
-    setType('')
+    setCategoryIds([])
     setDeadline('')
     setUnplanned(false)
   }
@@ -280,22 +330,15 @@ function Inventory({
       </form>
 
       <div className="flex gap-2 mb-2 items-center">
-        <input
-          type="text"
+        <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Note (optional)"
-          aria-label="Note"
-          className={`flex-1 text-xs ${inputClass}`}
+          placeholder="Description (optional)"
+          aria-label="Description"
+          rows={2}
+          className={`flex-1 text-xs resize-y ${inputClass}`}
         />
-        <input
-          type="text"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          placeholder="Category"
-          aria-label="Category"
-          className={`w-24 text-xs ${inputClass}`}
-        />
+        <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
       </div>
 
       <div className="flex gap-2 mb-4 items-center">
@@ -353,6 +396,7 @@ function Inventory({
           <InventoryRow
             key={item.id}
             item={item}
+            categories={categories}
             onSendToToday={onSendToToday}
             removeItem={removeItem}
             toggleDone={toggleDone}

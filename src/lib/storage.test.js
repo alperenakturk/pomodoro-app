@@ -20,7 +20,10 @@ import {
   clearActivityLog,
   clearTicks,
   clearTimerState,
+  clearCategories,
   resetAllData,
+  loadCategories,
+  saveCategories,
 } from './storage'
 
 beforeEach(() => {
@@ -38,13 +41,47 @@ describe('load-time normalization', () => {
     expect(task).toMatchObject({
       internal: 0,
       external: 0,
-      pairWith: '',
+      categoryIds: [],
+      notes: '',
       unplanned: false,
       urgent: false,
       inventoryId: null,
       reestimate1: null,
       reestimate2: null,
     })
+  })
+
+  it('drops a legacy free-text type/pairWith instead of crashing (treated as no category)', () => {
+    localStorage.setItem(
+      'pomodoro_today_tasks',
+      JSON.stringify([
+        { id: '1', text: 'Legacy task', type: 'Some old free text', pairWith: 'Alice', done: false },
+      ])
+    )
+
+    const [task] = loadTodayTasks()
+    expect(task.categoryIds).toEqual([])
+    expect(task.pairWith).toBeUndefined()
+  })
+
+  it('wraps a legacy single categoryId into a one-element categoryIds array', () => {
+    localStorage.setItem(
+      'pomodoro_today_tasks',
+      JSON.stringify([{ id: '1', text: 'Legacy task', categoryId: 'cat1', done: false }])
+    )
+
+    const [task] = loadTodayTasks()
+    expect(task.categoryIds).toEqual(['cat1'])
+  })
+
+  it('leaves an already-migrated categoryIds array untouched', () => {
+    localStorage.setItem(
+      'pomodoro_today_tasks',
+      JSON.stringify([{ id: '1', text: 'Task', categoryIds: ['cat1', 'cat2'], done: false }])
+    )
+
+    const [task] = loadTodayTasks()
+    expect(task.categoryIds).toEqual(['cat1', 'cat2'])
   })
 
   it('fills in defaults for fields missing from an old-schema activity record', () => {
@@ -55,6 +92,8 @@ describe('load-time normalization', () => {
 
     const [record] = loadActivityLog()
     expect(record).toMatchObject({
+      categoryIds: [],
+      notes: '',
       reestimate1: null,
       reestimate2: null,
       diffI: null,
@@ -63,6 +102,53 @@ describe('load-time normalization', () => {
       external: 0,
       unplanned: false,
     })
+  })
+
+  it('drops a legacy free-text type/pairWith on a Record instead of crashing', () => {
+    localStorage.setItem(
+      'pomodoro_activity_log',
+      JSON.stringify([
+        {
+          id: '1',
+          date: '2026-01-01',
+          activity: 'Legacy record',
+          type: 'Some old free text',
+          pairWith: 'Bob',
+          real: 2,
+        },
+      ])
+    )
+
+    const [record] = loadActivityLog()
+    expect(record.categoryIds).toEqual([])
+    expect(record.pairWith).toBeUndefined()
+  })
+
+  it('wraps a legacy single categoryId on a Record into a categoryIds array', () => {
+    localStorage.setItem(
+      'pomodoro_activity_log',
+      JSON.stringify([
+        { id: '1', date: '2026-01-01', activity: 'Legacy record', categoryId: 'cat1', real: 2 },
+      ])
+    )
+
+    const [record] = loadActivityLog()
+    expect(record.categoryIds).toEqual(['cat1'])
+  })
+})
+
+describe('Categories', () => {
+  it('round-trips a saved category and can clear all categories', () => {
+    saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
+    expect(loadCategories()).toEqual([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
+
+    clearCategories()
+    expect(loadCategories()).toEqual([])
+  })
+
+  it('defaults a missing color to null instead of crashing', () => {
+    localStorage.setItem('pomodoro_categories', JSON.stringify([{ id: 'c1', name: 'Coding' }]))
+    expect(loadCategories()).toEqual([{ id: 'c1', name: 'Coding', color: null }])
   })
 })
 
@@ -74,6 +160,7 @@ describe('Danger Zone: category clears', () => {
     saveTicks([{ id: 'k1', type: 'pomodoro', date: '2026-01-01' }])
     saveTimetable([{ id: 'b1', date: '2026-01-01', start: '09:00', end: '10:00' }])
     saveTimerState({ sessionType: 'work', secondsLeft: 100, isRunning: true })
+    saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
     patchSettings({ cycleLength: 6, theme: 'light', chimeStyle: 'soft' })
   }
 
@@ -87,6 +174,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTicks()).toHaveLength(1)
     expect(loadTimetable()).toHaveLength(1)
     expect(loadTimerState()).not.toBeNull()
+    expect(loadCategories()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6, theme: 'light', chimeStyle: 'soft' })
   })
 
@@ -100,6 +188,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadActivityLog()).toHaveLength(1)
     expect(loadTicks()).toHaveLength(1)
     expect(loadTimerState()).not.toBeNull()
+    expect(loadCategories()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -112,6 +201,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTodayTasks()).toHaveLength(1)
     expect(loadTicks()).toHaveLength(1)
     expect(loadTimetable()).toHaveLength(1)
+    expect(loadCategories()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -124,6 +214,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTodayTasks()).toHaveLength(1)
     expect(loadActivityLog()).toHaveLength(1)
     expect(loadTimetable()).toHaveLength(1)
+    expect(loadCategories()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -132,6 +223,19 @@ describe('Danger Zone: category clears', () => {
     clearTimerState()
 
     expect(loadTimerState()).toBeNull()
+    expect(loadInventory()).toHaveLength(1)
+    expect(loadTodayTasks()).toHaveLength(1)
+    expect(loadActivityLog()).toHaveLength(1)
+    expect(loadTicks()).toHaveLength(1)
+    expect(loadCategories()).toHaveLength(1)
+    expect(loadSettings()).toMatchObject({ cycleLength: 6 })
+  })
+
+  it('clearCategories removes only Categories, leaving everything else (incl. Settings) intact', () => {
+    seedEverything()
+    clearCategories()
+
+    expect(loadCategories()).toEqual([])
     expect(loadInventory()).toHaveLength(1)
     expect(loadTodayTasks()).toHaveLength(1)
     expect(loadActivityLog()).toHaveLength(1)
@@ -149,6 +253,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTicks()).toEqual([])
     expect(loadTimetable()).toEqual([])
     expect(loadTimerState()).toBeNull()
+    expect(loadCategories()).toEqual([])
     // loadSettings() always merges defaults back in, so the honest check is
     // that the underlying key is gone, not that loadSettings() returns {}.
     expect(localStorage.getItem('pomodoro_settings')).toBeNull()

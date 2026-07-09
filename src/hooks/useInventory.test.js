@@ -20,6 +20,15 @@ describe('useInventory', () => {
     })
   })
 
+  it('defaults categoryIds to an empty array, and accepts multiple via options', () => {
+    const { result } = renderHook(() => useInventory())
+    act(() => result.current.addItem('Write report', 2))
+    expect(result.current.items[0].categoryIds).toEqual([])
+
+    act(() => result.current.addItem('Fix bug', 1, { categoryIds: ['cat1', 'cat2'] }))
+    expect(result.current.items[1].categoryIds).toEqual(['cat1', 'cat2'])
+  })
+
   it('removes and updates items', () => {
     const { result } = renderHook(() => useInventory())
     act(() => result.current.addItem('Task A', 1))
@@ -70,6 +79,20 @@ describe('useInventory', () => {
 
       act(() => result.current.combineItems([id]))
       expect(result.current.items).toHaveLength(1)
+    })
+
+    it('unions categoryIds from the combined items, without duplicates', () => {
+      const { result } = renderHook(() => useInventory())
+      act(() => {
+        result.current.addItem('Reply to emails', 1, { categoryIds: ['cat1'] })
+        result.current.addItem('Clean up Slack', null, { categoryIds: ['cat1', 'cat2'] })
+      })
+      const [a, b] = result.current.items
+
+      act(() => result.current.combineItems([a.id, b.id]))
+
+      const combined = result.current.items.find((i) => i.text.includes('+'))
+      expect(combined.categoryIds).toEqual(['cat1', 'cat2'])
     })
   })
 })

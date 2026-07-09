@@ -15,6 +15,7 @@ import {
   datesForPeriod,
   hasNoHistoryYet,
   todayString,
+  pomodorosByCategory,
 } from './reportsMath'
 
 describe('effectiveDiff', () => {
@@ -111,6 +112,52 @@ describe('recordsWithEffectiveDiff', () => {
 describe('takeLast', () => {
   it('keeps the last N in the same (chronological) order', () => {
     expect(takeLast([1, 2, 3, 4, 5], 2)).toEqual([4, 5])
+  })
+})
+
+describe('pomodorosByCategory', () => {
+  const categories = [
+    { id: 'cat1', name: 'Coding', color: '#4a8c82' },
+    { id: 'cat2', name: 'Writing', color: '#8a5a7d' },
+  ]
+
+  it('sums real pomodoros per category, sorted descending', () => {
+    const records = [
+      { categoryIds: ['cat1'], real: 3 },
+      { categoryIds: ['cat2'], real: 1 },
+      { categoryIds: ['cat1'], real: 2 },
+    ]
+    expect(pomodorosByCategory(records, categories)).toEqual([
+      { id: 'cat1', name: 'Coding', color: '#4a8c82', total: 5 },
+      { id: 'cat2', name: 'Writing', color: '#8a5a7d', total: 1 },
+    ])
+  })
+
+  it('counts a multi-tagged task fully toward EACH of its categories, not split', () => {
+    const records = [{ categoryIds: ['cat1', 'cat2'], real: 4 }]
+    expect(pomodorosByCategory(records, categories)).toEqual([
+      { id: 'cat1', name: 'Coding', color: '#4a8c82', total: 4 },
+      { id: 'cat2', name: 'Writing', color: '#8a5a7d', total: 4 },
+    ])
+  })
+
+  it('buckets empty/legacy/deleted categoryIds as Uncategorized instead of dropping it', () => {
+    const records = [
+      { categoryIds: [], real: 2 },
+      { categoryIds: ['deleted-id'], real: 1 },
+    ]
+    expect(pomodorosByCategory(records, categories)).toEqual([
+      { id: 'uncategorized', name: 'Uncategorized', color: null, total: 3 },
+    ])
+  })
+
+  it('omits categories with zero total instead of showing an empty bar', () => {
+    const records = [{ categoryIds: ['cat1'], real: 0 }]
+    expect(pomodorosByCategory(records, categories)).toEqual([])
+  })
+
+  it('returns an empty array for no records', () => {
+    expect(pomodorosByCategory([], categories)).toEqual([])
   })
 })
 

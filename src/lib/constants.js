@@ -10,3 +10,19 @@ export const inputClass =
 // placeholder color, less rounding) to fit inside a table row.
 export const compactInputClass =
   'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-2 py-1 text-xs font-sans'
+
+// A small curated palette for user-created categories — deliberately not
+// reusing tomato/amber, which already mean specific things elsewhere (work/
+// danger and break/"took less", respectively); a category swatch in one of
+// those colors would visually collide with the diff charts. Muted, warm
+// tones chosen to fit the app's existing earthy palette without clashing.
+export const CATEGORY_COLORS = [
+  { name: 'Teal', value: '#4a8c82' },
+  { name: 'Plum', value: '#8a5a7d' },
+  { name: 'Slate', value: '#5b7290' },
+  { name: 'Moss', value: '#6b8a4f' },
+  { name: 'Mustard', value: '#c9a227' },
+  { name: 'Rose', value: '#b56576' },
+  { name: 'Ochre', value: '#b8803f' },
+  { name: 'Indigo', value: '#5a5a9c' },
+]
