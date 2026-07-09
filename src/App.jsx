@@ -130,7 +130,7 @@ function App() {
         <div
           className={activeTab === 'reports' ? 'max-w-3xl mx-auto flex flex-col gap-6' : 'hidden'}
         >
-          <Reports />
+          <Reports todayTasks={todayApi.tasks} />
           <RecordsLog />
         </div>
 

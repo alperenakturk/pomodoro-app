@@ -49,7 +49,18 @@ Four hooks own all mutable state:
 
 `App.jsx` instantiates `useInventory`, `useTodayTasks`, and `usePomodoro`, then passes their data down as props — `Timer` and `SettingsTab` are both purely presentational and share the one `usePomodoro` instance (`SettingsTab` needs `cycleLength`/`chimeStyle` setters that live in the same hook Timer renders from, so it can't be timer-local anymore). `useTimetable` is instantiated inside `TodoToday` (not `App`) so its block totals can feed `AvailablePomodoros`' suggested-hours button. The hooks never talk to each other directly — `App`/`TodoToday` bridge them: when a task from Inventory is sent to Today it stores the source `inventoryId` on the today-task, and when that task is finished `App` also removes it from Inventory. Marking a task done is deliberately decoupled from the timer — finishing a task early doesn't stop a running Pomodoro (the remaining time is still there for overlearning).
 
-`RecordsLog` and `Reports` receive no props and read storage directly on mount and on `pomodoro-data-changed` events. `Reports` also renders `DayReview` (an end-of-day summary modal) and reads `diffII ?? diffI ?? diff` (see `effectiveDiff` in `Reports.jsx`) so a re-estimated task's stats reflect its latest commitment, not the stale original estimate.
+`RecordsLog` reads storage directly on mount and on `pomodoro-data-changed` events, no props. `Reports` does the same for `ticks`/`activityLog`, but also takes one prop — `todayTasks={todayApi.tasks}` — for its "active task" count: `todayTasks` isn't date-stamped and `saveTodayTasks` doesn't dispatch `pomodoro-data-changed`, so reading it from storage on that event would show stale data; taking it as a prop from the live hook sidesteps that entirely. `Reports` also renders `DayReview` (an end-of-day summary modal, unchanged by the metrics redesign below).
+
+### Reports metrics
+
+`Reports.jsx` is organized around `src/lib/reportsMath.js` (pure, unit-tested date/aggregation helpers — `effectiveDiff`, `datesForPeriod`/`datesForThisWeek`/`datesForLastWeek`/etc., `estimationBreakdown`, `avgInterruptionsPerTask`, `trendDirection`). Per methodology, metrics favor trends and per-task ratios over cumulative totals:
+
+- **Today** — fixed today-vs-yesterday comparison (pomodoro count, task count, interruptions), independent of the time filter below.
+- **Estimation Accuracy** — overestimated/underestimated counts and a per-task diff chart, both scoped to the top time filter (Today/Week/Month/Year, default Week); plus a fixed this-week-vs-last-week avg-error trend.
+- **Interruption Trends** — average interruptions *per finished task* (not a raw total — the deliberate correction over the old design), scoped to the time filter, plus a fixed week-over-week trend and a per-task breakdown list.
+- **Long-term** — collapsed by default; the 13-week heatmap plus a month/quarter summary.
+
+`effectiveDiff` also lives here now (moved out of duplicate copies previously in `Reports.jsx` and `DayReview.jsx`); `DayReview.jsx` imports it from `reportsMath.js`.
 
 ### Tab layout
 

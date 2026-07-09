@@ -1,16 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-// A re-estimated task's original diff is stale once it's been revised —
-// judge estimation accuracy against the most recent commitment (Diff II if
-// it exists, else Diff I, else the original diff), matching Reports.jsx.
-function effectiveDiff(record) {
-  return record.diffII ?? record.diffI ?? record.diff
-}
+import { todayString, effectiveDiff } from '../lib/reportsMath'
 
 function DayReview({ ticks, activityLog, onClose }) {
   const closeButtonRef = useRef(null)

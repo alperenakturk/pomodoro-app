@@ -1,33 +1,234 @@
 import { useEffect, useState } from 'react'
 import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
+import {
+  todayString,
+  datesForYesterday,
+  datesForThisWeek,
+  datesForLastWeek,
+  datesForMonth,
+  datesForQuarter,
+  datesForPeriod,
+  effectiveDiff,
+  countTicksInDates,
+  recordsInDates,
+  recordsWithEffectiveDiff,
+  estimationBreakdown,
+  avgAbsDiff,
+  avgInterruptionsPerTask,
+  trendDirection,
+  takeLast,
+  hasNoHistoryYet,
+} from '../lib/reportsMath'
 import DayReview from './DayReview'
 
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
+const PERIODS = [
+  { id: 'today', label: 'Today' },
+  { id: 'week', label: 'This Week' },
+  { id: 'month', label: 'This Month' },
+  { id: 'year', label: 'This Year' },
+]
+
+// direction: 'up' | 'down' | 'flat' from trendDirection().
+// goodDirection: which raw direction counts as improvement — 'up', 'down',
+// or null for metrics (like raw pomodoro count) the methodology doesn't
+// treat as inherently better when higher.
+function TrendArrow({ direction, goodDirection }) {
+  if (direction === 'flat') return <span className="text-sage">→</span>
+  const glyph = direction === 'up' ? '↑' : '↓'
+  const colorClass =
+    goodDirection == null
+      ? 'text-sage'
+      : direction === goodDirection
+        ? 'text-cream'
+        : 'text-tomato'
+  return <span className={colorClass}>{glyph}</span>
 }
 
-// A re-estimated task's original diff is stale once it's been revised —
-// judge estimation accuracy against the most recent commitment (Diff II if
-// it exists, else Diff I, else the original diff), matching the point of
-// re-estimating in the first place.
-function effectiveDiff(record) {
-  return record.diffII ?? record.diffI ?? record.diff
+function Stat({ label, value, trend }) {
+  return (
+    <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 text-center">
+      <p className="font-display text-2xl text-cream flex items-center justify-center gap-1.5">
+        {value}
+        {trend}
+      </p>
+      <p className="text-sage text-xs mt-1">{label}</p>
+    </div>
+  )
 }
 
-function lastNDaysStrings(n) {
-  const days = []
-  for (let i = 0; i < n; i++) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    days.push(d.toISOString().slice(0, 10))
-  }
-  return days
+function TodaySection({ ticks, activityLog, todayTasks }) {
+  const today = [todayString()]
+  const yesterday = datesForYesterday()
+
+  const todayPomodoros = countTicksInDates(ticks, 'pomodoro', today)
+  const yesterdayPomodoros = countTicksInDates(ticks, 'pomodoro', yesterday)
+
+  const todayInterruptions =
+    countTicksInDates(ticks, 'interruption-internal', today) +
+    countTicksInDates(ticks, 'interruption-external', today)
+  const yesterdayInterruptions =
+    countTicksInDates(ticks, 'interruption-internal', yesterday) +
+    countTicksInDates(ticks, 'interruption-external', yesterday)
+
+  const completedToday = recordsInDates(activityLog, today).length
+  const activeToday = todayTasks.filter((t) => !t.done).length
+
+  return (
+    <div className="grid grid-cols-3 gap-3 font-sans">
+      <Stat
+        label="Pomodoros today"
+        value={todayPomodoros}
+        trend={<TrendArrow direction={trendDirection(todayPomodoros, yesterdayPomodoros)} goodDirection={null} />}
+      />
+      <Stat label="Tasks today" value={`${activeToday} active · ${completedToday} done`} />
+      <Stat
+        label="Interruptions today"
+        value={todayInterruptions}
+        trend={
+          <TrendArrow
+            direction={trendDirection(todayInterruptions, yesterdayInterruptions)}
+            goodDirection="down"
+          />
+        }
+      />
+    </div>
+  )
 }
 
-function Reports() {
+function EstimationAccuracySection({ activityLog, period }) {
+  const periodRecords = recordsWithEffectiveDiff(recordsInDates(activityLog, datesForPeriod(period)))
+  const chartRecords = takeLast(periodRecords, 20)
+  const { overestimated, underestimated } = estimationBreakdown(periodRecords)
+
+  const thisWeekAvg = avgAbsDiff(recordsInDates(activityLog, datesForThisWeek()))
+  const lastWeekAvg = avgAbsDiff(recordsInDates(activityLog, datesForLastWeek()))
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 font-sans mb-4">
+        <Stat label="Overestimated (took less)" value={overestimated} />
+        <Stat label="Underestimated (took longer)" value={underestimated} />
+      </div>
+
+      <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
+        Estimate vs. real, per task ({chartRecords.length})
+      </p>
+      <DiffTrend records={chartRecords} />
+
+      <div className="mt-4 pt-4 border-t border-cream/10 flex items-center justify-center gap-2 font-sans text-xs text-sage">
+        <span>Avg error this week: {thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1)}</span>
+        <span>·</span>
+        <span>last week: {lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1)}</span>
+        <TrendArrow direction={trendDirection(thisWeekAvg, lastWeekAvg)} goodDirection="down" />
+      </div>
+    </div>
+  )
+}
+
+function InterruptionTrendsSection({ activityLog, period }) {
+  const periodRecords = recordsInDates(activityLog, datesForPeriod(period))
+  const avgPerTask = avgInterruptionsPerTask(periodRecords)
+
+  const thisWeekAvg = avgInterruptionsPerTask(recordsInDates(activityLog, datesForThisWeek()))
+  const lastWeekAvg = avgInterruptionsPerTask(recordsInDates(activityLog, datesForLastWeek()))
+
+  const recentTasks = takeLast(periodRecords, 8).reverse()
+  const maxInterruptions = Math.max(1, ...recentTasks.map((r) => (r.internal || 0) + (r.external || 0)))
+
+  return (
+    <div>
+      <div className="flex items-center justify-center gap-2 font-sans text-sm text-cream mb-1">
+        <span className="font-display text-xl">{avgPerTask == null ? '-' : avgPerTask.toFixed(1)}</span>
+        <span className="text-sage text-xs">avg interruptions per task</span>
+      </div>
+      <div className="flex items-center justify-center gap-2 font-sans text-xs text-sage mb-4">
+        <span>this week: {thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1)}</span>
+        <span>·</span>
+        <span>last week: {lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1)}</span>
+        <TrendArrow direction={trendDirection(thisWeekAvg, lastWeekAvg)} goodDirection="down" />
+      </div>
+
+      {recentTasks.length === 0 ? (
+        <p className="text-sage text-xs font-sans text-center py-2">No tasks finished in this period.</p>
+      ) : (
+        <ul className="flex flex-col gap-1.5 font-sans">
+          {recentTasks.map((r) => {
+            const count = (r.internal || 0) + (r.external || 0)
+            return (
+              <li key={r.id} className="flex items-center gap-2 text-xs">
+                <span className="text-cream truncate w-32 flex-shrink-0" title={r.activity}>
+                  {r.activity}
+                </span>
+                <span className="flex-1 h-2 bg-cream/5 rounded-full overflow-hidden">
+                  <span
+                    className="block h-full bg-tomato/60 rounded-full"
+                    style={{ width: `${(count / maxInterruptions) * 100}%` }}
+                  />
+                </span>
+                <span className="text-sage w-24 text-right flex-shrink-0">
+                  {count} ({r.internal || 0} int · {r.external || 0} ext)
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function LongTermSection({ ticks, activityLog }) {
+  const [expanded, setExpanded] = useState(false)
+
+  const monthDates = datesForMonth()
+  const quarterDates = datesForQuarter()
+  const monthPomodoros = countTicksInDates(ticks, 'pomodoro', monthDates)
+  const quarterPomodoros = countTicksInDates(ticks, 'pomodoro', quarterDates)
+  const monthAvgInterruptions = avgInterruptionsPerTask(recordsInDates(activityLog, monthDates))
+  const quarterAvgInterruptions = avgInterruptionsPerTask(recordsInDates(activityLog, quarterDates))
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+        className="w-full flex items-center justify-between font-sans text-xs text-sage uppercase tracking-wide"
+      >
+        <span>Long-term</span>
+        <span>{expanded ? '▾ collapse' : '▸ expand'}</span>
+      </button>
+
+      {expanded && (
+        <div className="mt-4">
+          <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
+            Activity (last 13 weeks)
+          </p>
+          <ActivityHeatmap ticks={ticks} />
+
+          <div className="grid grid-cols-2 gap-3 font-sans mt-4 pt-4 border-t border-cream/10">
+            <Stat label="Pomodoros this month" value={monthPomodoros} />
+            <Stat label="Pomodoros this quarter" value={quarterPomodoros} />
+            <Stat
+              label="Avg interruptions/task (month)"
+              value={monthAvgInterruptions == null ? '-' : monthAvgInterruptions.toFixed(1)}
+            />
+            <Stat
+              label="Avg interruptions/task (quarter)"
+              value={quarterAvgInterruptions == null ? '-' : quarterAvgInterruptions.toFixed(1)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Reports({ todayTasks = [] }) {
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
+  const [period, setPeriod] = useState('week')
 
   // Polling yerine: veri her değiştiğinde anında haber al.
   useEffect(() => {
@@ -37,40 +238,6 @@ function Reports() {
     })
     return unsubscribe
   }, [])
-
-  const today = todayString()
-  const last7 = lastNDaysStrings(7)
-
-  const todayPomodoros = ticks.filter(
-    (t) => t.type === 'pomodoro' && t.date === today
-  ).length
-
-  const weekPomodoros = ticks.filter(
-    (t) => t.type === 'pomodoro' && last7.includes(t.date)
-  ).length
-
-  const internalCount = ticks.filter(
-    (t) => t.type === 'interruption-internal' && last7.includes(t.date)
-  ).length
-
-  const externalCount = ticks.filter(
-    (t) => t.type === 'interruption-external' && last7.includes(t.date)
-  ).length
-
-  // Qualitative error: plansız çıkıp gün içinde eklenen görevlerin sayısı.
-  const unplannedCount = activityLog.filter(
-    (r) => r.unplanned && last7.includes(r.date)
-  ).length
-
-  // Quantitative error trend: tahmin/gerçek farkının zamanla küçülüp
-  // küçülmediğini görmek için son tahminli kayıtlar ve 7 günlük ortalama |fark|.
-  const recordsWithDiff = activityLog.filter((r) => effectiveDiff(r) != null)
-  const recentDiffRecords = recordsWithDiff.slice(-10)
-  const diffRecords7d = recordsWithDiff.filter((r) => last7.includes(r.date))
-  const avgAbsDiff7d =
-    diffRecords7d.length === 0
-      ? null
-      : diffRecords7d.reduce((sum, r) => sum + Math.abs(effectiveDiff(r)), 0) / diffRecords7d.length
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
@@ -87,35 +254,52 @@ function Reports() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 font-sans">
-        <Stat label="Today" value={todayPomodoros} />
-        <Stat label="Last 7 days" value={weekPomodoros} />
-        <Stat label="Internal interruptions (7d)" value={internalCount} />
-        <Stat label="External interruptions (7d)" value={externalCount} />
-        <div className="col-span-2">
-          <Stat label="Unplanned tasks (7d)" value={unplannedCount} />
-        </div>
-        <div className="col-span-2">
-          <Stat
-            label="Avg estimation error (7d)"
-            value={avgAbsDiff7d == null ? '-' : avgAbsDiff7d.toFixed(1)}
-          />
-        </div>
+      <div className="flex gap-2 justify-center flex-wrap mb-4">
+        {PERIODS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setPeriod(p.id)}
+            aria-current={period === p.id ? 'page' : undefined}
+            className={
+              'font-display text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full border ' +
+              (period === p.id
+                ? 'bg-tomato/15 border-tomato/60 text-tomato'
+                : 'border-cream/15 text-sage hover:border-cream/30')
+            }
+          >
+            {p.label}
+          </button>
+        ))}
       </div>
 
-      <div className="mt-4 pt-4 border-t border-cream/10">
-        <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
-          Estimation trend (last {recentDiffRecords.length || 0} tasks)
+      {hasNoHistoryYet(ticks, activityLog) && (
+        <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
+          Not enough history yet — filters will differ as you use the app across more days.
         </p>
-        <DiffTrend records={recentDiffRecords} />
-      </div>
+      )}
 
-      <div className="mt-4 pt-4 border-t border-cream/10">
-        <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
-          Activity (last 13 weeks)
+      <section className="mb-6">
+        <TodaySection ticks={ticks} activityLog={activityLog} todayTasks={todayTasks} />
+      </section>
+
+      <section className="mb-6 pt-4 border-t border-cream/10">
+        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+          Estimation Accuracy
         </p>
-        <ActivityHeatmap ticks={ticks} />
-      </div>
+        <EstimationAccuracySection activityLog={activityLog} period={period} />
+      </section>
+
+      <section className="mb-6 pt-4 border-t border-cream/10">
+        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+          Interruption Trends
+        </p>
+        <InterruptionTrendsSection activityLog={activityLog} period={period} />
+      </section>
+
+      <section className="pt-4 border-t border-cream/10">
+        <LongTermSection ticks={ticks} activityLog={activityLog} />
+      </section>
 
       {showReview && (
         <DayReview
@@ -254,15 +438,6 @@ function DiffTrend({ records }) {
           Took less
         </span>
       </div>
-    </div>
-  )
-}
-
-function Stat({ label, value }) {
-  return (
-    <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 text-center">
-      <p className="font-display text-2xl text-cream">{value}</p>
-      <p className="text-sage text-xs mt-1">{label}</p>
     </div>
   )
 }

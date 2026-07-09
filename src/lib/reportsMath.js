@@ -1,0 +1,126 @@
+export function todayString() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+// Rolling window of `n` ISO date strings ending `offsetDays` ago (0 = today).
+// e.g. datesInWindow(7, 0) is today and the 6 days before it (this week);
+// datesInWindow(7, 7) is the 7 days before that (last week). Rolling windows
+// (not calendar-aligned weeks/months) to keep the date math simple.
+function datesInWindow(n, offsetDays = 0) {
+  const dates = []
+  for (let i = 0; i < n; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - offsetDays - i)
+    dates.push(d.toISOString().slice(0, 10))
+  }
+  return dates
+}
+
+export function datesForYesterday() {
+  return datesInWindow(1, 1)
+}
+
+export function datesForThisWeek() {
+  return datesInWindow(7, 0)
+}
+
+export function datesForLastWeek() {
+  return datesInWindow(7, 7)
+}
+
+export function datesForMonth() {
+  return datesInWindow(30, 0)
+}
+
+export function datesForQuarter() {
+  return datesInWindow(90, 0)
+}
+
+const PERIOD_WINDOW_DAYS = { today: 1, week: 7, month: 30, year: 365 }
+
+// The top-of-page time filter (Today/Week/Month/Year) — a rolling window
+// ending today, used to scope the Estimation Accuracy and Interruption
+// Trends sections. Distinct from datesForThisWeek/LastWeek, which are the
+// two fixed week-over-week comparisons those sections always show regardless
+// of this filter.
+export function datesForPeriod(period) {
+  return datesInWindow(PERIOD_WINDOW_DAYS[period] ?? PERIOD_WINDOW_DAYS.week, 0)
+}
+
+// A re-estimated task's original diff is stale once it's been revised —
+// judge estimation accuracy against the most recent commitment (Diff II if
+// it exists, else Diff I, else the original diff).
+export function effectiveDiff(record) {
+  return record.diffII ?? record.diffI ?? record.diff
+}
+
+export function countTicksInDates(ticks, type, dates) {
+  const dateSet = new Set(dates)
+  return ticks.filter((t) => t.type === type && dateSet.has(t.date)).length
+}
+
+export function recordsInDates(records, dates) {
+  const dateSet = new Set(dates)
+  return records.filter((r) => dateSet.has(r.date))
+}
+
+export function recordsWithEffectiveDiff(records) {
+  return records.filter((r) => effectiveDiff(r) != null)
+}
+
+// Over/underestimation counts, using the methodology's own sign convention:
+// diff > 0 -> underestimated (task took longer than planned)
+// diff < 0 -> overestimated (task took less time than planned)
+// Balance between the two — not minimizing either one alone — is the goal.
+export function estimationBreakdown(records) {
+  let overestimated = 0
+  let underestimated = 0
+  for (const r of records) {
+    const diff = effectiveDiff(r)
+    if (diff == null || diff === 0) continue
+    if (diff > 0) underestimated++
+    else overestimated++
+  }
+  return { overestimated, underestimated }
+}
+
+export function avgAbsDiff(records) {
+  const withDiff = recordsWithEffectiveDiff(records)
+  if (withDiff.length === 0) return null
+  return withDiff.reduce((sum, r) => sum + Math.abs(effectiveDiff(r)), 0) / withDiff.length
+}
+
+// The key correction over a raw interruption total: normalize by how many
+// tasks were actually finished, not just how many interruption events
+// happened — a busy week with 10 tasks and 10 interruptions reads very
+// differently from a light week with 2 tasks and 10 interruptions.
+export function avgInterruptionsPerTask(records) {
+  if (records.length === 0) return null
+  const total = records.reduce((sum, r) => sum + (r.internal || 0) + (r.external || 0), 0)
+  return total / records.length
+}
+
+export function trendDirection(current, previous) {
+  if (current == null || previous == null) return 'flat'
+  if (current > previous) return 'up'
+  if (current < previous) return 'down'
+  return 'flat'
+}
+
+// Most recent N records in append (chronological) order, newest last —
+// matches how records/ticks are stored, so callers that want newest-first
+// just reverse the result.
+export function takeLast(records, limit) {
+  return records.slice(-limit)
+}
+
+// True once there's at least one tick/record, but every single one of them
+// is dated today — i.e. no historical data exists yet, so the Today/Week/
+// Month/Year filters are all aggregating the exact same one day and can
+// never show a different result. Distinct from "no data at all" (which the
+// existing empty states already explain on their own).
+export function hasNoHistoryYet(ticks, records) {
+  const today = todayString()
+  const allDates = [...ticks.map((t) => t.date), ...records.map((r) => r.date)]
+  return allDates.length > 0 && allDates.every((d) => d === today)
+}
