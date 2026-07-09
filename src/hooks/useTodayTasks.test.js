@@ -45,6 +45,24 @@ describe('useTodayTasks', () => {
       act(() => result.current.reestimateTask(id, NaN))
       expect(result.current.tasks[0].reestimate1).toBeNull()
     })
+
+    it('rejects a third re-estimate and leaves reestimate2 untouched', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('Task A', 2))
+      const id = result.current.tasks[0].id
+
+      act(() => result.current.reestimateTask(id, 4))
+      act(() => result.current.reestimateTask(id, 6))
+
+      let accepted
+      act(() => {
+        accepted = result.current.reestimateTask(id, 8)
+      })
+
+      expect(accepted).toBe(false)
+      expect(result.current.tasks[0].reestimate1).toBe(4)
+      expect(result.current.tasks[0].reestimate2).toBe(6)
+    })
   })
 
   describe('finishTask', () => {

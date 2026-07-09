@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTimetable } from '../hooks/useTimetable'
+import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
+import { diffClass, diffLabel } from '../lib/diffHelpers'
 import AvailablePomodoros from './AvailablePomodoros'
 import Timetable from './Timetable'
 
@@ -9,23 +11,10 @@ function blockMinutes(block) {
   return Math.max(0, eh * 60 + em - (sh * 60 + sm))
 }
 
-// Rule 4: tasks estimated above this should be broken down into sub-tasks.
-const MAX_RECOMMENDED_ESTIMATE = 7
-
-const inputClass =
-  'bg-cream/5 border border-cream/15 rounded-xl text-cream placeholder:text-sage/50 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-3 py-2 text-sm font-sans'
-
 const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_26px_26px_26px_16px_16px_16px] gap-1.5 items-center'
 
 function diffOf(task) {
   return task.estimate != null ? task.realized - task.estimate : null
-}
-
-function diffClass(diff) {
-  if (diff == null) return 'text-sage'
-  if (diff > 0) return 'text-tomato'
-  if (diff < 0) return 'text-amber'
-  return 'text-cream'
 }
 
 function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onReestimate }) {
@@ -64,7 +53,11 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
     e.preventDefault()
     const value = Number(reestimateValue)
     if (!Number.isFinite(value) || value <= 0) return
-    onReestimate(task.id, value)
+    const applied = onReestimate(task.id, value)
+    if (applied === false) {
+      window.alert('This task already has two re-estimates (Diff I and Diff II) — the second one is locked in.')
+      return
+    }
     setReestimating(false)
   }
 
@@ -176,9 +169,7 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
         </button>
       )}
       <span className="text-sage text-xs text-right">{task.realized}</span>
-      <span className={`text-xs text-right ${diffClass(diff)}`}>
-        {diff == null ? '-' : `${diff > 0 ? '+' : ''}${diff}`}
-      </span>
+      <span className={`text-xs text-right ${diffClass(diff)}`}>{diffLabel(diff)}</span>
       {!task.done && (
         <button
           type="button"

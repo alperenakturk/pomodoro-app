@@ -7,9 +7,8 @@ import {
   exportAllData,
 } from '../lib/storage'
 import { activityLogToCSV, downloadFile } from '../lib/export'
-
-const inputClass =
-  'bg-cream/5 border border-cream/15 rounded-lg text-cream outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-2 py-1 text-xs font-sans'
+import { compactInputClass as inputClass } from '../lib/constants'
+import { diffClass, diffLabel } from '../lib/diffHelpers'
 
 function recomputeDiff(estimate, real) {
   return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
@@ -31,6 +30,8 @@ function RecordRow({ record, onDelete }) {
       estimate: nextEstimate,
       real: nextReal,
       diff: recomputeDiff(nextEstimate, nextReal),
+      diffI: recomputeDiff(record.reestimate1, nextReal),
+      diffII: recomputeDiff(record.reestimate2, nextReal),
     })
     setEditing(false)
   }
@@ -124,24 +125,12 @@ function RecordRow({ record, onDelete }) {
       <div className="text-sage text-xs flex gap-3 mt-1 items-center">
         <span>Estimate: {record.estimate ?? '-'}</span>
         <span>Actual: {record.real}</span>
-        <span
-          className={
-            record.diff > 0 ? 'text-tomato' : record.diff < 0 ? 'text-amber' : ''
-          }
-        >
-          Diff: {record.diff == null ? '-' : `${record.diff > 0 ? '+' : ''}${record.diff}`}
-        </span>
+        <span className={diffClass(record.diff)}>Diff: {diffLabel(record.diff)}</span>
         {record.diffI != null && (
-          <span className={record.diffI > 0 ? 'text-tomato' : record.diffI < 0 ? 'text-amber' : ''}>
-            Diff I: {record.diffI > 0 ? '+' : ''}
-            {record.diffI}
-          </span>
+          <span className={diffClass(record.diffI)}>Diff I: {diffLabel(record.diffI)}</span>
         )}
         {record.diffII != null && (
-          <span className={record.diffII > 0 ? 'text-tomato' : record.diffII < 0 ? 'text-amber' : ''}>
-            Diff II: {record.diffII > 0 ? '+' : ''}
-            {record.diffII}
-          </span>
+          <span className={diffClass(record.diffII)}>Diff II: {diffLabel(record.diffII)}</span>
         )}
         <button
           type="button"

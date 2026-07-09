@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { addTick, removeLastTick, loadSettings, patchSettings } from '../lib/storage'
+import {
+  addTick,
+  removeLastTick,
+  loadSettings,
+  patchSettings,
+  loadTimerState,
+  saveTimerState,
+} from '../lib/storage'
 import { unlockAudio, playChime, requestNotificationPermission, notify } from '../lib/alert'
 
 const DURATIONS = {
@@ -15,9 +22,12 @@ function todayString() {
 }
 
 export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
-  const [sessionType, setSessionType] = useState('work')
-  const [secondsLeft, setSecondsLeft] = useState(DURATIONS.work)
-  const [isRunning, setIsRunning] = useState(false)
+  // Restored on mount so a refresh doesn't lose a session in progress.
+  const [sessionType, setSessionType] = useState(() => loadTimerState()?.sessionType ?? 'work')
+  const [secondsLeft, setSecondsLeft] = useState(
+    () => loadTimerState()?.secondsLeft ?? DURATIONS.work
+  )
+  const [isRunning, setIsRunning] = useState(() => loadTimerState()?.isRunning ?? false)
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [internalCount, setInternalCount] = useState(0)
   const [externalCount, setExternalCount] = useState(0)
@@ -44,6 +54,10 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     setChimeStyleState(style)
     patchSettings({ chimeStyle: style })
   }, [])
+
+  useEffect(() => {
+    saveTimerState({ sessionType, secondsLeft, isRunning })
+  }, [sessionType, secondsLeft, isRunning])
 
   useEffect(() => {
     if (!isRunning) return

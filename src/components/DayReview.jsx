@@ -1,19 +1,15 @@
 import { useEffect, useRef } from 'react'
+import { diffClass, diffLabel } from '../lib/diffHelpers'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
-function diffLabel(diff) {
-  if (diff == null) return '-'
-  return `${diff > 0 ? '+' : ''}${diff}`
-}
-
-function diffClass(diff) {
-  if (diff == null) return 'text-sage'
-  if (diff > 0) return 'text-tomato'
-  if (diff < 0) return 'text-amber'
-  return 'text-cream'
+// A re-estimated task's original diff is stale once it's been revised —
+// judge estimation accuracy against the most recent commitment (Diff II if
+// it exists, else Diff I, else the original diff), matching Reports.jsx.
+function effectiveDiff(record) {
+  return record.diffII ?? record.diffI ?? record.diff
 }
 
 function DayReview({ ticks, activityLog, onClose }) {
@@ -38,12 +34,12 @@ function DayReview({ ticks, activityLog, onClose }) {
 
   const todaysRecords = activityLog.filter((r) => r.date === today)
   const unplannedCount = todaysRecords.filter((r) => r.unplanned).length
-  const withDiff = todaysRecords.filter((r) => r.diff != null)
+  const withDiff = todaysRecords.filter((r) => effectiveDiff(r) != null)
   const best = withDiff.length
-    ? withDiff.reduce((a, b) => (Math.abs(b.diff) < Math.abs(a.diff) ? b : a))
+    ? withDiff.reduce((a, b) => (Math.abs(effectiveDiff(b)) < Math.abs(effectiveDiff(a)) ? b : a))
     : null
   const worst = withDiff.length
-    ? withDiff.reduce((a, b) => (Math.abs(b.diff) > Math.abs(a.diff) ? b : a))
+    ? withDiff.reduce((a, b) => (Math.abs(effectiveDiff(b)) > Math.abs(effectiveDiff(a)) ? b : a))
     : null
 
   return (
@@ -96,7 +92,7 @@ function DayReview({ ticks, activityLog, onClose }) {
             <p className="text-sage text-xs uppercase tracking-wide mb-1">Most accurate estimate</p>
             <p className="text-cream">
               {best.activity}{' '}
-              <span className={diffClass(best.diff)}>({diffLabel(best.diff)})</span>
+              <span className={diffClass(effectiveDiff(best))}>({diffLabel(effectiveDiff(best))})</span>
             </p>
           </div>
         )}
@@ -106,7 +102,7 @@ function DayReview({ ticks, activityLog, onClose }) {
             <p className="text-sage text-xs uppercase tracking-wide mb-1">Biggest surprise</p>
             <p className="text-cream">
               {worst.activity}{' '}
-              <span className={diffClass(worst.diff)}>({diffLabel(worst.diff)})</span>
+              <span className={diffClass(effectiveDiff(worst))}>({diffLabel(effectiveDiff(worst))})</span>
             </p>
           </div>
         )}
@@ -126,7 +122,7 @@ function DayReview({ ticks, activityLog, onClose }) {
                 <span className="text-sage text-xs flex gap-2">
                   <span>Est. {r.estimate ?? '-'}</span>
                   <span>Real {r.real}</span>
-                  <span className={diffClass(r.diff)}>{diffLabel(r.diff)}</span>
+                  <span className={diffClass(effectiveDiff(r))}>{diffLabel(effectiveDiff(r))}</span>
                 </span>
               </li>
             ))}

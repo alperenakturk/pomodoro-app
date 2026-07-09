@@ -133,4 +133,18 @@ describe('usePomodoro', () => {
     expect(onInterruption).toHaveBeenCalledWith('internal', 1)
     expect(onInterruption).toHaveBeenCalledWith('internal', -1)
   })
+
+  it('restores an in-progress session after a remount (simulated page refresh)', () => {
+    const { result, unmount } = renderHook(() => usePomodoro())
+    act(() => result.current.start())
+    tick(10)
+    expect(result.current.secondsLeft).toBe(25 * 60 - 10)
+
+    unmount()
+
+    const { result: resumed } = renderHook(() => usePomodoro())
+    expect(resumed.current.sessionType).toBe('work')
+    expect(resumed.current.secondsLeft).toBe(25 * 60 - 10)
+    expect(resumed.current.isRunning).toBe(true)
+  })
 })

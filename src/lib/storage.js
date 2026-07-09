@@ -24,19 +24,76 @@ export function subscribeToChanges(callback) {
   return () => window.removeEventListener(EVENT_NAME, callback)
 }
 
+// Schema versioning: none of these keys carry a version number, so old
+// records from before a field existed (e.g. reestimate1/reestimate2,
+// pairWith, urgent) simply lack that key in the parsed JSON. Each load
+// function below runs its records through a normalize step that fills in
+// the same default the "add" helper would have used, so consumers never
+// have to guard against `undefined` on a field that "should" always exist.
+
 // Activity Inventory: ana görev havuzu
 const INVENTORY_KEY = 'pomodoro_inventory'
-export const loadInventory = () => loadJSON(INVENTORY_KEY, [])
+function normalizeInventoryItem(item) {
+  return {
+    id: item.id,
+    text: item.text,
+    estimate: item.estimate ?? null,
+    notes: item.notes ?? '',
+    type: item.type ?? '',
+    deadline: item.deadline ?? null,
+    unplanned: item.unplanned ?? false,
+    done: item.done ?? false,
+  }
+}
+export const loadInventory = () => loadJSON(INVENTORY_KEY, []).map(normalizeInventoryItem)
 export const saveInventory = (items) => saveJSON(INVENTORY_KEY, items)
 
 // To Do Today: bugüne seçilen görevler
 const TODAY_KEY = 'pomodoro_today_tasks'
-export const loadTodayTasks = () => loadJSON(TODAY_KEY, [])
+function normalizeTodayTask(task) {
+  return {
+    id: task.id,
+    text: task.text,
+    estimate: task.estimate ?? null,
+    realized: task.realized ?? 0,
+    internal: task.internal ?? 0,
+    external: task.external ?? 0,
+    type: task.type ?? '',
+    pairWith: task.pairWith ?? '',
+    unplanned: task.unplanned ?? false,
+    urgent: task.urgent ?? false,
+    done: task.done ?? false,
+    inventoryId: task.inventoryId ?? null,
+    reestimate1: task.reestimate1 ?? null,
+    reestimate2: task.reestimate2 ?? null,
+  }
+}
+export const loadTodayTasks = () => loadJSON(TODAY_KEY, []).map(normalizeTodayTask)
 export const saveTodayTasks = (items) => saveJSON(TODAY_KEY, items)
 
 // Records: tamamlanan görevlerin Tahmin/Gerçek/Fark kaydı
 const ACTIVITY_LOG_KEY = 'pomodoro_activity_log'
-export const loadActivityLog = () => loadJSON(ACTIVITY_LOG_KEY, [])
+function normalizeActivityRecord(record) {
+  return {
+    id: record.id,
+    date: record.date,
+    time: record.time ?? '',
+    activity: record.activity,
+    type: record.type ?? '',
+    pairWith: record.pairWith ?? '',
+    estimate: record.estimate ?? null,
+    reestimate1: record.reestimate1 ?? null,
+    reestimate2: record.reestimate2 ?? null,
+    real: record.real ?? 0,
+    diff: record.diff ?? null,
+    diffI: record.diffI ?? null,
+    diffII: record.diffII ?? null,
+    internal: record.internal ?? 0,
+    external: record.external ?? 0,
+    unplanned: record.unplanned ?? false,
+  }
+}
+export const loadActivityLog = () => loadJSON(ACTIVITY_LOG_KEY, []).map(normalizeActivityRecord)
 export const saveActivityLog = (items) => saveJSON(ACTIVITY_LOG_KEY, items)
 export function addActivityRecord(record) {
   const log = loadActivityLog()
@@ -75,7 +132,15 @@ export function patchSettings(patch) {
 
 // Ticks: her pomodoro/kesinti için hafif kayıt (günlük/haftalık raporlar için)
 const TICKS_KEY = 'pomodoro_ticks'
-export const loadTicks = () => loadJSON(TICKS_KEY, [])
+function normalizeTick(t) {
+  return {
+    id: t.id,
+    type: t.type,
+    date: t.date,
+    timestamp: t.timestamp ?? null,
+  }
+}
+export const loadTicks = () => loadJSON(TICKS_KEY, []).map(normalizeTick)
 export const saveTicks = (items) => saveJSON(TICKS_KEY, items)
 export function addTick(tick) {
   const ticks = loadTicks()
@@ -102,8 +167,32 @@ export function removeLastTick(type) {
 
 // Timetable: gün içi pomodoro setleri için planlanan zaman blokları (örn. 09:00-11:00)
 const TIMETABLE_KEY = 'pomodoro_timetable'
-export const loadTimetable = () => loadJSON(TIMETABLE_KEY, [])
+function normalizeTimetableBlock(block) {
+  return {
+    id: block.id,
+    date: block.date,
+    start: block.start,
+    end: block.end,
+    label: block.label ?? '',
+  }
+}
+export const loadTimetable = () => loadJSON(TIMETABLE_KEY, []).map(normalizeTimetableBlock)
 export const saveTimetable = (blocks) => saveJSON(TIMETABLE_KEY, blocks)
+
+// Timer state: sayfa yenilenince devam eden pomodoro'nun kaybolmaması için
+// sessionType/secondsLeft/isRunning'in anlık görüntüsü.
+const TIMER_STATE_KEY = 'pomodoro_timer_state'
+const DEFAULT_WORK_SECONDS = 25 * 60
+function normalizeTimerState(state) {
+  if (!state) return null
+  return {
+    sessionType: state.sessionType ?? 'work',
+    secondsLeft: state.secondsLeft ?? DEFAULT_WORK_SECONDS,
+    isRunning: state.isRunning ?? false,
+  }
+}
+export const loadTimerState = () => normalizeTimerState(loadJSON(TIMER_STATE_KEY, null))
+export const saveTimerState = (state) => saveJSON(TIMER_STATE_KEY, state)
 
 // Full backup of every storage key, for the export feature.
 export function exportAllData() {
@@ -117,3 +206,23 @@ export function exportAllData() {
     timetable: loadTimetable(),
   }
 }
+
+// Cross-tab sync: the native 'storage' event fires in *other* tabs/windows
+// when one of them writes to localStorage (never in the tab that wrote it).
+// Re-dispatching our own change event lets RecordsLog/Reports — which
+// already subscribe via subscribeToChanges() — pick up edits made in
+// another tab without a manual refresh. e.key is null on localStorage.clear().
+const SYNCED_KEYS = [
+  INVENTORY_KEY,
+  TODAY_KEY,
+  ACTIVITY_LOG_KEY,
+  SETTINGS_KEY,
+  TICKS_KEY,
+  TIMETABLE_KEY,
+]
+
+window.addEventListener('storage', (e) => {
+  if (e.key === null || SYNCED_KEYS.includes(e.key)) {
+    notifyChange()
+  }
+})

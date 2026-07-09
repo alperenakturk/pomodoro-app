@@ -303,7 +303,7 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
         Space start · Esc void · F finish · 1/2/3 switch
       </p>
 
-      {isWork && (
+      {isWork && isRunning && (
         <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
           <p className="text-sage text-xs font-sans">Had an interruption?</p>
           <div className="flex gap-3">

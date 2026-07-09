@@ -63,8 +63,14 @@ export function useTodayTasks() {
 
   // Takes the new value directly (collected by an inline form in TaskRow)
   // rather than prompting itself, so this stays a pure updater.
+  // Only two re-estimates are tracked (reestimate1/reestimate2, matching the
+  // Diff I / Diff II fields) — once both are set, a third call is rejected
+  // instead of silently overwriting reestimate2. Returns false when rejected
+  // so the caller (TaskRow) can warn the user.
   const reestimateTask = useCallback((id, value) => {
-    if (!Number.isFinite(value) || value <= 0) return
+    if (!Number.isFinite(value) || value <= 0) return false
+    const task = tasks.find((t) => t.id === id)
+    if (task && task.reestimate1 != null && task.reestimate2 != null) return false
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== id) return t
@@ -72,7 +78,8 @@ export function useTodayTasks() {
         return { ...t, [slot]: value }
       })
     )
-  }, [])
+    return true
+  }, [tasks])
 
   const addInterruption = useCallback((id, kind, delta = 1) => {
     setTasks((prev) =>
