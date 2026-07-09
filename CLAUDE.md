@@ -47,9 +47,22 @@ Four hooks own all mutable state:
 
 ### Component wiring
 
-`App.jsx` instantiates `useInventory` and `useTodayTasks`, then passes their data down as props. `usePomodoro` is instantiated inside `Timer` (it's timer-local state). `useTimetable` is instantiated inside `TodoToday` (not `App`) so its block totals can feed `AvailablePomodoros`' suggested-hours button. The hooks never talk to each other directly — `App`/`TodoToday` bridge them: when a task from Inventory is sent to Today it stores the source `inventoryId` on the today-task, and when that task is finished `App` also removes it from Inventory.
+`App.jsx` instantiates `useInventory`, `useTodayTasks`, and `usePomodoro`, then passes their data down as props — `Timer` and `SettingsTab` are both purely presentational and share the one `usePomodoro` instance (`SettingsTab` needs `cycleLength`/`chimeStyle` setters that live in the same hook Timer renders from, so it can't be timer-local anymore). `useTimetable` is instantiated inside `TodoToday` (not `App`) so its block totals can feed `AvailablePomodoros`' suggested-hours button. The hooks never talk to each other directly — `App`/`TodoToday` bridge them: when a task from Inventory is sent to Today it stores the source `inventoryId` on the today-task, and when that task is finished `App` also removes it from Inventory. Marking a task done is deliberately decoupled from the timer — finishing a task early doesn't stop a running Pomodoro (the remaining time is still there for overlearning).
 
 `RecordsLog` and `Reports` receive no props and read storage directly on mount and on `pomodoro-data-changed` events. `Reports` also renders `DayReview` (an end-of-day summary modal) and reads `diffII ?? diffI ?? diff` (see `effectiveDiff` in `Reports.jsx`) so a re-estimated task's stats reflect its latest commitment, not the stale original estimate.
+
+### Tab layout
+
+`App.jsx` renders four tabs via `TabNav` (`activeTab` state: `timer` | `planning` | `reports` | `settings`) to keep the Timer screen distraction-free per methodology — no Inventory/Records/Reports content should be visible while a Pomodoro is running. **All four tab panels stay mounted; only the active one is toggled visible with Tailwind's `hidden` class** (not conditionally rendered). This is required, not just an optimization: unmounting the Timer panel on tab switch would stop `usePomodoro`'s countdown interval while the user is on another tab, effectively pausing a running Pomodoro. Keeping `RecordsLog`/`Reports` mounted also avoids dropping and re-subscribing their `pomodoro-data-changed` listeners on every switch.
+
+- **Timer tab** — `Timer.jsx`: ring + state label, current active task, Start/Void/Finish-early/Skip-break, interruption buttons (internal/external, gated on `isRunning`), and `UnplannedCapture` (add-only input, no list — jot it down and keep working).
+- **Planning tab** — `Inventory` + `TodoToday` (which itself includes `AvailablePomodoros`, `Timetable`, the today-task list, and the full Unplanned & Urgent box with its list).
+- **Reports tab** — `Reports` (which renders `DayReview` internally) + `RecordsLog`.
+- **Settings tab** — `SettingsTab.jsx`: cycle length, chime/sound, theme toggle (moved out of the header). Short/long break duration and language are inert "Coming soon" rows — not backed by real state yet.
+
+`UnplannedCapture.jsx` is a shared add-only form (calls `addTask(text, null, { unplanned: true, urgent: true })`) used both standalone on the Timer tab and inside `TodoToday`'s Unplanned & Urgent box (which additionally renders the list).
+
+The Timer keeps a "Finish Pomodoro" (finish-early) control even though methodology.md's Rule 2 says a Pomodoro should always ring — this is an intentional, documented deviation (see the comment in `Timer.jsx`): the confirm dialog teaches the overlearning rule but leaves the choice to the user, and confirming still records the Pomodoro as complete.
 
 ### Styling
 

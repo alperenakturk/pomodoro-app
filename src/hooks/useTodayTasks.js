@@ -95,6 +95,9 @@ export function useTodayTasks() {
   // addActivityRecord bilerek setTasks'in updater'ının DIŞINDA çağrılıyor —
   // updater'lar saf olmalı; StrictMode onları geliştirmede 2 kez çalıştırıp
   // bu yan etkiyi (localStorage yazımını) tekrarlayabilir.
+  // Marking a task done is intentionally decoupled from the timer (usePomodoro
+  // lives in a separate hook instance) — finishing a task early must not stop
+  // a running Pomodoro; the remaining time is still available for overlearning.
   const finishTask = useCallback((id) => {
     const task = tasks.find((t) => t.id === id)
     if (task) {

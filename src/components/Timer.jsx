@@ -1,13 +1,5 @@
 import { useEffect } from 'react'
-import { usePomodoro, DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
-import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
-import Select from './Select'
-
-const CHIME_LABELS = {
-  classic: 'Classic',
-  soft: 'Soft',
-  alert: 'Alert',
-}
+import UnplannedCapture from './UnplannedCapture'
 
 const DEFAULT_TITLE = 'Pomodoro Technique'
 
@@ -36,28 +28,27 @@ function formatTime(totalSeconds) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function Timer({ activeTask, onWorkComplete, onInterruption }) {
-  const {
-    sessionType,
-    secondsLeft,
-    isRunning,
-    completedPomodoros,
-    internalCount,
-    externalCount,
-    cycleLength,
-    setCycleLength,
-    resetCycleLength,
-    chimeStyle,
-    setChimeStyle,
-    start,
-    voidPomodoro,
-    finishEarly,
-    skipBreak,
-    switchSession,
-    logInterruption,
-    undoInterruption,
-  } = usePomodoro({ onWorkComplete, onInterruption })
-
+// Purely presentational — usePomodoro is instantiated once in App.jsx (not
+// here) so the countdown keeps running and is controllable from the Settings
+// tab even while the Timer tab isn't the one showing.
+function Timer({
+  activeTask,
+  addTask,
+  sessionType,
+  secondsLeft,
+  isRunning,
+  completedPomodoros,
+  internalCount,
+  externalCount,
+  cycleLength,
+  start,
+  voidPomodoro,
+  finishEarly,
+  skipBreak,
+  switchSession,
+  logInterruption,
+  undoInterruption,
+}) {
   // Shows the live countdown in the tab title so it's visible without
   // switching back to this tab; reverts to the default title when idle.
   useEffect(() => {
@@ -94,10 +85,17 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
     }
   }
 
+  // Rule 2 says a Pomodoro always rings and there's no "finish early" —
+  // overrunning time is meant for overlearning, not for stopping the clock.
+  // We deliberately deviate from that: the confirm dialog *teaches* the rule
+  // (spells out what overlearning is and why finishing early isn't the
+  // default), but leaves the actual call to the user rather than blocking
+  // it outright. Confirming still finishes the Pomodoro as complete (an X
+  // is recorded), same as letting it ring naturally.
   function handleFinishEarly() {
     if (
       window.confirm(
-        "In the Pomodoro Technique, a Pomodoro isn't split and shouldn't be finished before it rings — the remaining time is meant for overlearning (reviewing what you did). Finish this Pomodoro early anyway and count it as complete?"
+        'Pomodoro Technique says a Pomodoro should ring before you stop. If your task is done, consider using the remaining time for overlearning (review/refine). Finish anyway?'
       )
     ) {
       finishEarly()
@@ -208,51 +206,6 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-sage text-xs font-sans">
-        <label htmlFor="cycle-length">Long break every</label>
-        <input
-          id="cycle-length"
-          type="number"
-          min="1"
-          max="12"
-          value={cycleLength}
-          onChange={(e) => setCycleLength(Number(e.target.value))}
-          className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
-        />
-        <span>pomodoro</span>
-        {cycleLength !== DEFAULT_CYCLE_LENGTH && (
-          <button
-            type="button"
-            onClick={resetCycleLength}
-            className="underline decoration-dotted text-cream"
-            title={`Reset to default (${DEFAULT_CYCLE_LENGTH})`}
-          >
-            Reset
-          </button>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2 text-sage text-xs font-sans">
-        <label htmlFor="chime-style">Sound</label>
-        <Select
-          id="chime-style"
-          value={chimeStyle}
-          options={CHIME_STYLES}
-          labels={CHIME_LABELS}
-          onChange={setChimeStyle}
-        />
-        <button
-          type="button"
-          onClick={() => {
-            unlockAudio()
-            playChime(chimeStyle)
-          }}
-          className="underline decoration-dotted text-cream"
-        >
-          Test
-        </button>
-      </div>
-
       <div className="text-center">
         <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">Current task</p>
         <p className="font-sans text-cream font-semibold">
@@ -346,6 +299,11 @@ function Timer({ activeTask, onWorkComplete, onInterruption }) {
           </div>
         </div>
       )}
+
+      <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
+        <p className="text-sage text-xs font-sans">Unplanned & urgent? Jot it and keep going.</p>
+        <UnplannedCapture addTask={addTask} className="w-full" />
+      </div>
     </div>
   )
 }

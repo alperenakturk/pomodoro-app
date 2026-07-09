@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
+import { usePomodoro } from './hooks/usePomodoro'
 import { loadSettings, patchSettings } from './lib/storage'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
 import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
+import TabNav from './components/TabNav'
+import SettingsTab from './components/SettingsTab'
 
 function App() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
+  const [activeTab, setActiveTab] = useState('timer')
 
   const [theme, setTheme] = useState(() => loadSettings().theme)
 
@@ -30,11 +34,25 @@ function App() {
 
   // Görev bittiğinde, eğer envanterden geldiyse envanterden de siliyoruz
   // (kitaptaki "tamamlanan işleri envanterden sil" kuralına uygun).
+  // Bu, timer'dan tamamen bağımsız — bir görevi bitirmek çalışan Pomodoro'yu
+  // durdurmaz (overlearning için kalan süre kullanılabilir).
   function handleFinishTask(id) {
     const task = todayApi.tasks.find((t) => t.id === id)
     todayApi.finishTask(id)
     if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
   }
+
+  // Instantiated here (not inside Timer) so the countdown keeps running and
+  // stays controllable from the Settings tab regardless of which tab is
+  // currently shown — see the "hidden, not unmounted" tab panels below.
+  const pomodoro = usePomodoro({
+    onWorkComplete: () => {
+      if (todayApi.activeTaskId) todayApi.incrementRealized(todayApi.activeTaskId)
+    },
+    onInterruption: (kind, delta) => {
+      if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind, delta)
+    },
+  })
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -62,23 +80,32 @@ function App() {
             Pomodoro Technique
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <p className="text-sage text-xs font-sans whitespace-nowrap">
-            {today} · {time}
-          </p>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            title="Toggle light/dark theme"
-            className="text-sage text-xs font-sans border border-cream/15 rounded-full px-3 py-1 whitespace-nowrap"
-          >
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
-          </button>
-        </div>
+        <p className="text-sage text-xs font-sans whitespace-nowrap">
+          {today} · {time}
+        </p>
       </header>
 
-      <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-[380px_1fr_380px] gap-6 items-start">
-        <div className="flex flex-col gap-6">
+      <TabNav activeTab={activeTab} onChange={setActiveTab} />
+
+      {/* All four panels stay mounted — only the active one is shown (CSS
+          `hidden`, not conditional rendering). Unmounting the Timer panel on
+          every tab switch would stop usePomodoro's countdown interval while
+          away, effectively pausing a running Pomodoro; unmounting Reports/
+          RecordsLog would drop and re-subscribe their storage listeners on
+          every switch. "Not visible while working" only requires display:none,
+          not unmounting. */}
+      <main className="max-w-7xl mx-auto p-6">
+        <div className={activeTab === 'timer' ? 'flex justify-center' : 'hidden'}>
+          <Timer activeTask={activeTask} addTask={todayApi.addTask} {...pomodoro} />
+        </div>
+
+        <div
+          className={
+            activeTab === 'planning'
+              ? 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start'
+              : 'hidden'
+          }
+        >
           <Inventory
             items={inventoryApi.items}
             addItem={inventoryApi.addItem}
@@ -88,22 +115,6 @@ function App() {
             combineItems={inventoryApi.combineItems}
             onSendToToday={handleSendToToday}
           />
-          <RecordsLog />
-        </div>
-
-        <div className="flex justify-center lg:sticky lg:top-6">
-          <Timer
-            activeTask={activeTask}
-            onWorkComplete={() => {
-              if (todayApi.activeTaskId) todayApi.incrementRealized(todayApi.activeTaskId)
-            }}
-            onInterruption={(kind, delta) => {
-              if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind, delta)
-            }}
-          />
-        </div>
-
-        <div className="flex flex-col gap-6">
           <TodoToday
             tasks={todayApi.tasks}
             activeTaskId={todayApi.activeTaskId}
@@ -114,9 +125,27 @@ function App() {
             reestimateTask={todayApi.reestimateTask}
             finishTask={handleFinishTask}
           />
-          <Reports />
         </div>
-      </div>
+
+        <div
+          className={activeTab === 'reports' ? 'max-w-3xl mx-auto flex flex-col gap-6' : 'hidden'}
+        >
+          <Reports />
+          <RecordsLog />
+        </div>
+
+        <div className={activeTab === 'settings' ? '' : 'hidden'}>
+          <SettingsTab
+            cycleLength={pomodoro.cycleLength}
+            setCycleLength={pomodoro.setCycleLength}
+            resetCycleLength={pomodoro.resetCycleLength}
+            chimeStyle={pomodoro.chimeStyle}
+            setChimeStyle={pomodoro.setChimeStyle}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        </div>
+      </main>
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
 import AvailablePomodoros from './AvailablePomodoros'
 import Timetable from './Timetable'
+import UnplannedCapture from './UnplannedCapture'
 
 function blockMinutes(block) {
   const [sh, sm] = block.start.split(':').map(Number)
@@ -276,14 +277,6 @@ function TodoToday({
     setPairWith('')
   }
 
-  function handleAddUnplanned(e) {
-    e.preventDefault()
-    const value = e.target.elements.unplannedText.value.trim()
-    if (!value) return
-    addTask(value, null, { unplanned: true, urgent: true })
-    e.target.reset()
-  }
-
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
@@ -390,21 +383,7 @@ function TodoToday({
           <span className="w-1.5 h-1.5 rounded-full bg-tomato" />
           Unplanned &amp; Urgent
         </p>
-        <form onSubmit={handleAddUnplanned} className="flex gap-2 mb-2">
-          <input
-            name="unplannedText"
-            type="text"
-            placeholder="Sudden task..."
-            aria-label="Sudden task"
-            className={`flex-1 ${inputClass}`}
-          />
-          <button
-            type="submit"
-            className="font-sans text-sm px-4 py-2 rounded-xl border border-cream/20 text-cream"
-          >
-            Add
-          </button>
-        </form>
+        <UnplannedCapture addTask={addTask} className="mb-2" />
         <ul className="flex flex-col gap-1">
           {urgentTasks.map((task) => (
             <TaskRow
