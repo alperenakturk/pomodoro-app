@@ -194,6 +194,42 @@ function normalizeTimerState(state) {
 export const loadTimerState = () => normalizeTimerState(loadJSON(TIMER_STATE_KEY, null))
 export const saveTimerState = (state) => saveJSON(TIMER_STATE_KEY, state)
 
+// Danger Zone (Settings tab): category-scoped resets, each removing only its
+// own key(s). Settings is deliberately never touched by any of these — only
+// resetAllData() below resets it, per the "settings survive a data reset"
+// requirement.
+export function clearInventory() {
+  localStorage.removeItem(INVENTORY_KEY)
+}
+// Timetable blocks are today-scoped planning data with the same lifecycle as
+// Today's Tasks, so clearing "Today's Tasks" clears both.
+export function clearTodayTasks() {
+  localStorage.removeItem(TODAY_KEY)
+  localStorage.removeItem(TIMETABLE_KEY)
+}
+export function clearActivityLog() {
+  localStorage.removeItem(ACTIVITY_LOG_KEY)
+}
+export function clearTicks() {
+  localStorage.removeItem(TICKS_KEY)
+}
+export function clearTimerState() {
+  localStorage.removeItem(TIMER_STATE_KEY)
+}
+
+// Reset to Factory Settings: removes every key, including Settings — the one
+// case where settings themselves are wiped, returning the app to its
+// first-launch state.
+export function resetAllData() {
+  localStorage.removeItem(INVENTORY_KEY)
+  localStorage.removeItem(TODAY_KEY)
+  localStorage.removeItem(TIMETABLE_KEY)
+  localStorage.removeItem(ACTIVITY_LOG_KEY)
+  localStorage.removeItem(TICKS_KEY)
+  localStorage.removeItem(TIMER_STATE_KEY)
+  localStorage.removeItem(SETTINGS_KEY)
+}
+
 // Full backup of every storage key, for the export feature.
 export function exportAllData() {
   return {
