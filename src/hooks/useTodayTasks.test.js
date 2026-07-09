@@ -1,10 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTodayTasks } from './useTodayTasks'
 import { loadActivityLog } from '../lib/storage'
+import { playTaskCompleteChime } from '../lib/alert'
+
+vi.mock('../lib/alert', () => ({
+  playTaskCompleteChime: vi.fn(),
+}))
 
 beforeEach(() => {
   localStorage.clear()
+  vi.clearAllMocks()
 })
 
 describe('useTodayTasks', () => {
@@ -90,6 +96,7 @@ describe('useTodayTasks', () => {
         diffII: -1, // 5 - 6
       })
       expect(result.current.tasks[0].done).toBe(true)
+      expect(playTaskCompleteChime).toHaveBeenCalledTimes(1)
     })
 
     it('stores null diffs when the task was never estimated', () => {

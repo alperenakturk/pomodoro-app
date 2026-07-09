@@ -1,5 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import UnplannedCapture from './UnplannedCapture'
+
+const RING_PULSE_MS = 500
 
 const DEFAULT_TITLE = 'Pomodoro Technique'
 
@@ -40,6 +42,7 @@ function Timer({
   completedPomodoros,
   internalCount,
   externalCount,
+  completionPulseKey,
   cycleLength,
   start,
   voidPomodoro,
@@ -62,6 +65,20 @@ function Timer({
       document.title = DEFAULT_TITLE
     }
   }, [])
+
+  // A brief one-shot ring-pulse whenever a Pomodoro completes.
+  // completionPulseKey is reset to 0 on every mount (it isn't persisted), so
+  // comparing against a ref — rather than any nonzero value — is what keeps
+  // this from firing on mount/refresh, only on an actual increment.
+  const [pulsing, setPulsing] = useState(false)
+  const prevPulseKeyRef = useRef(completionPulseKey)
+  useEffect(() => {
+    if (completionPulseKey === prevPulseKeyRef.current) return
+    prevPulseKeyRef.current = completionPulseKey
+    setPulsing(true)
+    const timeoutId = setTimeout(() => setPulsing(false), RING_PULSE_MS)
+    return () => clearTimeout(timeoutId)
+  }, [completionPulseKey])
 
   const isWork = sessionType === 'work'
   const accentClass = isWork ? 'text-tomato' : 'text-amber'
@@ -168,7 +185,10 @@ function Timer({
       </div>
 
       <div className="relative w-60 h-60 sm:w-72 sm:h-72">
-        <svg viewBox="0 0 100 100" className="w-full h-full">
+        <svg
+          viewBox="0 0 100 100"
+          className={`w-full h-full ${accentClass} ${pulsing ? 'animate-ring-pulse' : ''}`}
+        >
           <circle cx="50" cy="50" r={RADIUS} fill="none" strokeWidth="1.5" className="stroke-cream/10" />
           <circle
             cx="50"

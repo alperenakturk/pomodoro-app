@@ -6,6 +6,7 @@ import { loadTicks } from '../lib/storage'
 vi.mock('../lib/alert', () => ({
   unlockAudio: vi.fn(),
   playChime: vi.fn(),
+  playPing: vi.fn(),
   requestNotificationPermission: vi.fn(),
   notify: vi.fn(),
 }))
@@ -132,6 +133,26 @@ describe('usePomodoro', () => {
 
     expect(onInterruption).toHaveBeenCalledWith('internal', 1)
     expect(onInterruption).toHaveBeenCalledWith('internal', -1)
+  })
+
+  // Per methodology a "Pomodoro" is specifically the work session, so the
+  // completion-pulse trigger (used for the ring-pulse animation) should only
+  // fire when a Pomodoro rings, not when a break ends.
+  it('bumps completionPulseKey when a Pomodoro completes, but not when a break ends', () => {
+    const { result } = renderHook(() => usePomodoro())
+    expect(result.current.completionPulseKey).toBe(0)
+
+    act(() => result.current.start())
+    tick(25 * 60) // work -> short break
+    expect(result.current.completionPulseKey).toBe(1)
+
+    act(() => result.current.start())
+    tick(5 * 60) // short break -> work
+    expect(result.current.completionPulseKey).toBe(1)
+
+    act(() => result.current.start())
+    tick(25 * 60) // work -> short break again
+    expect(result.current.completionPulseKey).toBe(2)
   })
 
   it('restores an in-progress session after a remount (simulated page refresh)', () => {

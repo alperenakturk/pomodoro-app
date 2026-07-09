@@ -121,9 +121,12 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
       />
       <span
         title={task.text}
-        className={`truncate ${task.done ? 'line-through text-sage' : 'text-cream'}`}
+        className={`truncate ${task.done ? 'text-sage' : 'text-cream'}`}
       >
-        {task.text}
+        <span className="relative inline-block">
+          {task.text}
+          {task.done && <span aria-hidden="true" className="task-strike" />}
+        </span>
         {task.unplanned && (
           <span className="text-amber text-xs font-semibold ml-1" title="Unplanned">
             U
@@ -182,7 +185,11 @@ function TaskRow({ task, isActive, onSelect, onFinish, onRemove, onUpdate, onRee
           ✓
         </button>
       )}
-      {task.done && <span />}
+      {task.done && (
+        <span className="text-tomato text-xs leading-none animate-task-check" aria-hidden="true">
+          ✓
+        </span>
+      )}
       <button
         type="button"
         onClick={() => setEditing(true)}

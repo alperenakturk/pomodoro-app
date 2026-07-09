@@ -40,3 +40,83 @@ body {
 #root {
   min-height: 100svh;
 }
+
+/* Completion feedback animations (Pomodoro ring, task checkmark/strikethrough).
+   Static fallbacks below are the "reduced motion" end-state — informational
+   ones (the strikethrough, which means "done") default to their finished
+   look; purely decorative ones (the checkmark pop, the ring pulse) default to
+   invisible/inert. The prefers-reduced-motion block below overrides both with
+   the animated version when the user hasn't asked to reduce motion. Sound
+   (played from JS, not CSS) is unaffected either way. */
+.task-strike {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1px;
+  width: 100%;
+  background-color: currentColor;
+}
+
+.animate-task-check {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes ring-pulse {
+    0% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 currentColor);
+    }
+    40% {
+      transform: scale(1.035);
+      filter: drop-shadow(0 0 14px currentColor);
+    }
+    100% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 currentColor);
+    }
+  }
+  .animate-ring-pulse {
+    animation: ring-pulse 0.5s ease-out;
+  }
+
+  @keyframes strike-draw {
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
+  }
+  .task-strike {
+    width: 0%;
+    animation: strike-draw 0.6s ease-out forwards;
+  }
+
+  @keyframes task-check-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    30% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+    45% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    75% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1);
+    }
+  }
+  .animate-task-check {
+    animation: task-check-pop 1.3s ease-out forwards;
+  }
+}

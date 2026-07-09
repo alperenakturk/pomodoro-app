@@ -81,6 +81,15 @@ Tailwind CSS v4 loaded via `@tailwindcss/vite` plugin. Custom design tokens (col
 
 Light theme works by inverting the `pine`/`cream`/`sage` token *values* under a `.light` class on the app root (see `src/index.css`) — components never branch on theme in JS; they just keep using `bg-pine`/`text-cream`/etc. and the CSS variables do the swap. Don't add a component-level light/dark conditional; add or adjust a token override in the `.light` block instead.
 
+### Completion feedback
+
+Small, calm animation + sound pairs mark two moments — deliberately not gamified (no confetti/scores):
+
+- **Pomodoro completion** (`completeWork` in `usePomodoro.js`) — a `completionPulseKey` counter increments, which `Timer.jsx` turns into a one-shot ~500ms `animate-ring-pulse` class on the ring `<svg>` (subtle scale + `drop-shadow(currentColor)`, so it automatically matches the tomato/amber `accentClass` already applied). Paired with a new `playPing()` (`alert.js`) alongside the existing configurable `playChime(chimeStyle)`. Per methodology a "Pomodoro" is specifically the work session, so both the pulse and the ping fire only on `completeWork`, never `completeBreak` — ending a break keeps its original chime-only behavior.
+- **Task completion** (`finishTask` in `useTodayTasks.js`) — calls a new `playTaskCompleteChime()` (a longer, still-gentle ascending arpeggio). Visually, `TodoToday.jsx`'s `TaskRow` swaps the instant `line-through` for an absolutely-positioned `.task-strike` bar that draws left-to-right once (`task.done` flipping true is a one-time mount, so the CSS animation doesn't replay on later re-renders), and reuses the empty grid-slot placeholder for a `.animate-task-check` checkmark that pops in and fades out.
+
+All three keyframes live in `index.css`, gated behind `@media (prefers-reduced-motion: no-preference)`. The base (non-media-query) rules are the reduced-motion fallback: `.task-strike` defaults to `width: 100%` (a done task should still visibly read as done — that's information, not decoration, so it doesn't disappear), while `.animate-ring-pulse`/`.animate-task-check` default to inert/invisible (matching the pre-animation appearance). Sound is untouched by the media query either way — nothing in the JS checks `prefers-reduced-motion`, so audio plays the same regardless of motion preference.
+
 ### Gotchas
 
 - `vite-plugin-pwa` is wired into `vite.config.js` (`generateSW` strategy, `registerType: 'autoUpdate'`) — production builds emit a manifest and service worker, making the app installable and offline-capable. It only activates on `npm run build` + `npm run preview` (or a real deploy); `npm run dev` does not register a service worker unless `devOptions.enabled` is set.

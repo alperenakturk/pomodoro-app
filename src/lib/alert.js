@@ -48,6 +48,27 @@ export function playChime(style = 'classic') {
   playTone(880, 0.36, 0.16)
 }
 
+// A tiny, always-the-same acknowledgment tone for when a Pomodoro rings —
+// distinct from playChime() above: that's a configurable *notification*
+// ("pay attention, time to switch"), this is a UI *micro-confirmation*
+// ("that just completed"), so it isn't tied to the user's chimeStyle choice.
+export function playPing() {
+  if (!audioCtx) return
+  playTone(720, 0, 0.15, 0.16)
+}
+
+// A fuller, still-calm confirmation for finishing a task — a gentle
+// ascending arpeggio, longer and warmer than playPing() but deliberately far
+// from an "achievement unlocked" sound; this app values focus, not
+// gamification.
+export function playTaskCompleteChime() {
+  if (!audioCtx) return
+  playTone(523, 0, 0.35, 0.15)
+  playTone(659, 0.18, 0.35, 0.16)
+  playTone(784, 0.36, 0.4, 0.17)
+  playTone(880, 0.56, 0.55, 0.15)
+}
+
 export function requestNotificationPermission() {
   if (!('Notification' in window)) return
   if (Notification.permission === 'default') Notification.requestPermission()

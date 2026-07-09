@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { loadTodayTasks, saveTodayTasks, addActivityRecord } from '../lib/storage'
+import { playTaskCompleteChime } from '../lib/alert'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -123,6 +124,7 @@ export function useTodayTasks() {
         external: task.external,
         unplanned: task.unplanned,
       })
+      playTaskCompleteChime()
     }
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: true } : t)))
     setActiveTaskId((cur) => (cur === id ? null : cur))

@@ -7,7 +7,7 @@ import {
   loadTimerState,
   saveTimerState,
 } from '../lib/storage'
-import { unlockAudio, playChime, requestNotificationPermission, notify } from '../lib/alert'
+import { unlockAudio, playChime, playPing, requestNotificationPermission, notify } from '../lib/alert'
 
 const DURATIONS = {
   work: 25 * 60,
@@ -31,6 +31,11 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [internalCount, setInternalCount] = useState(0)
   const [externalCount, setExternalCount] = useState(0)
+  // Bumped only when a Pomodoro (work session) actually completes — Timer.jsx
+  // watches this to trigger a brief one-shot ring-pulse animation. A counter
+  // rather than a boolean so consecutive completions each retrigger the
+  // effect even if a render happens to land between them.
+  const [completionPulseKey, setCompletionPulseKey] = useState(0)
   // Rule 3: normalde her 4 pomodorodan sonra long break gelir, ama kullanıcı
   // bu oranı kendi çalışma ritmine göre ayarlayabilir.
   const [cycleLength, setCycleLengthState] = useState(
@@ -71,7 +76,13 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
   // kullanıcı "Pomodoro'yu bitir" ile erken tamamladığında aynı yolu izler.
   const completeWork = useCallback(() => {
     setIsRunning(false)
+    // Per methodology, a "Pomodoro" is specifically the work session — breaks
+    // aren't Pomodoros — so the ping + ring-pulse (Pomodoro completion feedback)
+    // live only here, not in completeBreak. playChime is the separate,
+    // user-configurable "time to switch" notification and still fires for both.
+    playPing()
     playChime(chimeStyle)
+    setCompletionPulseKey((k) => k + 1)
     const newCount = completedPomodoros + 1
     setCompletedPomodoros(newCount)
     addTick({
@@ -186,6 +197,7 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
     completedPomodoros,
     internalCount,
     externalCount,
+    completionPulseKey,
     cycleLength,
     setCycleLength,
     resetCycleLength,
