@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
+import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 
 const RING_PULSE_MS = 500
 
@@ -36,6 +38,7 @@ function formatTime(totalSeconds) {
 function Timer({
   activeTask,
   addTask,
+  theme,
   sessionType,
   secondsLeft,
   isRunning,
@@ -101,6 +104,47 @@ function Timer({
       document.exitFullscreen()
     } else {
       containerRef.current?.requestFullscreen().catch(() => {})
+    }
+  }
+
+  // Picture-in-Picture mini timer. pipWindow is the open PiP Window object
+  // (or null when closed); its content is a React portal, so it re-renders
+  // in step with the main countdown automatically — no separate timer, no
+  // manual sync. Read-only by design: no interruption buttons or controls,
+  // just the time and session type, matching document.title's existing
+  // countdown fallback for browsers without this API (Safari) in spirit.
+  const [pipWindow, setPipWindow] = useState(null)
+  const pipRequestInFlightRef = useRef(false)
+  const pipSupported = isPipSupported()
+
+  // Fires when the PiP window closes, whether the user closed it directly or
+  // we called .close() ourselves from toggling it off — single source of
+  // truth for "is it open", so state can't drift from reality.
+  useEffect(() => {
+    if (!pipWindow) return
+    function handlePipClosed() {
+      setPipWindow(null)
+    }
+    pipWindow.addEventListener('pagehide', handlePipClosed)
+    return () => pipWindow.removeEventListener('pagehide', handlePipClosed)
+  }, [pipWindow])
+
+  async function togglePip() {
+    if (pipWindow) {
+      pipWindow.close()
+      return
+    }
+    if (pipRequestInFlightRef.current) return
+    pipRequestInFlightRef.current = true
+    try {
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 220, height: 160 })
+      copyStylesToWindow(pip)
+      fillPipDocument(pip)
+      setPipWindow(pip)
+    } catch {
+      // Rejected/cancelled (e.g. no transient user activation) — stay put.
+    } finally {
+      pipRequestInFlightRef.current = false
     }
   }
 
@@ -212,11 +256,7 @@ function Timer({
       }
       if ((e.key === 'e' || e.key === 'E') && isRunning && isWork) {
         handleFinishEarly()
-        return
       }
-      if (e.key === '1') handleSwitch('work')
-      else if (e.key === '2') handleSwitch('shortBreak')
-      else if (e.key === '3') handleSwitch('longBreak')
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -239,15 +279,28 @@ function Timer({
             : 'relative bg-black/20 border border-cream/10 rounded-3xl px-6 sm:px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6'
         }
       >
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className="absolute top-3 right-3 text-sage hover:text-cream text-sm leading-none"
-          aria-label={isFullscreen ? 'Exit fullscreen focus mode' : 'Enter fullscreen focus mode'}
-          title={isFullscreen ? 'Exit fullscreen (F or Esc)' : 'Fullscreen focus mode (F)'}
-        >
-          ⛶
-        </button>
+        <div className="absolute top-3 right-3 flex items-center gap-3">
+          {!isFullscreen && pipSupported && (
+            <button
+              type="button"
+              onClick={togglePip}
+              className="text-sage hover:text-cream text-xs leading-none"
+              aria-label={pipWindow ? 'Close mini timer window' : 'Open mini timer window (picture-in-picture)'}
+              title={pipWindow ? 'Close mini timer window' : 'Mini timer window (picture-in-picture)'}
+            >
+              PiP
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="text-sage hover:text-cream text-sm leading-none"
+            aria-label={isFullscreen ? 'Exit fullscreen focus mode' : 'Enter fullscreen focus mode'}
+            title={isFullscreen ? 'Exit fullscreen (F or Esc)' : 'Fullscreen focus mode (F)'}
+          >
+            ⛶
+          </button>
+        </div>
 
         {!isFullscreen && (
           <div className="flex gap-2">
@@ -399,7 +452,7 @@ function Timer({
 
         {!isFullscreen && (
           <p className="text-sage/60 text-[10px] font-sans tracking-wide" title="Keyboard shortcuts">
-            Space start · Esc void · E finish · F fullscreen · 1/2/3 switch
+            Space start · Esc void · E finish · F fullscreen
           </p>
         )}
 
@@ -454,6 +507,21 @@ function Timer({
           </div>
         )}
       </div>
+
+      {pipWindow &&
+        createPortal(
+          <div
+            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${theme === 'light' ? 'light' : ''}`}
+          >
+            <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
+              {LABELS[sessionType]}
+            </p>
+            <p className="font-display text-5xl text-cream tracking-tight tabular-nums">
+              {formatTime(secondsLeft)}
+            </p>
+          </div>,
+          pipWindow.document.body
+        )}
     </div>
   )
 }

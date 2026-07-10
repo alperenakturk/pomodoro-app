@@ -373,6 +373,7 @@ WORK (25 min)
 - **Task combination** — select 2+ small Inventory tasks and combine them into one (Rule 5), summing their estimates.
 - **Categories** (Settings tab) — user-defined name + color labels for Inventory/Today/Records tasks, replacing the old free-text "type" field; see the Categories data-model section above.
 - **Fullscreen Focus Mode** (Timer tab) — a toggle (button or `F`) that uses the browser Fullscreen API to show only the ring, current task, interruption buttons, and Start/Void/Skip controls — no navigation, no other chrome. `Esc` (or the toggle) exits back to the normal Timer tab.
+- **Picture-in-Picture mini timer** (Timer tab) — where supported (feature-detected; hidden entirely on browsers without it, e.g. Safari), a toggle opens a small always-on-top window showing just the countdown and session type, so it stays visible when switching tabs/apps. Read-only — no interruption buttons or controls — `document.title`'s countdown remains the fallback everywhere else.
 
 ---
 

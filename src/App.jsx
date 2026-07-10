@@ -128,7 +128,7 @@ function App() {
           not unmounting. */}
       <main className="max-w-7xl mx-auto p-6">
         <div className={activeTab === 'timer' ? 'flex justify-center' : 'hidden'}>
-          <Timer activeTask={activeTask} addTask={todayApi.addTask} {...pomodoro} />
+          <Timer activeTask={activeTask} addTask={todayApi.addTask} theme={theme} {...pomodoro} />
         </div>
 
         <div
