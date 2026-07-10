@@ -181,7 +181,11 @@ export function updateActivityRecord(id, patch) {
 // Settings: kullanıcı tarafından ayarlanabilen tercihler (örn. long break'e
 // kaç pomodorodan sonra geçileceği)
 const SETTINGS_KEY = 'pomodoro_settings'
-const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic', userId: 'local' }
+// `language` is null until the user explicitly picks one in Settings — until
+// then the UI auto-detects from navigator.language on every load (see
+// resolveLanguage() in lib/i18n) rather than freezing in whatever was
+// detected the first time.
+const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic', userId: 'local', language: null }
 export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
 export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
 // Merges a partial update into existing settings — saveSettings overwrites

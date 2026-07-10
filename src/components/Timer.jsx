@@ -2,15 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
+import { useTranslation } from '../hooks/useTranslation'
 
 const RING_PULSE_MS = 500
 
-const DEFAULT_TITLE = 'Pomodoro Technique'
-
-const LABELS = {
-  work: 'Focus',
-  shortBreak: 'Short break',
-  longBreak: 'Long break',
+const LABEL_KEYS = {
+  work: 'timer.focus',
+  shortBreak: 'timer.shortBreak',
+  longBreak: 'timer.longBreak',
 }
 
 const SESSION_ORDER = ['work', 'shortBreak', 'longBreak']
@@ -55,19 +54,22 @@ function Timer({
   logInterruption,
   undoInterruption,
 }) {
+  const { t } = useTranslation()
+  const defaultTitle = t('common.appTitle')
+
   // Shows the live countdown in the tab title so it's visible without
   // switching back to this tab; reverts to the default title when idle.
   useEffect(() => {
     document.title = isRunning
-      ? `${formatTime(secondsLeft)} · ${LABELS[sessionType]}`
-      : DEFAULT_TITLE
-  }, [isRunning, secondsLeft, sessionType])
+      ? `${formatTime(secondsLeft)} · ${t(LABEL_KEYS[sessionType])}`
+      : defaultTitle
+  }, [isRunning, secondsLeft, sessionType, defaultTitle, t])
 
   useEffect(() => {
     return () => {
-      document.title = DEFAULT_TITLE
+      document.title = defaultTitle
     }
-  }, [])
+  }, [defaultTitle])
 
   // A brief one-shot ring-pulse whenever a Pomodoro completes.
   // completionPulseKey is reset to 0 on every mount (it isn't persisted), so
@@ -196,11 +198,7 @@ function Timer({
   // Fullscreen Focus Mode — that view keeps only Start/Void/Skip, the
   // methodology-clean core controls.
   function handleFinishEarly() {
-    if (
-      window.confirm(
-        'Pomodoro Technique says a Pomodoro should ring before you stop. If your task is done, consider using the remaining time for overlearning (review/refine). Finish anyway?'
-      )
-    ) {
+    if (window.confirm(t('timer.finishEarlyConfirm'))) {
       finishEarly()
     }
   }
@@ -208,11 +206,7 @@ function Timer({
   function handleSwitch(type) {
     if (type === sessionType) return
     if (sessionType === 'work' && isRunning) {
-      if (
-        !window.confirm(
-          "The current Pomodoro will be abandoned before it rings and voided (it won't count). Switch to the break anyway?"
-        )
-      ) {
+      if (!window.confirm(t('timer.switchAwayConfirm'))) {
         return
       }
     }
@@ -285,8 +279,8 @@ function Timer({
               type="button"
               onClick={togglePip}
               className="text-sage hover:text-cream text-xs leading-none"
-              aria-label={pipWindow ? 'Close mini timer window' : 'Open mini timer window (picture-in-picture)'}
-              title={pipWindow ? 'Close mini timer window' : 'Mini timer window (picture-in-picture)'}
+              aria-label={pipWindow ? t('timer.closeMiniTimerAria') : t('timer.openMiniTimerAria')}
+              title={pipWindow ? t('timer.closeMiniTimerTitle') : t('timer.openMiniTimerTitle')}
             >
               PiP
             </button>
@@ -295,8 +289,8 @@ function Timer({
             type="button"
             onClick={toggleFullscreen}
             className="text-sage hover:text-cream text-sm leading-none"
-            aria-label={isFullscreen ? 'Exit fullscreen focus mode' : 'Enter fullscreen focus mode'}
-            title={isFullscreen ? 'Exit fullscreen (F or Esc)' : 'Fullscreen focus mode (F)'}
+            aria-label={isFullscreen ? t('timer.exitFullscreenAria') : t('timer.enterFullscreenAria')}
+            title={isFullscreen ? t('timer.exitFullscreenTitle') : t('timer.enterFullscreenTitle')}
           >
             ⛶
           </button>
@@ -309,7 +303,7 @@ function Timer({
                 key={type}
                 type="button"
                 onClick={() => handleSwitch(type)}
-                title={sessionType === type ? undefined : `Switch to ${LABELS[type]}`}
+                title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
                 className={
                   'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
                   (sessionType === type
@@ -317,7 +311,7 @@ function Timer({
                     : 'border-cream/15 text-sage hover:border-cream/30')
                 }
               >
-                {LABELS[type]}
+                {t(LABEL_KEYS[type])}
               </button>
             ))}
           </div>
@@ -346,7 +340,7 @@ function Timer({
 
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
-              {LABELS[sessionType]}
+              {t(LABEL_KEYS[sessionType])}
             </p>
             <p className="font-display text-6xl text-cream tracking-tight tabular-nums">
               {formatTime(secondsLeft)}
@@ -366,9 +360,9 @@ function Timer({
         </div>
 
         <div className="text-center">
-          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">Current task</p>
+          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
           <p className="font-sans text-cream font-semibold">
-            {activeTask ? activeTask.text : 'No active task selected'}
+            {activeTask ? activeTask.text : t('timer.noActiveTask')}
           </p>
         </div>
 
@@ -379,7 +373,7 @@ function Timer({
               onClick={start}
               className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
             >
-              Start
+              {t('timer.start')}
             </button>
           )}
           {isRunning && isWork && (
@@ -388,7 +382,7 @@ function Timer({
               onClick={openVoidPrompt}
               className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
             >
-              Void Pomodoro
+              {t('timer.voidPomodoro')}
             </button>
           )}
           {!isFullscreen && isRunning && isWork && (
@@ -397,7 +391,7 @@ function Timer({
               onClick={handleFinishEarly}
               className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
             >
-              Finish Pomodoro
+              {t('timer.finishPomodoro')}
             </button>
           )}
           {isRunning && !isWork && (
@@ -406,7 +400,7 @@ function Timer({
               onClick={skipBreak}
               className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
             >
-              Skip break
+              {t('timer.skipBreak')}
             </button>
           )}
         </div>
@@ -417,10 +411,10 @@ function Timer({
             className="w-full bg-tomato/5 border border-tomato/20 rounded-xl p-3 flex flex-col gap-2"
           >
             <p className="text-tomato text-xs font-sans">
-              This Pomodoro will be voided and won't count.
+              {t('timer.voidPanelWarning')}
             </p>
             <label htmlFor="void-reason" className="text-sage text-xs font-sans">
-              Why did you void this Pomodoro? (optional)
+              {t('timer.voidReasonLabel')}
             </label>
             <input
               id="void-reason"
@@ -428,8 +422,8 @@ function Timer({
               autoFocus
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="e.g. got called into a meeting"
-              aria-label="Void reason (optional)"
+              placeholder={t('timer.voidReasonPlaceholder')}
+              aria-label={t('timer.voidReasonAria')}
               className="bg-cream/5 border border-cream/15 rounded-lg text-cream placeholder:text-sage/50 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-3 py-2 text-sm font-sans"
             />
             <div className="flex gap-2 justify-end">
@@ -437,28 +431,28 @@ function Timer({
                 type="submit"
                 className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
               >
-                Void Pomodoro
+                {t('timer.voidPomodoro')}
               </button>
               <button
                 type="button"
                 onClick={cancelVoid}
                 className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </form>
         )}
 
         {!isFullscreen && (
-          <p className="text-sage/60 text-[10px] font-sans tracking-wide" title="Keyboard shortcuts">
-            Space start · Esc void · E finish · F fullscreen
+          <p className="text-sage/60 text-[10px] font-sans tracking-wide" title={t('timer.keyboardShortcutsTitle')}>
+            {t('timer.keyboardHint')}
           </p>
         )}
 
         {isWork && isRunning && (
           <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-            <p className="text-sage text-xs font-sans">Had an interruption?</p>
+            <p className="text-sage text-xs font-sans">{t('timer.hadInterruption')}</p>
             <div className="flex gap-3">
               <div className="flex items-center gap-1">
                 <button
@@ -466,14 +460,14 @@ function Timer({
                   onClick={() => logInterruption('internal')}
                   className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
                 >
-                  Internal interruption ({internalCount})
+                  {t('timer.internalInterruption', { count: internalCount })}
                 </button>
                 <button
                   type="button"
                   onClick={() => undoInterruption('internal')}
                   disabled={internalCount === 0}
                   className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                  aria-label="undo internal interruption"
+                  aria-label={t('timer.undoInternalAria')}
                 >
                   -1
                 </button>
@@ -484,14 +478,14 @@ function Timer({
                   onClick={() => logInterruption('external')}
                   className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
                 >
-                  External interruption ({externalCount})
+                  {t('timer.externalInterruption', { count: externalCount })}
                 </button>
                 <button
                   type="button"
                   onClick={() => undoInterruption('external')}
                   disabled={externalCount === 0}
                   className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                  aria-label="undo external interruption"
+                  aria-label={t('timer.undoExternalAria')}
                 >
                   -1
                 </button>
@@ -502,7 +496,7 @@ function Timer({
 
         {!isFullscreen && (
           <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-            <p className="text-sage text-xs font-sans">Unplanned & urgent? Jot it and keep going.</p>
+            <p className="text-sage text-xs font-sans">{t('timer.unplannedPrompt')}</p>
             <UnplannedCapture addTask={addTask} className="w-full" />
           </div>
         )}
@@ -514,7 +508,7 @@ function Timer({
             className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${theme === 'light' ? 'light' : ''}`}
           >
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
-              {LABELS[sessionType]}
+              {t(LABEL_KEYS[sessionType])}
             </p>
             <p className="font-display text-5xl text-cream tracking-tight tabular-nums">
               {formatTime(secondsLeft)}

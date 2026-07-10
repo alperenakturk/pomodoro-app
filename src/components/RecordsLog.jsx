@@ -11,6 +11,8 @@ import {
 import { activityLogToCSV, downloadFile } from '../lib/export'
 import { compactInputClass as inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
+import { useTranslation } from '../hooks/useTranslation'
+import { formatDateLocalized } from '../lib/i18n'
 import CategorySelect from './CategorySelect'
 import CategoryTagPicker from './CategoryTagPicker'
 
@@ -56,6 +58,7 @@ function RecordRow({ record, categories, onDelete }) {
   const [estimate, setEstimate] = useState(record.estimate ?? '')
   const [real, setReal] = useState(record.real)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const { t, localeTag } = useTranslation()
 
   function handleSave() {
     const nextEstimate = estimate === '' ? null : Number(estimate)
@@ -87,14 +90,14 @@ function RecordRow({ record, categories, onDelete }) {
           <input
             value={activity}
             onChange={(e) => setActivity(e.target.value)}
-            aria-label="Activity name"
+            aria-label={t('recordsLog.activityAria')}
             className={`flex-1 ${inputClass}`}
           />
           <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={`est-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
-            Est.
+            {t('today.estimateLabel')}
           </label>
           <input
             id={`est-${record.id}`}
@@ -105,7 +108,7 @@ function RecordRow({ record, categories, onDelete }) {
             className={`w-14 ${inputClass}`}
           />
           <label htmlFor={`real-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
-            Real
+            {t('today.colReal')}
           </label>
           <input
             id={`real-${record.id}`}
@@ -120,14 +123,14 @@ function RecordRow({ record, categories, onDelete }) {
             onClick={handleSave}
             className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream ml-auto"
           >
-            Save
+            {t('common.save')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </li>
@@ -146,33 +149,33 @@ function RecordRow({ record, categories, onDelete }) {
               onClick={() => setNotesExpanded((prev) => !prev)}
               className="text-sage text-xs ml-2 hover:text-cream"
               aria-expanded={notesExpanded}
-              title={notesExpanded ? 'Hide description' : 'Show description'}
+              title={notesExpanded ? t('common.hideDescription') : t('common.showDescription')}
             >
               {notesExpanded ? '📝▾' : '📝'}
             </button>
           )}
         </span>
-        <span className="text-sage text-xs">{record.date}</span>
+        <span className="text-sage text-xs">{formatDateLocalized(record.date, localeTag)}</span>
       </div>
       {notesExpanded && record.notes && (
         <p className="text-sage text-xs whitespace-pre-wrap mt-1">{record.notes}</p>
       )}
       <div className="text-sage text-xs flex gap-3 mt-1 items-center">
-        <span>Estimate: {record.estimate ?? '-'}</span>
-        <span>Actual: {record.real}</span>
-        <span className={diffClass(record.diff)}>Diff: {diffLabel(record.diff)}</span>
+        <span>{t('recordsLog.estimateLabel', { value: record.estimate ?? '-' })}</span>
+        <span>{t('recordsLog.actualLabel', { value: record.real })}</span>
+        <span className={diffClass(record.diff)}>{t('recordsLog.diffLabel', { value: diffLabel(record.diff) })}</span>
         {record.diffI != null && (
-          <span className={diffClass(record.diffI)}>Diff I: {diffLabel(record.diffI)}</span>
+          <span className={diffClass(record.diffI)}>{t('recordsLog.diffILabel', { value: diffLabel(record.diffI) })}</span>
         )}
         {record.diffII != null && (
-          <span className={diffClass(record.diffII)}>Diff II: {diffLabel(record.diffII)}</span>
+          <span className={diffClass(record.diffII)}>{t('recordsLog.diffIILabel', { value: diffLabel(record.diffII) })}</span>
         )}
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="ml-auto text-cream"
-          aria-label="edit record"
-          title="Edit"
+          aria-label={t('recordsLog.editAria')}
+          title={t('recordsLog.editTitle')}
         >
           ✎
         </button>
@@ -180,8 +183,8 @@ function RecordRow({ record, categories, onDelete }) {
           type="button"
           onClick={() => onDelete(record.id)}
           className="text-sage"
-          aria-label="delete record"
-          title="Delete"
+          aria-label={t('recordsLog.deleteAria')}
+          title={t('recordsLog.deleteTitle')}
         >
           ✕
         </button>
@@ -195,11 +198,12 @@ function RecordRow({ record, categories, onDelete }) {
 // above (those exist for Records Log's aggregation-adjacent use, not this;
 // see storage.js's pomodoro_void_log comment on why Reports never reads it).
 function VoidLogRow({ entry, categories, onDelete }) {
+  const { t } = useTranslation()
   const category = categories.find((c) => entry.categoryIds.includes(c.id)) ?? null
   return (
     <li className="text-sage text-xs font-sans flex items-center gap-2">
       <span className="flex-1">
-        Voided at {formatElapsed(entry.elapsedSeconds)} / {formatElapsed(WORK_SECONDS)}
+        {t('recordsLog.voidedAt', { elapsed: formatElapsed(entry.elapsedSeconds), total: formatElapsed(WORK_SECONDS) })}
         {entry.activity && <> — {entry.activity}</>}
         {category && <CategoryTag category={category} />}
         {entry.reason && <> — {entry.reason}</>}
@@ -208,8 +212,8 @@ function VoidLogRow({ entry, categories, onDelete }) {
         type="button"
         onClick={() => onDelete(entry.id)}
         className="text-sage hover:text-cream flex-shrink-0"
-        aria-label="delete void log entry"
-        title="Delete"
+        aria-label={t('recordsLog.deleteVoidAria')}
+        title={t('recordsLog.deleteVoidTitle')}
       >
         ✕
       </button>
@@ -218,6 +222,7 @@ function VoidLogRow({ entry, categories, onDelete }) {
 }
 
 function RecordsLog({ categories = [] }) {
+  const { t } = useTranslation()
   const [log, setLog] = useState(() => loadActivityLog())
   const [voidLog, setVoidLog] = useState(() => loadVoidLog())
   const [dateFilter, setDateFilter] = useState('')
@@ -234,13 +239,13 @@ function RecordsLog({ categories = [] }) {
   }, [])
 
   function handleDelete(id) {
-    if (window.confirm('Delete this record?')) {
+    if (window.confirm(t('recordsLog.deleteConfirm'))) {
       removeActivityRecord(id)
     }
   }
 
   function handleDeleteVoidEntry(id) {
-    if (window.confirm('Delete this void log entry?')) {
+    if (window.confirm(t('recordsLog.deleteVoidConfirm'))) {
       removeVoidLogEntry(id)
     }
   }
@@ -281,14 +286,14 @@ function RecordsLog({ categories = [] }) {
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
-          Records Log
+          {t('recordsLog.title')}
         </p>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={handleExportCSV}
             className="text-sage text-xs"
-            title="Export records as CSV"
+            title={t('recordsLog.exportCsvTitle')}
           >
             CSV
           </button>
@@ -296,7 +301,7 @@ function RecordsLog({ categories = [] }) {
             type="button"
             onClick={handleExportJSON}
             className="text-sage text-xs"
-            title="Export a full JSON backup of all data"
+            title={t('recordsLog.exportJsonTitle')}
           >
             JSON
           </button>
@@ -308,7 +313,7 @@ function RecordsLog({ categories = [] }) {
           type="date"
           value={dateFilter}
           onChange={(e) => setDateFilter(e.target.value)}
-          aria-label="Filter by date"
+          aria-label={t('recordsLog.filterDateAria')}
           className={inputClass}
         />
         <CategorySelect
@@ -316,7 +321,6 @@ function RecordsLog({ categories = [] }) {
           value={categoryFilter}
           onChange={setCategoryFilter}
           allowAll
-          allLabel="All categories"
           className="w-32"
         />
         {filtersActive && (
@@ -325,14 +329,14 @@ function RecordsLog({ categories = [] }) {
             onClick={clearFilters}
             className="text-sage text-xs underline decoration-dotted"
           >
-            Clear filters
+            {t('recordsLog.clearFilters')}
           </button>
         )}
       </div>
 
       {recent.length === 0 && (
         <p className="text-sage text-sm font-sans text-center py-2">
-          {filtersActive ? 'No records match these filters.' : 'No completed tasks yet.'}
+          {filtersActive ? t('recordsLog.noRecordsFiltered') : t('recordsLog.noRecordsEmpty')}
         </p>
       )}
 
@@ -345,7 +349,7 @@ function RecordsLog({ categories = [] }) {
       {voidLog.length > 0 && (
         <div className="mt-4 pt-4 border-t border-cream/10">
           <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2">
-            Voided Pomodoros
+            {t('recordsLog.voidedPomodorosTitle')}
           </p>
           <ul className="flex flex-col gap-1.5">
             {[...voidLog]

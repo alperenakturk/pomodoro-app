@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from '../hooks/useTranslation'
 
 // A dropdown for picking a task's category, modeled after Select.jsx's
 // from-scratch pattern (native <option> popups ignore author background
@@ -29,10 +30,12 @@ function CategorySelect({
   onChange,
   className = '',
   allowAll = false,
-  allLabel = 'All categories',
+  allLabel,
 }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
+  const { t } = useTranslation()
+  const resolvedAllLabel = allLabel ?? t('categorySelect.allCategories')
 
   useEffect(() => {
     if (!open) return
@@ -66,7 +69,7 @@ function CategorySelect({
         className="w-full bg-cream/5 border border-cream/15 rounded-lg text-cream px-2 py-1.5 text-xs flex items-center gap-1.5 focus:border-tomato focus:ring-2 focus:ring-tomato/40 outline-none"
       >
         {!isAll && <Dot color={selected?.color} />}
-        <span className="truncate">{isAll ? allLabel : selected ? selected.name : 'No category'}</span>
+        <span className="truncate">{isAll ? resolvedAllLabel : selected ? selected.name : t('categorySelect.noCategory')}</span>
         <span className="text-sage text-[10px] ml-auto">▾</span>
       </button>
 
@@ -88,7 +91,7 @@ function CategorySelect({
                   isAll ? 'bg-tomato/20 text-tomato' : 'text-cream hover:bg-cream/10'
                 }`}
               >
-                {allLabel}
+                {resolvedAllLabel}
               </button>
             </li>
           )}
@@ -104,7 +107,7 @@ function CategorySelect({
               }`}
             >
               <Dot color={null} />
-              No category
+              {t('categorySelect.noCategory')}
             </button>
           </li>
           {categories.map((category) => (

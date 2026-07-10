@@ -8,6 +8,7 @@ import {
   saveTimerState,
 } from '../lib/storage'
 import { unlockAudio, playChime, playPing, requestNotificationPermission, notify } from '../lib/alert'
+import { translate } from '../lib/i18n'
 
 const DURATIONS = {
   work: 25 * 60,
@@ -21,7 +22,12 @@ function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function usePomodoro({ onWorkComplete, onInterruption, onVoid } = {}) {
+// `t` defaults to a plain English lookup (bypassing the LanguageContext
+// entirely) so this hook stays usable standalone — same reasoning as the
+// onWorkComplete/onInterruption/onVoid callbacks below: usePomodoro doesn't
+// otherwise know about cross-cutting concerns, App.jsx supplies the real
+// translator from useTranslation() since it does.
+export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, vars) => translate('en', key, vars) } = {}) {
   // Restored on mount so a refresh doesn't lose a session in progress.
   const [sessionType, setSessionType] = useState(() => loadTimerState()?.sessionType ?? 'work')
   const [secondsLeft, setSecondsLeft] = useState(
@@ -94,22 +100,22 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid } = {}) {
     onWorkComplete && onWorkComplete()
     const nextType = newCount % cycleLength === 0 ? 'longBreak' : 'shortBreak'
     notify(
-      'Pomodoro complete',
-      nextType === 'longBreak' ? 'Time for a long break.' : 'Time for a short break.'
+      t('notifications.pomodoroCompleteTitle'),
+      nextType === 'longBreak' ? t('notifications.longBreakBody') : t('notifications.shortBreakBody')
     )
     setSessionType(nextType)
     setSecondsLeft(DURATIONS[nextType])
-  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle])
+  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle, t])
 
   const completeBreak = useCallback(() => {
     setIsRunning(false)
     playChime(chimeStyle)
     // Rule 3: the pomodoro count resets only when a long break ends.
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
-    notify('Break over', 'Time to get back to work.')
+    notify(t('notifications.breakOverTitle'), t('notifications.backToWorkBody'))
     setSessionType('work')
     setSecondsLeft(DURATIONS.work)
-  }, [sessionType, chimeStyle])
+  }, [sessionType, chimeStyle, t])
 
   useEffect(() => {
     if (secondsLeft !== 0 || !isRunning) return

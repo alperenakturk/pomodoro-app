@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
+import { useTranslation } from '../hooks/useTranslation'
+import { formatDateLocalized } from '../lib/i18n'
 import {
   todayString,
   datesForYesterday,
@@ -23,10 +25,10 @@ import {
 import DayReview from './DayReview'
 
 const PERIODS = [
-  { id: 'today', label: 'Today' },
-  { id: 'week', label: 'This Week' },
-  { id: 'month', label: 'This Month' },
-  { id: 'year', label: 'This Year' },
+  { id: 'today', labelKey: 'reports.periodToday' },
+  { id: 'week', labelKey: 'reports.periodWeek' },
+  { id: 'month', labelKey: 'reports.periodMonth' },
+  { id: 'year', labelKey: 'reports.periodYear' },
 ]
 
 // direction: 'up' | 'down' | 'flat' from trendDirection().
@@ -58,6 +60,7 @@ function Stat({ label, value, trend }) {
 }
 
 function TodaySection({ ticks, activityLog, todayTasks }) {
+  const { t } = useTranslation()
   const today = [todayString()]
   const yesterday = datesForYesterday()
 
@@ -77,13 +80,16 @@ function TodaySection({ ticks, activityLog, todayTasks }) {
   return (
     <div className="grid grid-cols-3 gap-3 font-sans">
       <Stat
-        label="Pomodoros today"
+        label={t('reports.pomodorosToday')}
         value={todayPomodoros}
         trend={<TrendArrow direction={trendDirection(todayPomodoros, yesterdayPomodoros)} goodDirection={null} />}
       />
-      <Stat label="Tasks today" value={`${activeToday} active · ${completedToday} done`} />
       <Stat
-        label="Interruptions today"
+        label={t('reports.tasksToday')}
+        value={t('reports.tasksTodayValue', { active: activeToday, done: completedToday })}
+      />
+      <Stat
+        label={t('reports.interruptionsToday')}
         value={todayInterruptions}
         trend={
           <TrendArrow
@@ -97,6 +103,7 @@ function TodaySection({ ticks, activityLog, todayTasks }) {
 }
 
 function EstimationAccuracySection({ activityLog, period }) {
+  const { t } = useTranslation()
   const periodRecords = recordsWithEffectiveDiff(recordsInDates(activityLog, datesForPeriod(period)))
   const chartRecords = takeLast(periodRecords, 20)
   const { overestimated, underestimated } = estimationBreakdown(periodRecords)
@@ -107,19 +114,19 @@ function EstimationAccuracySection({ activityLog, period }) {
   return (
     <div>
       <div className="grid grid-cols-2 gap-3 font-sans mb-4">
-        <Stat label="Overestimated (took less)" value={overestimated} />
-        <Stat label="Underestimated (took longer)" value={underestimated} />
+        <Stat label={t('reports.overestimated')} value={overestimated} />
+        <Stat label={t('reports.underestimated')} value={underestimated} />
       </div>
 
       <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
-        Estimate vs. real, per task ({chartRecords.length})
+        {t('reports.diffChartCaption', { count: chartRecords.length })}
       </p>
       <DiffTrend records={chartRecords} />
 
       <div className="mt-4 pt-4 border-t border-cream/10 flex items-center justify-center gap-2 font-sans text-xs text-sage">
-        <span>Avg error this week: {thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1)}</span>
+        <span>{t('reports.avgErrorThisWeek', { value: thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1) })}</span>
         <span>·</span>
-        <span>last week: {lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1)}</span>
+        <span>{t('reports.avgErrorLastWeek', { value: lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1) })}</span>
         <TrendArrow direction={trendDirection(thisWeekAvg, lastWeekAvg)} goodDirection="down" />
       </div>
     </div>
@@ -127,6 +134,7 @@ function EstimationAccuracySection({ activityLog, period }) {
 }
 
 function InterruptionTrendsSection({ activityLog, period }) {
+  const { t } = useTranslation()
   const periodRecords = recordsInDates(activityLog, datesForPeriod(period))
   const avgPerTask = avgInterruptionsPerTask(periodRecords)
 
@@ -140,17 +148,17 @@ function InterruptionTrendsSection({ activityLog, period }) {
     <div>
       <div className="flex items-center justify-center gap-2 font-sans text-sm text-cream mb-1">
         <span className="font-display text-xl">{avgPerTask == null ? '-' : avgPerTask.toFixed(1)}</span>
-        <span className="text-sage text-xs">avg interruptions per task</span>
+        <span className="text-sage text-xs">{t('reports.avgInterruptionsPerTask')}</span>
       </div>
       <div className="flex items-center justify-center gap-2 font-sans text-xs text-sage mb-4">
-        <span>this week: {thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1)}</span>
+        <span>{t('reports.thisWeek', { value: thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1) })}</span>
         <span>·</span>
-        <span>last week: {lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1)}</span>
+        <span>{t('reports.lastWeek', { value: lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1) })}</span>
         <TrendArrow direction={trendDirection(thisWeekAvg, lastWeekAvg)} goodDirection="down" />
       </div>
 
       {recentTasks.length === 0 ? (
-        <p className="text-sage text-xs font-sans text-center py-2">No tasks finished in this period.</p>
+        <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noTasksFinishedPeriod')}</p>
       ) : (
         <ul className="flex flex-col gap-1.5 font-sans">
           {recentTasks.map((r) => {
@@ -167,7 +175,7 @@ function InterruptionTrendsSection({ activityLog, period }) {
                   />
                 </span>
                 <span className="text-sage w-24 text-right flex-shrink-0">
-                  {count} ({r.internal || 0} int · {r.external || 0} ext)
+                  {t('reports.interruptionCount', { count, internal: r.internal || 0, external: r.external || 0 })}
                 </span>
               </li>
             )
@@ -179,14 +187,15 @@ function InterruptionTrendsSection({ activityLog, period }) {
 }
 
 function CategoryBreakdownSection({ activityLog, categories, period }) {
+  const { t } = useTranslation()
   const periodRecords = recordsInDates(activityLog, datesForPeriod(period))
-  const buckets = pomodorosByCategory(periodRecords, categories)
+  const buckets = pomodorosByCategory(periodRecords, categories, t('reports.uncategorized'))
   const maxTotal = Math.max(1, ...buckets.map((b) => b.total))
 
   if (buckets.length === 0) {
     return (
       <p className="text-sage text-xs font-sans text-center py-2">
-        No pomodoros logged against finished tasks in this period.
+        {t('reports.categoryBreakdownEmpty')}
       </p>
     )
   }
@@ -208,7 +217,7 @@ function CategoryBreakdownSection({ activityLog, categories, period }) {
             />
           </span>
           <span className="text-sage w-16 text-right flex-shrink-0">
-            {bucket.total} pom.
+            {t('reports.pomSuffix', { count: bucket.total })}
           </span>
         </li>
       ))}
@@ -217,6 +226,7 @@ function CategoryBreakdownSection({ activityLog, categories, period }) {
 }
 
 function LongTermSection({ ticks, activityLog }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   const monthDates = datesForMonth()
@@ -234,26 +244,26 @@ function LongTermSection({ ticks, activityLog }) {
         aria-expanded={expanded}
         className="w-full flex items-center justify-between font-sans text-xs text-sage uppercase tracking-wide"
       >
-        <span>Long-term</span>
-        <span>{expanded ? '▾ collapse' : '▸ expand'}</span>
+        <span>{t('reports.longTermTitle')}</span>
+        <span>{expanded ? t('reports.collapse') : t('reports.expand')}</span>
       </button>
 
       {expanded && (
         <div className="mt-4">
           <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
-            Activity (last 13 weeks)
+            {t('reports.activityCaption')}
           </p>
           <ActivityHeatmap ticks={ticks} />
 
           <div className="grid grid-cols-2 gap-3 font-sans mt-4 pt-4 border-t border-cream/10">
-            <Stat label="Pomodoros this month" value={monthPomodoros} />
-            <Stat label="Pomodoros this quarter" value={quarterPomodoros} />
+            <Stat label={t('reports.pomodorosThisMonth')} value={monthPomodoros} />
+            <Stat label={t('reports.pomodorosThisQuarter')} value={quarterPomodoros} />
             <Stat
-              label="Avg interruptions/task (month)"
+              label={t('reports.avgInterruptionsMonth')}
               value={monthAvgInterruptions == null ? '-' : monthAvgInterruptions.toFixed(1)}
             />
             <Stat
-              label="Avg interruptions/task (quarter)"
+              label={t('reports.avgInterruptionsQuarter')}
               value={quarterAvgInterruptions == null ? '-' : quarterAvgInterruptions.toFixed(1)}
             />
           </div>
@@ -264,6 +274,7 @@ function LongTermSection({ ticks, activityLog }) {
 }
 
 function Reports({ todayTasks = [], categories = [] }) {
+  const { t } = useTranslation()
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
@@ -282,14 +293,14 @@ function Reports({ todayTasks = [], categories = [] }) {
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
-          Reports
+          {t('reports.title')}
         </p>
         <button
           type="button"
           onClick={() => setShowReview(true)}
           className="text-tomato text-xs font-sans"
         >
-          Review today
+          {t('reports.reviewToday')}
         </button>
       </div>
 
@@ -307,14 +318,14 @@ function Reports({ todayTasks = [], categories = [] }) {
                 : 'border-cream/15 text-sage hover:border-cream/30')
             }
           >
-            {p.label}
+            {t(p.labelKey)}
           </button>
         ))}
       </div>
 
       {hasNoHistoryYet(ticks, activityLog) && (
         <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
-          Not enough history yet — filters will differ as you use the app across more days.
+          {t('reports.noHistoryHint')}
         </p>
       )}
 
@@ -324,21 +335,21 @@ function Reports({ todayTasks = [], categories = [] }) {
 
       <section className="mb-6 pt-4 border-t border-cream/10">
         <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          Estimation Accuracy
+          {t('reports.estimationAccuracyTitle')}
         </p>
         <EstimationAccuracySection activityLog={activityLog} period={period} />
       </section>
 
       <section className="mb-6 pt-4 border-t border-cream/10">
         <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          Interruption Trends
+          {t('reports.interruptionTrendsTitle')}
         </p>
         <InterruptionTrendsSection activityLog={activityLog} period={period} />
       </section>
 
       <section className="mb-6 pt-4 border-t border-cream/10">
         <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          Pomodoros by Category
+          {t('reports.categoryBreakdownTitle')}
         </p>
         <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
       </section>
@@ -369,6 +380,7 @@ function bucketClass(count) {
 }
 
 function ActivityHeatmap({ ticks }) {
+  const { t, localeTag } = useTranslation()
   const totalDays = HEATMAP_WEEKS * 7
   const days = []
   for (let i = totalDays - 1; i >= 0; i--) {
@@ -378,9 +390,9 @@ function ActivityHeatmap({ ticks }) {
   }
 
   const countByDate = {}
-  for (const t of ticks) {
-    if (t.type !== 'pomodoro') continue
-    countByDate[t.date] = (countByDate[t.date] || 0) + 1
+  for (const tick of ticks) {
+    if (tick.type !== 'pomodoro') continue
+    countByDate[tick.date] = (countByDate[tick.date] || 0) + 1
   }
 
   const columns = []
@@ -390,16 +402,17 @@ function ActivityHeatmap({ ticks }) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="flex gap-[3px]" role="img" aria-label="Daily Pomodoro activity, last 13 weeks">
+      <div className="flex gap-[3px]" role="img" aria-label={t('reports.heatmapAriaLabel')}>
         {columns.map((col, ci) => (
           <div key={ci} className="flex flex-col gap-[3px]">
             {col.map((date) => {
               const count = countByDate[date] || 0
+              const tooltipKey = count === 1 ? 'reports.heatmapTooltipOne' : 'reports.heatmapTooltipOther'
               return (
                 <span
                   key={date}
                   className={`w-2.5 h-2.5 rounded-sm ${bucketClass(count)}`}
-                  title={`${date}: ${count} pomodoro${count === 1 ? '' : 's'}`}
+                  title={t(tooltipKey, { date: formatDateLocalized(date, localeTag), count })}
                 />
               )
             })}
@@ -407,21 +420,23 @@ function ActivityHeatmap({ ticks }) {
         ))}
       </div>
       <div className="flex items-center gap-1 text-sage text-[10px] font-sans">
-        <span>Less</span>
+        <span>{t('reports.less')}</span>
         {[0, 1, 3, 5, 7].map((count) => (
           <span key={count} className={`w-2.5 h-2.5 rounded-sm ${bucketClass(count)}`} />
         ))}
-        <span>More</span>
+        <span>{t('reports.more')}</span>
       </div>
     </div>
   )
 }
 
 function DiffTrend({ records }) {
+  const { t } = useTranslation()
+
   if (records.length === 0) {
     return (
       <p className="text-sage text-xs font-sans text-center py-2">
-        No estimated tasks completed yet.
+        {t('reports.noEstimatedTasks')}
       </p>
     )
   }
@@ -440,7 +455,7 @@ function DiffTrend({ records }) {
 
   return (
     <div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label="Estimation diff per task">
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" role="img" aria-label={t('reports.diffChartAriaLabel')}>
         <line x1="0" y1={baseline} x2={width} y2={baseline} className="stroke-cream/15" strokeWidth="1" />
         {records.map((r, i) => {
           const diff = effectiveDiff(r)
@@ -455,9 +470,13 @@ function DiffTrend({ records }) {
           return (
             <g key={r.id}>
               <rect x={x} y={y} width={barWidth} height={barHeight} rx="2" className={colorClass}>
-                <title>{`${r.activity}: ${diff > 0 ? '+' : ''}${diff}${
-                  r.diffI != null ? ' (re-estimated)' : ''
-                }`}</title>
+                <title>
+                  {t('reports.diffTooltip', {
+                    activity: r.activity,
+                    diff: diff > 0 ? `+${diff}` : diff,
+                    reestimated: r.diffI != null ? t('reports.diffTooltipReestimated') : '',
+                  })}
+                </title>
               </rect>
               {showLabel && (
                 <text
@@ -477,11 +496,11 @@ function DiffTrend({ records }) {
       <div className="flex items-center justify-center gap-4 mt-1">
         <span className="flex items-center gap-1 text-sage text-[10px] font-sans">
           <span className="w-2 h-2 rounded-full bg-tomato inline-block" />
-          Took longer
+          {t('reports.tookLonger')}
         </span>
         <span className="flex items-center gap-1 text-sage text-[10px] font-sans">
           <span className="w-2 h-2 rounded-full bg-amber inline-block" />
-          Took less
+          {t('reports.tookLess')}
         </span>
       </div>
     </div>

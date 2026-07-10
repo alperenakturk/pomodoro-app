@@ -1,11 +1,14 @@
+import { useTranslation } from '../hooks/useTranslation'
+
 const TABS = [
-  { id: 'timer', label: 'Timer' },
-  { id: 'planning', label: 'Planning' },
-  { id: 'reports', label: 'Reports' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'timer', labelKey: 'tabs.timer' },
+  { id: 'planning', labelKey: 'tabs.planning' },
+  { id: 'reports', labelKey: 'tabs.reports' },
+  { id: 'settings', labelKey: 'tabs.settings' },
 ]
 
 function TabNav({ activeTab, onChange }) {
+  const { t } = useTranslation()
   return (
     <nav className="flex gap-2 justify-center flex-wrap px-4 sm:px-6 py-3 border-b border-cream/10">
       {TABS.map((tab) => (
@@ -21,7 +24,7 @@ function TabNav({ activeTab, onChange }) {
               : 'border-cream/15 text-sage hover:border-cream/30')
           }
         >
-          {tab.label}
+          {t(tab.labelKey)}
         </button>
       ))}
     </nav>

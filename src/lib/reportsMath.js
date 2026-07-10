@@ -128,7 +128,7 @@ export function takeLast(records, limit) {
 // spend all of its pomodoros on both at once, not half on each. A record
 // with no tags, or whose tags don't resolve to a real category (deleted, or
 // legacy data), buckets into "Uncategorized" rather than being dropped.
-export function pomodorosByCategory(records, categories) {
+export function pomodorosByCategory(records, categories, uncategorizedLabel = 'Uncategorized') {
   const byId = new Map(categories.map((c) => [c.id, c]))
   const totals = new Map()
 
@@ -144,7 +144,7 @@ export function pomodorosByCategory(records, categories) {
   for (const r of records) {
     const resolvedCategories = (r.categoryIds ?? []).map((id) => byId.get(id)).filter(Boolean)
     if (resolvedCategories.length === 0) {
-      addTo('uncategorized', 'Uncategorized', null, r.real || 0)
+      addTo('uncategorized', uncategorizedLabel, null, r.real || 0)
     } else {
       for (const category of resolvedCategories) {
         addTo(category.id, category.name, category.color, r.real || 0)

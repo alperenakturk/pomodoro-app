@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTimetable } from '../hooks/useTimetable'
+import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
 import AvailablePomodoros from './AvailablePomodoros'
@@ -53,6 +54,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
   const [reestimating, setReestimating] = useState(false)
   const [reestimateValue, setReestimateValue] = useState('')
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const { t } = useTranslation()
 
   function handleSave() {
     if (!text.trim()) return
@@ -85,7 +87,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
     if (!Number.isFinite(value) || value <= 0) return
     const applied = onReestimate(task.id, value)
     if (applied === false) {
-      window.alert('This task already has two re-estimates (Diff I and Diff II) — the second one is locked in.')
+      window.alert(t('today.alreadyTwoReestimates'))
       return
     }
     setReestimating(false)
@@ -97,7 +99,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          aria-label="Task name"
+          aria-label={t('today.taskNameAria')}
           className={inputClass}
         />
         <div className="flex gap-2">
@@ -106,8 +108,8 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
             min="1"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
-            placeholder="Est."
-            aria-label="Estimate"
+            placeholder={t('today.estimateShortPlaceholder')}
+            aria-label={t('today.estimateAria')}
             className={`w-16 text-xs ${inputClass}`}
           />
           <CategoryTagPicker
@@ -121,21 +123,21 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
             onClick={handleSave}
             className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream ml-auto"
           >
-            Save
+            {t('today.saveButton')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
           >
-            Cancel
+            {t('today.cancelButton')}
           </button>
         </div>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Description (optional)"
-          aria-label="Description"
+          placeholder={t('common.descriptionPlaceholder')}
+          aria-label={t('common.descriptionAria')}
           rows={3}
           className={`text-xs resize-y ${inputClass}`}
         />
@@ -153,7 +155,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
           'w-4 h-4 rounded-full border flex-shrink-0 ' +
           (isActive ? 'bg-tomato border-tomato' : 'border-sage')
         }
-        aria-label="make active task"
+        aria-label={t('today.makeActiveAria')}
       />
       <span
         title={task.text}
@@ -164,7 +166,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
           {task.done && <span aria-hidden="true" className="task-strike" />}
         </span>
         {task.unplanned && (
-          <span className="text-amber text-xs font-semibold ml-1" title="Unplanned">
+          <span className="text-amber text-xs font-semibold ml-1" title={t('today.unplannedBadgeTitle')}>
             U
           </span>
         )}
@@ -175,7 +177,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
             onClick={() => setNotesExpanded((prev) => !prev)}
             className="text-sage text-xs ml-1 hover:text-cream"
             aria-expanded={notesExpanded}
-            title={notesExpanded ? 'Hide description' : 'Show description'}
+            title={notesExpanded ? t('common.hideDescription') : t('common.showDescription')}
           >
             {notesExpanded ? '📝▾' : '📝'}
           </button>
@@ -183,7 +185,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
             className="text-tomato ml-1"
-            title={`More than ${MAX_RECOMMENDED_ESTIMATE} — break it up (Rule 4)`}
+            title={t('today.moreThanWarningInline', { max: MAX_RECOMMENDED_ESTIMATE })}
           >
             ⚠
           </span>
@@ -196,13 +198,15 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
           type="button"
           onClick={openReestimate}
           className="text-sage text-xs text-right hover:text-tomato"
-          aria-label="re-estimate task"
+          aria-label={t('today.reestimateAria')}
           title={
             task.reestimate1 != null
-              ? `Re-estimated: ${task.estimate ?? '?'} → ${task.reestimate1}${
-                  task.reestimate2 != null ? ` → ${task.reestimate2}` : ''
-                }. Click to re-estimate again.`
-              : 'Running long? Click to re-estimate.'
+              ? t('today.reestimateTitleAgain', {
+                  from: task.estimate ?? '?',
+                  to: task.reestimate1,
+                  extra: task.reestimate2 != null ? ` → ${task.reestimate2}` : '',
+                })
+              : t('today.reestimateTitleRunningLong')
           }
         >
           {task.estimate ?? '-'}
@@ -216,8 +220,8 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
           type="button"
           onClick={() => onFinish(task.id)}
           className="text-tomato text-xs leading-none"
-          title="Finish task"
-          aria-label="finish task"
+          title={t('today.finishTaskTitle')}
+          aria-label={t('today.finishTaskAria')}
         >
           ✓
         </button>
@@ -231,21 +235,21 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
         type="button"
         onClick={() => setEditing(true)}
         className="text-cream text-xs leading-none"
-        title="Edit task"
-        aria-label="edit task"
+        title={t('today.editTaskTitle')}
+        aria-label={t('today.editTaskAria')}
       >
         ✎
       </button>
       <button
         type="button"
         onClick={() => {
-          if (window.confirm('Delete this task?')) {
+          if (window.confirm(t('today.deleteConfirm'))) {
             onRemove(task.id)
           }
         }}
         className="text-sage text-xs leading-none"
-        title="Delete task"
-        aria-label="delete task"
+        title={t('today.deleteTaskTitle')}
+        aria-label={t('today.deleteTaskAria')}
       >
         ✕
       </button>
@@ -258,28 +262,28 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
     {reestimating && (
       <li className="flex items-center gap-2 px-2 py-2 -mt-1 mb-1 bg-tomato/5 border border-tomato/20 rounded-xl">
         <form onSubmit={submitReestimate} className="flex items-center gap-2 flex-1 flex-wrap">
-          <span className="text-sage text-xs">Re-estimate "{task.text}":</span>
+          <span className="text-sage text-xs">{t('today.reestimatePrompt', { text: task.text })}</span>
           <input
             type="number"
             min="1"
             autoFocus
             value={reestimateValue}
             onChange={(e) => setReestimateValue(e.target.value)}
-            aria-label="New estimate"
+            aria-label={t('today.newEstimateAria')}
             className={`w-16 text-xs ${inputClass}`}
           />
           <button
             type="submit"
             className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
           >
-            Save
+            {t('today.saveButton')}
           </button>
           <button
             type="button"
             onClick={() => setReestimating(false)}
             className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
           >
-            Cancel
+            {t('today.cancelButton')}
           </button>
         </form>
       </li>
@@ -303,6 +307,7 @@ function TodoToday({
   const [estimate, setEstimate] = useState('')
   const [categoryIds, setCategoryIds] = useState([])
   const [notes, setNotes] = useState('')
+  const { t } = useTranslation()
 
   // Bölüm ayrımı "urgent"a göre yapılıyor — "unplanned" sadece görevin kökenini
   // (bugün plan dışı çıktığını) belirtir, hangi bölümde görüneceğini değil.
@@ -330,7 +335,7 @@ function TodoToday({
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
-        Today's Tasks
+        {t('today.title')}
       </p>
 
       <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={timetableHours} />
@@ -345,13 +350,13 @@ function TodoToday({
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="New task..."
-          aria-label="New task"
+          placeholder={t('today.newTaskPlaceholder')}
+          aria-label={t('today.newTaskAria')}
           className={`flex-1 min-w-0 ${inputClass}`}
         />
         <div className="flex flex-col gap-1">
           <label htmlFor="today-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
-            Est.
+            {t('today.estimateLabel')}
           </label>
           <input
             id="today-estimate"
@@ -359,7 +364,7 @@ function TodoToday({
             min="1"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
-            placeholder="# pomodoros"
+            placeholder={t('today.estimatePlaceholder')}
             className={`w-20 px-2 ${inputClass}`}
           />
         </div>
@@ -367,7 +372,7 @@ function TodoToday({
           type="submit"
           className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream"
         >
-          Add
+          {t('today.addButton')}
         </button>
       </form>
 
@@ -375,8 +380,8 @@ function TodoToday({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Description (optional)"
-          aria-label="Description"
+          placeholder={t('common.descriptionPlaceholder')}
+          aria-label={t('common.descriptionAria')}
           rows={2}
           className={`flex-1 text-xs resize-y ${inputClass}`}
         />
@@ -385,16 +390,16 @@ function TodoToday({
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
         <p className="text-tomato text-xs font-sans mb-4 -mt-2">
-          More than {MAX_RECOMMENDED_ESTIMATE} pomodoros — break the task into sub-tasks (Rule 4).
+          {t('today.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
         </p>
       )}
 
       <div className={`${ROW_GRID} px-2 mb-1`}>
         <span />
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide">Task</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Est.</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Real</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">Diff</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide">{t('today.colTask')}</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colEstimate')}</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colReal')}</span>
+        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colDiff')}</span>
         <span />
         <span />
         <span />
@@ -403,7 +408,7 @@ function TodoToday({
       <ul className="flex flex-col gap-1 mb-4">
         {planned.length === 0 && (
           <li className="text-sage text-sm font-sans text-center py-2">
-            No tasks yet.
+            {t('today.emptyState')}
           </li>
         )}
         {planned.map((task) => (
@@ -424,7 +429,7 @@ function TodoToday({
       <div className="bg-tomato/5 border border-tomato/20 rounded-2xl p-3">
         <p className="flex items-center gap-2 text-tomato text-xs font-sans uppercase tracking-wide mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-tomato" />
-          Unplanned &amp; Urgent
+          {t('today.unplannedUrgentTitle')}
         </p>
         <UnplannedCapture addTask={addTask} className="mb-2" />
         <ul className="flex flex-col gap-1">

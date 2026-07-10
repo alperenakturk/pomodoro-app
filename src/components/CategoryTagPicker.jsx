@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from '../hooks/useTranslation'
 
 // Multi-select category picker (tags) for assigning categories to a task —
 // distinct from CategorySelect, which is a single-pick dropdown still used
@@ -16,6 +17,7 @@ function Dot({ color }) {
 function CategoryTagPicker({ id, categories, value, onChange, className = '' }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!open) return
@@ -54,7 +56,7 @@ function CategoryTagPicker({ id, categories, value, onChange, className = '' }) 
         className="w-full min-h-[30px] bg-cream/5 border border-cream/15 rounded-lg text-cream px-2 py-1 text-xs flex items-center gap-1 flex-wrap focus:border-tomato focus:ring-2 focus:ring-tomato/40 outline-none"
       >
         {selected.length === 0 ? (
-          <span className="text-sage">No categories</span>
+          <span className="text-sage">{t('categoryPicker.noneSelected')}</span>
         ) : (
           selected.map((c) => (
             <span
@@ -77,7 +79,7 @@ function CategoryTagPicker({ id, categories, value, onChange, className = '' }) 
           className="absolute left-0 top-full mt-1 z-10 bg-pine border border-cream/15 rounded-lg shadow-lg overflow-hidden min-w-full max-h-48 overflow-y-auto"
         >
           {categories.length === 0 && (
-            <li className="px-2 py-1.5 text-xs text-sage whitespace-nowrap">No categories yet</li>
+            <li className="px-2 py-1.5 text-xs text-sage whitespace-nowrap">{t('categoryPicker.noneYet')}</li>
           )}
           {categories.map((category) => {
             const isSelected = value.includes(category.id)

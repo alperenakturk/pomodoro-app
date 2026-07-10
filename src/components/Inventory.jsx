@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
+import { useTranslation } from '../hooks/useTranslation'
+import { formatDateLocalized } from '../lib/i18n'
 import CategoryTagPicker from './CategoryTagPicker'
 
 function isOverdue(deadline) {
@@ -52,6 +54,7 @@ function InventoryRow({
   const [deadline, setDeadline] = useState(item.deadline ?? '')
   const [unplanned, setUnplanned] = useState(item.unplanned ?? false)
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const { t, localeTag } = useTranslation()
 
   function handleSave() {
     if (!text.trim()) return
@@ -82,7 +85,7 @@ function InventoryRow({
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          aria-label="Task name"
+          aria-label={t('inventory.taskNameAria')}
           className={inputClass}
         />
         <div className="flex gap-2">
@@ -91,8 +94,8 @@ function InventoryRow({
             min="1"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
-            placeholder="Est."
-            aria-label="Estimate"
+            placeholder={t('inventory.estimateShortPlaceholder')}
+            aria-label={t('inventory.estimateAria')}
             className={`w-16 text-xs ${inputClass}`}
           />
           <CategoryTagPicker
@@ -105,14 +108,14 @@ function InventoryRow({
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            aria-label="Deadline"
+            aria-label={t('inventory.deadlineAria')}
             className={`text-xs ${inputClass}`}
           />
           <button
             type="button"
             onClick={() => setUnplanned((prev) => !prev)}
             aria-pressed={unplanned}
-            title="Mark as unplanned"
+            title={t('inventory.markUnplannedTitle')}
             className={
               'font-sans text-xs px-3 py-1 rounded-xl border whitespace-nowrap flex-shrink-0 ' +
               (unplanned ? 'bg-amber/20 border-amber/60 text-amber' : 'border-cream/15 text-sage')
@@ -124,8 +127,8 @@ function InventoryRow({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Description (optional)"
-          aria-label="Description"
+          placeholder={t('common.descriptionPlaceholder')}
+          aria-label={t('common.descriptionAria')}
           rows={3}
           className={`text-xs resize-y ${inputClass}`}
         />
@@ -135,14 +138,14 @@ function InventoryRow({
             onClick={handleSave}
             className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
           >
-            Save
+            {t('inventory.saveButton')}
           </button>
           <button
             type="button"
             onClick={handleCancel}
             className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
           >
-            Cancel
+            {t('inventory.cancelButton')}
           </button>
         </div>
       </li>
@@ -161,8 +164,8 @@ function InventoryRow({
           type="checkbox"
           checked={selected}
           onChange={() => onToggleSelect(item.id)}
-          aria-label={`select ${item.text} to combine`}
-          title="Select to combine with other small tasks (Rule 5)"
+          aria-label={t('inventory.selectAria', { text: item.text })}
+          title={t('inventory.selectToCombineTitle')}
           className="flex-shrink-0"
         />
         <button
@@ -172,13 +175,13 @@ function InventoryRow({
             'w-4 h-4 rounded-full border flex-shrink-0 ' +
             (item.done ? 'bg-sage border-sage' : 'border-sage')
           }
-          aria-label="mark as done"
+          aria-label={t('inventory.markDoneAria')}
         />
         <span className={item.done ? 'flex-1 line-through text-sage' : 'flex-1'}>
           {item.text}
         </span>
         {item.unplanned && (
-          <span className="text-amber text-xs font-semibold" title="Unplanned">
+          <span className="text-amber text-xs font-semibold" title={t('inventory.unplannedBadgeTitle')}>
             U
           </span>
         )}
@@ -189,7 +192,7 @@ function InventoryRow({
             onClick={() => setNotesExpanded((prev) => !prev)}
             className="text-sage text-xs hover:text-cream"
             aria-expanded={notesExpanded}
-            title={notesExpanded ? 'Hide description' : 'Show description'}
+            title={notesExpanded ? t('common.hideDescription') : t('common.showDescription')}
           >
             {notesExpanded ? '📝▾' : '📝'}
           </button>
@@ -200,7 +203,7 @@ function InventoryRow({
               isOverdue(item.deadline) ? 'text-tomato text-xs font-semibold' : 'text-sage text-xs'
             }
           >
-            {item.deadline}
+            {formatDateLocalized(item.deadline, localeTag)}
           </span>
         )}
         {item.estimate && (
@@ -212,11 +215,12 @@ function InventoryRow({
             }
             title={
               item.estimate > MAX_RECOMMENDED_ESTIMATE
-                ? `More than ${MAX_RECOMMENDED_ESTIMATE} — break it up (Rule 4)`
+                ? t('inventory.moreThanWarningInline', { max: MAX_RECOMMENDED_ESTIMATE })
                 : undefined
             }
           >
-            {item.estimate} pom.{item.estimate > MAX_RECOMMENDED_ESTIMATE ? ' ⚠' : ''}
+            {t('reports.pomSuffix', { count: item.estimate })}
+            {item.estimate > MAX_RECOMMENDED_ESTIMATE ? ' ⚠' : ''}
           </span>
         )}
         <button
@@ -224,27 +228,27 @@ function InventoryRow({
           onClick={() => onSendToToday(item)}
           className="text-tomato text-xs"
         >
-          Add to today
+          {t('inventory.addToToday')}
         </button>
         <button
           type="button"
           onClick={() => setEditing(true)}
           className="text-cream"
-          aria-label="edit inventory item"
-          title="Edit"
+          aria-label={t('inventory.editAria')}
+          title={t('inventory.editTitle')}
         >
           ✎
         </button>
         <button
           type="button"
           onClick={() => {
-            if (window.confirm('Delete this task from the inventory?')) {
+            if (window.confirm(t('inventory.deleteConfirm'))) {
               removeItem(item.id)
             }
           }}
           className="text-sage text-xs"
         >
-          Delete
+          {t('common.delete')}
         </button>
       </div>
       {notesExpanded && item.notes && (
@@ -271,6 +275,7 @@ function Inventory({
   const [deadline, setDeadline] = useState('')
   const [unplanned, setUnplanned] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
+  const { t } = useTranslation()
 
   function toggleSelect(id) {
     setSelectedIds((prev) => {
@@ -282,11 +287,7 @@ function Inventory({
   }
 
   function handleCombine() {
-    if (
-      window.confirm(
-        `Combine ${selectedIds.size} tasks into one? The originals will be replaced and this can't be undone.`
-      )
-    ) {
+    if (window.confirm(t('inventory.combineConfirm', { count: selectedIds.size }))) {
       combineItems([...selectedIds])
       setSelectedIds(new Set())
     }
@@ -313,9 +314,9 @@ function Inventory({
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
-          Activity Inventory
+          {t('inventory.title')}
         </p>
-        <span className="text-sage text-xs font-sans">{items.length} items</span>
+        <span className="text-sage text-xs font-sans">{t('inventory.itemsCount', { count: items.length })}</span>
       </div>
 
       <form onSubmit={handleAdd} className="flex gap-2 mb-4 items-end">
@@ -323,13 +324,13 @@ function Inventory({
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="New task..."
-          aria-label="New task"
+          placeholder={t('inventory.newTaskPlaceholder')}
+          aria-label={t('inventory.newTaskAria')}
           className={`flex-1 min-w-0 ${inputClass}`}
         />
         <div className="flex flex-col gap-1">
           <label htmlFor="inventory-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
-            Est.
+            {t('inventory.estimateLabel')}
           </label>
           <input
             id="inventory-estimate"
@@ -337,7 +338,7 @@ function Inventory({
             min="1"
             value={estimate}
             onChange={(e) => setEstimate(e.target.value)}
-            placeholder="# pomodoros"
+            placeholder={t('inventory.estimatePlaceholder')}
             className={`w-20 px-2 ${inputClass}`}
           />
         </div>
@@ -345,7 +346,7 @@ function Inventory({
           type="submit"
           className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream"
         >
-          Add
+          {t('inventory.addButton')}
         </button>
       </form>
 
@@ -353,8 +354,8 @@ function Inventory({
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Description (optional)"
-          aria-label="Description"
+          placeholder={t('common.descriptionPlaceholder')}
+          aria-label={t('common.descriptionAria')}
           rows={2}
           className={`flex-1 text-xs resize-y ${inputClass}`}
         />
@@ -366,14 +367,14 @@ function Inventory({
           type="date"
           value={deadline}
           onChange={(e) => setDeadline(e.target.value)}
-          aria-label="Deadline"
+          aria-label={t('inventory.deadlineAria')}
           className={`text-xs ${inputClass}`}
         />
         <button
           type="button"
           onClick={() => setUnplanned((prev) => !prev)}
           aria-pressed={unplanned}
-          title="Mark as unplanned"
+          title={t('inventory.markUnplannedTitle')}
           className={
             'font-sans text-xs px-3 py-2 rounded-xl border whitespace-nowrap flex-shrink-0 ' +
             (unplanned
@@ -387,21 +388,21 @@ function Inventory({
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
         <p className="text-tomato text-xs font-sans mb-4 -mt-2">
-          More than {MAX_RECOMMENDED_ESTIMATE} pomodoros — break the task into sub-tasks (Rule 4).
+          {t('inventory.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
         </p>
       )}
 
       {selectedIds.size >= 2 && (
         <div className="flex items-center justify-between bg-tomato/10 border border-tomato/30 rounded-xl px-3 py-2 mb-3">
           <p className="text-tomato text-xs font-sans">
-            {selectedIds.size} tasks selected — combine into one? (Rule 5)
+            {t('inventory.combinePrompt', { count: selectedIds.size })}
           </p>
           <button
             type="button"
             onClick={handleCombine}
             className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
           >
-            Combine
+            {t('inventory.combineButton')}
           </button>
         </div>
       )}
@@ -409,7 +410,7 @@ function Inventory({
       <ul className="flex flex-col gap-2">
         {items.length === 0 && (
           <li className="text-sage text-sm font-sans text-center py-2">
-            Inventory is empty.
+            {t('inventory.emptyState')}
           </li>
         )}
         {items.map((item) => (

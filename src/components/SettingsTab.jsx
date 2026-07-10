@@ -1,5 +1,7 @@
 import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
 import { DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
+import { useTranslation } from '../hooks/useTranslation'
+import { SUPPORTED_LANGUAGES } from '../lib/i18n'
 import {
   clearInventory,
   clearTodayTasks,
@@ -13,12 +15,6 @@ import {
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 
-const CHIME_LABELS = {
-  classic: 'Classic',
-  soft: 'Soft',
-  alert: 'Alert',
-}
-
 const rowClass =
   'flex items-center justify-between gap-3 text-sage text-xs font-sans py-3 border-b border-cream/10 last:border-b-0'
 
@@ -28,61 +24,24 @@ const dangerRowClass =
 // Category-scoped resets — Settings itself is deliberately excluded from all
 // of these (see storage.js); only "Reset to Factory Settings" below touches it.
 const RESET_CATEGORIES = [
-  {
-    label: 'Records / Activity Log',
-    confirmText: 'This will permanently delete all your Records. This cannot be undone. Continue?',
-    action: clearActivityLog,
-  },
-  {
-    label: 'Interruption data (ticks)',
-    confirmText:
-      'This will permanently delete all your interruption and Pomodoro tick history (used by Reports). This cannot be undone. Continue?',
-    action: clearTicks,
-  },
-  {
-    label: "Today's Tasks",
-    confirmText:
-      "This will permanently delete Today's Tasks and today's Timetable. This cannot be undone. Continue?",
-    action: clearTodayTasks,
-  },
-  {
-    label: 'Activity Inventory',
-    confirmText: 'This will permanently delete your Activity Inventory. This cannot be undone. Continue?',
-    action: clearInventory,
-  },
-  {
-    label: 'Timer state',
-    confirmText:
-      'This will reset the saved timer state (useful if a Pomodoro looks stuck after a refresh). This cannot be undone. Continue?',
-    action: clearTimerState,
-  },
-  {
-    label: 'Categories',
-    confirmText:
-      'This will permanently delete all your Categories. Tasks and records using them will show as uncategorized. This cannot be undone. Continue?',
-    action: clearCategories,
-  },
-  {
-    label: 'Void log',
-    confirmText:
-      'This will permanently delete your Void log (voided Pomodoros and their reasons). This cannot be undone. Continue?',
-    action: clearVoidLog,
-  },
+  { labelKey: 'settings.resetRecordsLabel', confirmKey: 'settings.resetRecordsConfirm', action: clearActivityLog },
+  { labelKey: 'settings.resetTicksLabel', confirmKey: 'settings.resetTicksConfirm', action: clearTicks },
+  { labelKey: 'settings.resetTodayLabel', confirmKey: 'settings.resetTodayConfirm', action: clearTodayTasks },
+  { labelKey: 'settings.resetInventoryLabel', confirmKey: 'settings.resetInventoryConfirm', action: clearInventory },
+  { labelKey: 'settings.resetTimerLabel', confirmKey: 'settings.resetTimerConfirm', action: clearTimerState },
+  { labelKey: 'settings.resetCategoriesLabel', confirmKey: 'settings.resetCategoriesConfirm', action: clearCategories },
+  { labelKey: 'settings.resetVoidLogLabel', confirmKey: 'settings.resetVoidLogConfirm', action: clearVoidLog },
 ]
 
-function handleCategoryDelete(category) {
-  if (window.confirm(category.confirmText)) {
+function handleCategoryDelete(category, t) {
+  if (window.confirm(t(category.confirmKey))) {
     category.action()
     window.location.reload()
   }
 }
 
-function handleFactoryReset() {
-  if (
-    window.confirm(
-      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?"
-    )
-  ) {
+function handleFactoryReset(t) {
+  if (window.confirm(t('settings.factoryResetConfirm'))) {
     resetAllData()
     window.location.reload()
   }
@@ -101,15 +60,26 @@ function SettingsTab({
   updateCategory,
   removeCategory,
 }) {
+  const { t, language, setLanguage } = useTranslation()
+  const chimeLabels = {
+    classic: t('chime.classic'),
+    soft: t('chime.soft'),
+    alert: t('chime.alert'),
+  }
+  const languageLabels = {
+    en: t('settings.languageEnglish'),
+    tr: t('settings.languageTurkish'),
+  }
+
   return (
     <div className="max-w-md mx-auto">
       <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2">
-          Settings
+          {t('settings.title')}
         </p>
 
         <div className={rowClass}>
-          <label htmlFor="cycle-length">Long break every</label>
+          <label htmlFor="cycle-length">{t('settings.longBreakEvery')}</label>
           <div className="flex items-center gap-2">
             <input
               id="cycle-length"
@@ -120,28 +90,28 @@ function SettingsTab({
               onChange={(e) => setCycleLength(Number(e.target.value))}
               className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
             />
-            <span>pomodoro</span>
+            <span>{t('settings.pomodoroUnit')}</span>
             {cycleLength !== DEFAULT_CYCLE_LENGTH && (
               <button
                 type="button"
                 onClick={resetCycleLength}
                 className="underline decoration-dotted text-cream"
-                title={`Reset to default (${DEFAULT_CYCLE_LENGTH})`}
+                title={t('settings.resetTitle', { value: DEFAULT_CYCLE_LENGTH })}
               >
-                Reset
+                {t('settings.resetButton')}
               </button>
             )}
           </div>
         </div>
 
         <div className={rowClass}>
-          <label htmlFor="chime-style">Sound</label>
+          <label htmlFor="chime-style">{t('settings.soundLabel')}</label>
           <div className="flex items-center gap-2">
             <Select
               id="chime-style"
               value={chimeStyle}
               options={CHIME_STYLES}
-              labels={CHIME_LABELS}
+              labels={chimeLabels}
               onChange={setChimeStyle}
             />
             <button
@@ -152,34 +122,40 @@ function SettingsTab({
               }}
               className="underline decoration-dotted text-cream"
             >
-              Test
+              {t('settings.testButton')}
             </button>
           </div>
         </div>
 
         <div className={rowClass}>
-          <span>Theme</span>
+          <span>{t('settings.themeLabel')}</span>
           <button
             type="button"
             onClick={onToggleTheme}
-            title="Toggle light/dark theme"
+            title={t('settings.toggleThemeTitle')}
             className="text-cream border border-cream/15 rounded-full px-3 py-1"
           >
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
+            {theme === 'light' ? t('settings.darkMode') : t('settings.lightMode')}
           </button>
         </div>
 
         {/* Not wired up yet — surfacing the category here so the Settings tab
-            reflects the full intended settings set, without adding new timer
-            duration/i18n logic as part of this layout pass. */}
+            reflects the full intended settings set; break duration remains a
+            placeholder, unlike Language above it (now functional). */}
         <div className={`${rowClass} text-sage/50`}>
-          <span>Short/long break duration</span>
-          <span className="italic">Coming soon</span>
+          <span>{t('settings.breakDurationLabel')}</span>
+          <span className="italic">{t('settings.comingSoon')}</span>
         </div>
 
-        <div className={`${rowClass} text-sage/50`}>
-          <span>Language</span>
-          <span className="italic">Coming soon</span>
+        <div className={rowClass}>
+          <label htmlFor="language-select">{t('settings.languageLabel')}</label>
+          <Select
+            id="language-select"
+            value={language}
+            options={SUPPORTED_LANGUAGES}
+            labels={languageLabels}
+            onChange={setLanguage}
+          />
         </div>
       </div>
 
@@ -192,21 +168,21 @@ function SettingsTab({
 
       <div className="bg-black/20 border border-tomato/30 rounded-3xl px-6 py-6 shadow-lg w-full mt-6">
         <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1">
-          Danger Zone
+          {t('settings.dangerZoneTitle')}
         </p>
         <p className="text-sage text-[11px] font-sans mb-2">
-          These actions permanently delete data and cannot be undone.
+          {t('settings.dangerZoneWarning')}
         </p>
 
         {RESET_CATEGORIES.map((category) => (
-          <div key={category.label} className={dangerRowClass}>
-            <span>{category.label}</span>
+          <div key={category.labelKey} className={dangerRowClass}>
+            <span>{t(category.labelKey)}</span>
             <button
               type="button"
-              onClick={() => handleCategoryDelete(category)}
+              onClick={() => handleCategoryDelete(category, t)}
               className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
             >
-              Delete
+              {t('settings.deleteButton')}
             </button>
           </div>
         ))}
@@ -214,13 +190,13 @@ function SettingsTab({
         <div className="pt-4 mt-1">
           <button
             type="button"
-            onClick={handleFactoryReset}
+            onClick={() => handleFactoryReset(t)}
             className="w-full font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream font-semibold"
           >
-            Reset to Factory Settings
+            {t('settings.resetFactoryButton')}
           </button>
           <p className="text-sage/60 text-[10px] font-sans mt-2 text-center">
-            Deletes everything, including these settings, and returns the app to its default state.
+            {t('settings.resetFactoryHint')}
           </p>
         </div>
       </div>

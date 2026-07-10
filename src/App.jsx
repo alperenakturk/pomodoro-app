@@ -4,6 +4,7 @@ import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
 import { loadSettings, patchSettings, addVoidLogEntry } from './lib/storage'
+import { useTranslation } from './hooks/useTranslation'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
@@ -24,6 +25,7 @@ function App() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
   const categoriesApi = useCategories()
+  const { t, localeTag } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
 
   const [theme, setTheme] = useState(() => loadSettings().theme)
@@ -84,6 +86,7 @@ function App() {
         reason,
       })
     },
+    t,
   })
 
   const [now, setNow] = useState(() => new Date())
@@ -92,15 +95,16 @@ function App() {
     return () => clearInterval(intervalId)
   }, [])
 
-  const today = now.toLocaleDateString('en-US', {
+  const today = now.toLocaleDateString(localeTag, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   })
-  const time = now.toLocaleTimeString('en-US', {
+  // hour12 intentionally omitted (not forced to true) — Intl picks the
+  // locale-appropriate default: 12-hour for en-US, 24-hour for tr-TR.
+  const time = now.toLocaleTimeString(localeTag, {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true,
   })
 
   return (
@@ -109,7 +113,7 @@ function App() {
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
           <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
-            Pomodoro Technique
+            {t('common.appTitle')}
           </p>
         </div>
         <p className="text-sage text-xs font-sans whitespace-nowrap">

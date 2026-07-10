@@ -16,13 +16,16 @@ export const compactInputClass =
 // danger and break/"took less", respectively); a category swatch in one of
 // those colors would visually collide with the diff charts. Muted, warm
 // tones chosen to fit the app's existing earthy palette without clashing.
+// `name` is the English dev-facing label (used as a fallback and in
+// non-UI contexts); `key` looks up the translated label via
+// t(`categoryColors.${key}`) wherever the color name is shown to the user.
 export const CATEGORY_COLORS = [
-  { name: 'Teal', value: '#4a8c82' },
-  { name: 'Plum', value: '#8a5a7d' },
-  { name: 'Slate', value: '#5b7290' },
-  { name: 'Moss', value: '#6b8a4f' },
-  { name: 'Mustard', value: '#c9a227' },
-  { name: 'Rose', value: '#b56576' },
-  { name: 'Ochre', value: '#b8803f' },
-  { name: 'Indigo', value: '#5a5a9c' },
+  { name: 'Teal', key: 'teal', value: '#4a8c82' },
+  { name: 'Plum', key: 'plum', value: '#8a5a7d' },
+  { name: 'Slate', key: 'slate', value: '#5b7290' },
+  { name: 'Moss', key: 'moss', value: '#6b8a4f' },
+  { name: 'Mustard', key: 'mustard', value: '#c9a227' },
+  { name: 'Rose', key: 'rose', value: '#b56576' },
+  { name: 'Ochre', key: 'ochre', value: '#b8803f' },
+  { name: 'Indigo', key: 'indigo', value: '#5a5a9c' },
 ]
