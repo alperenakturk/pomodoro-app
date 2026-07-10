@@ -1,5 +1,13 @@
 import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
-import { DEFAULT_CYCLE_LENGTH } from '../hooks/usePomodoro'
+import {
+  DEFAULT_CYCLE_LENGTH,
+  SHORT_BREAK_MIN,
+  SHORT_BREAK_MAX,
+  SHORT_BREAK_RECOMMENDED_MAX,
+  LONG_BREAK_MIN,
+  LONG_BREAK_MAX,
+  LONG_BREAK_RECOMMENDED_MAX,
+} from '../hooks/usePomodoro'
 import { useTranslation } from '../hooks/useTranslation'
 import { SUPPORTED_LANGUAGES } from '../lib/i18n'
 import {
@@ -52,6 +60,10 @@ function SettingsTab({
   cycleLength,
   setCycleLength,
   resetCycleLength,
+  shortBreakMinutes,
+  setShortBreakMinutes,
+  longBreakMinutes,
+  setLongBreakMinutes,
   chimeStyle,
   setChimeStyle,
   theme,
@@ -140,12 +152,60 @@ function SettingsTab({
           </button>
         </div>
 
-        {/* Not wired up yet — surfacing the category here so the Settings tab
-            reflects the full intended settings set; break duration remains a
-            placeholder, unlike Language above it (now functional). */}
-        <div className={`${rowClass} text-sage/50`}>
-          <span>{t('settings.breakDurationLabel')}</span>
-          <span className="italic">{t('settings.comingSoon')}</span>
+        <div className="border-b border-cream/10 py-3">
+          <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="short-break-minutes">{t('settings.shortBreakLabel')}</label>
+              <span className="text-sage/40 text-[10px]">
+                {t('settings.breakRangeHint', { min: SHORT_BREAK_MIN, max: SHORT_BREAK_MAX })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="short-break-minutes"
+                type="number"
+                min={SHORT_BREAK_MIN}
+                max={SHORT_BREAK_MAX}
+                value={shortBreakMinutes}
+                onChange={(e) => setShortBreakMinutes(Number(e.target.value))}
+                className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
+              />
+              <span>{t('settings.minutesUnit')}</span>
+            </div>
+          </div>
+          {shortBreakMinutes > SHORT_BREAK_RECOMMENDED_MAX && (
+            <p className="text-sage/60 text-[10px] font-sans mt-1">
+              {t('settings.shortBreakRecommendedHint')}
+            </p>
+          )}
+        </div>
+
+        <div className="border-b border-cream/10 py-3">
+          <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="long-break-minutes">{t('settings.longBreakLabel')}</label>
+              <span className="text-sage/40 text-[10px]">
+                {t('settings.breakRangeHint', { min: LONG_BREAK_MIN, max: LONG_BREAK_MAX })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="long-break-minutes"
+                type="number"
+                min={LONG_BREAK_MIN}
+                max={LONG_BREAK_MAX}
+                value={longBreakMinutes}
+                onChange={(e) => setLongBreakMinutes(Number(e.target.value))}
+                className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
+              />
+              <span>{t('settings.minutesUnit')}</span>
+            </div>
+          </div>
+          {longBreakMinutes > LONG_BREAK_RECOMMENDED_MAX && (
+            <p className="text-sage/60 text-[10px] font-sans mt-1">
+              {t('settings.longBreakRecommendedHint')}
+            </p>
+          )}
         </div>
 
         <div className={rowClass}>

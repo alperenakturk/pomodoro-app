@@ -195,6 +195,8 @@ const SETTINGS_KEY = 'pomodoro_settings'
 // never shows again even if they later clear all their data.
 const DEFAULT_SETTINGS = {
   cycleLength: 4,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
   theme: 'dark',
   chimeStyle: 'classic',
   userId: 'local',

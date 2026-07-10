@@ -12,11 +12,23 @@ import { translate } from '../lib/i18n'
 
 const DURATIONS = {
   work: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60,
 }
 
 export const DEFAULT_CYCLE_LENGTH = 4
+
+// Rule 3: short break 3-5 min recommended, long break 15-30 min recommended
+// (docs/methodology.md). Min/max are hard bounds the input enforces; the
+// recommended range is only ever surfaced as a non-blocking hint in
+// SettingsTab — values outside it are still valid and fully allowed.
+export const DEFAULT_SHORT_BREAK_MINUTES = 5
+export const SHORT_BREAK_MIN = 3
+export const SHORT_BREAK_MAX = 10
+export const SHORT_BREAK_RECOMMENDED_MAX = 5
+
+export const DEFAULT_LONG_BREAK_MINUTES = 15
+export const LONG_BREAK_MIN = 15
+export const LONG_BREAK_MAX = 60
+export const LONG_BREAK_RECOMMENDED_MAX = 30
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -57,6 +69,26 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   const resetCycleLength = useCallback(() => {
     setCycleLengthState(DEFAULT_CYCLE_LENGTH)
     patchSettings({ cycleLength: DEFAULT_CYCLE_LENGTH })
+  }, [])
+
+  const [shortBreakMinutes, setShortBreakMinutesState] = useState(
+    () => loadSettings().shortBreakMinutes
+  )
+  const setShortBreakMinutes = useCallback((n) => {
+    const rounded = Math.round(n) || DEFAULT_SHORT_BREAK_MINUTES
+    const value = Math.min(SHORT_BREAK_MAX, Math.max(SHORT_BREAK_MIN, rounded))
+    setShortBreakMinutesState(value)
+    patchSettings({ shortBreakMinutes: value })
+  }, [])
+
+  const [longBreakMinutes, setLongBreakMinutesState] = useState(
+    () => loadSettings().longBreakMinutes
+  )
+  const setLongBreakMinutes = useCallback((n) => {
+    const rounded = Math.round(n) || DEFAULT_LONG_BREAK_MINUTES
+    const value = Math.min(LONG_BREAK_MAX, Math.max(LONG_BREAK_MIN, rounded))
+    setLongBreakMinutesState(value)
+    patchSettings({ longBreakMinutes: value })
   }, [])
 
   const [chimeStyle, setChimeStyleState] = useState(() => loadSettings().chimeStyle)
@@ -104,8 +136,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
       nextType === 'longBreak' ? t('notifications.longBreakBody') : t('notifications.shortBreakBody')
     )
     setSessionType(nextType)
-    setSecondsLeft(DURATIONS[nextType])
-  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle, t])
+    setSecondsLeft(nextType === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60)
+  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle, t, shortBreakMinutes, longBreakMinutes])
 
   const completeBreak = useCallback(() => {
     setIsRunning(false)
@@ -172,9 +204,11 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
       if (type === sessionType) return
       setIsRunning(false)
       setSessionType(type)
-      setSecondsLeft(DURATIONS[type])
+      setSecondsLeft(
+        type === 'work' ? DURATIONS.work : type === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60
+      )
     },
-    [sessionType]
+    [sessionType, shortBreakMinutes, longBreakMinutes]
   )
 
   const logInterruption = useCallback(
@@ -216,6 +250,10 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     cycleLength,
     setCycleLength,
     resetCycleLength,
+    shortBreakMinutes,
+    setShortBreakMinutes,
+    longBreakMinutes,
+    setLongBreakMinutes,
     chimeStyle,
     setChimeStyle,
     start,

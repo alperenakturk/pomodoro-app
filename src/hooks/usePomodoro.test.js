@@ -185,6 +185,75 @@ describe('usePomodoro', () => {
     expect(result.current.completionPulseKey).toBe(2)
   })
 
+  // Rule 3: short break 3-5 min recommended, hard bounds 3-10.
+  it('setShortBreakMinutes clamps to the 3-10 range and persists', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => result.current.setShortBreakMinutes(1))
+    expect(result.current.shortBreakMinutes).toBe(3)
+
+    act(() => result.current.setShortBreakMinutes(20))
+    expect(result.current.shortBreakMinutes).toBe(10)
+
+    act(() => result.current.setShortBreakMinutes(4))
+    expect(result.current.shortBreakMinutes).toBe(4)
+
+    const { result: resumed } = renderHook(() => usePomodoro())
+    expect(resumed.current.shortBreakMinutes).toBe(4)
+  })
+
+  // Rule 3: long break 15-30 min recommended, hard bounds 15-60.
+  it('setLongBreakMinutes clamps to the 15-60 range and persists', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => result.current.setLongBreakMinutes(5))
+    expect(result.current.longBreakMinutes).toBe(15)
+
+    act(() => result.current.setLongBreakMinutes(90))
+    expect(result.current.longBreakMinutes).toBe(60)
+
+    act(() => result.current.setLongBreakMinutes(20))
+    expect(result.current.longBreakMinutes).toBe(20)
+
+    const { result: resumed } = renderHook(() => usePomodoro())
+    expect(resumed.current.longBreakMinutes).toBe(20)
+  })
+
+  it('a configured short break duration is used for the actual short-break countdown', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.setShortBreakMinutes(3))
+
+    act(() => result.current.start())
+    tick(25 * 60)
+
+    expect(result.current.sessionType).toBe('shortBreak')
+    expect(result.current.secondsLeft).toBe(3 * 60)
+  })
+
+  it('a configured long break duration is used for the actual long-break countdown', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.setCycleLength(1))
+    act(() => result.current.setLongBreakMinutes(20))
+
+    act(() => result.current.start())
+    tick(25 * 60)
+
+    expect(result.current.sessionType).toBe('longBreak')
+    expect(result.current.secondsLeft).toBe(20 * 60)
+  })
+
+  it('switchSession uses the configured break durations', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.setShortBreakMinutes(4))
+    act(() => result.current.setLongBreakMinutes(25))
+
+    act(() => result.current.switchSession('shortBreak'))
+    expect(result.current.secondsLeft).toBe(4 * 60)
+
+    act(() => result.current.switchSession('longBreak'))
+    expect(result.current.secondsLeft).toBe(25 * 60)
+  })
+
   it('restores an in-progress session after a remount (simulated page refresh)', () => {
     const { result, unmount } = renderHook(() => usePomodoro())
     act(() => result.current.start())

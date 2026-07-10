@@ -326,6 +326,10 @@ function AppInner() {
             cycleLength={pomodoro.cycleLength}
             setCycleLength={pomodoro.setCycleLength}
             resetCycleLength={pomodoro.resetCycleLength}
+            shortBreakMinutes={pomodoro.shortBreakMinutes}
+            setShortBreakMinutes={pomodoro.setShortBreakMinutes}
+            longBreakMinutes={pomodoro.longBreakMinutes}
+            setLongBreakMinutes={pomodoro.setLongBreakMinutes}
             categories={categoriesApi.categories}
             addCategory={categoriesApi.addCategory}
             updateCategory={categoriesApi.updateCategory}
