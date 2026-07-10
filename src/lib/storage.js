@@ -1,14 +1,33 @@
+// Storage provider: every load/save/clear below goes through this object
+// rather than touching localStorage directly. Swapping in a remote backend
+// later (Supabase/Firebase/REST) means replacing this one object, not every
+// call site — the collection-keyed get/set/remove shape is what a remote
+// provider's client SDK would offer too.
+const localStorageProvider = {
+  get(collection, fallback) {
+    try {
+      const raw = localStorage.getItem(collection)
+      return raw ? JSON.parse(raw) : fallback
+    } catch {
+      return fallback
+    }
+  },
+  set(collection, value) {
+    localStorage.setItem(collection, JSON.stringify(value))
+  },
+  remove(collection) {
+    localStorage.removeItem(collection)
+  },
+}
+
+const provider = localStorageProvider
+
 function loadJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
-  }
+  return provider.get(key, fallback)
 }
 
 function saveJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+  provider.set(key, value)
 }
 
 // Reports ve Records gibi bağımsız bileşenlerin, veri her değiştiğinde
@@ -40,6 +59,38 @@ function normalizeCategoryIds(record) {
   return []
 }
 
+// Backend-readiness prep: every persisted record carries userId/createdAt/
+// updatedAt so a future multi-device backend can scope data per-account and
+// resolve sync conflicts by recency. Single-user today — userId is always
+// 'local' and old records simply have no timestamps (null) — but the shape
+// already exists, so wiring in real auth/sync later only changes values,
+// not the schema.
+function normalizeMeta(record) {
+  return {
+    userId: record.userId ?? 'local',
+    createdAt: record.createdAt ?? null,
+    updatedAt: record.updatedAt ?? null,
+  }
+}
+
+// Stamps userId/createdAt/updatedAt onto a freshly created record (used by
+// this file's own addX functions, where `record` is already a complete,
+// caller-built object — unlike normalize*, which migrates a potentially
+// stale/legacy shape, so spreading it here is safe).
+function stampCreated(record) {
+  const now = new Date().toISOString()
+  return {
+    ...record,
+    userId: record.userId ?? 'local',
+    createdAt: record.createdAt ?? now,
+    updatedAt: record.updatedAt ?? now,
+  }
+}
+
+function stampUpdated(record) {
+  return { ...record, updatedAt: new Date().toISOString() }
+}
+
 // Activity Inventory: ana görev havuzu
 const INVENTORY_KEY = 'pomodoro_inventory'
 function normalizeInventoryItem(item) {
@@ -52,6 +103,7 @@ function normalizeInventoryItem(item) {
     deadline: item.deadline ?? null,
     unplanned: item.unplanned ?? false,
     done: item.done ?? false,
+    ...normalizeMeta(item),
   }
 }
 export const loadInventory = () => loadJSON(INVENTORY_KEY, []).map(normalizeInventoryItem)
@@ -75,6 +127,7 @@ function normalizeTodayTask(task) {
     inventoryId: task.inventoryId ?? null,
     reestimate1: task.reestimate1 ?? null,
     reestimate2: task.reestimate2 ?? null,
+    ...normalizeMeta(task),
   }
 }
 export const loadTodayTasks = () => loadJSON(TODAY_KEY, []).map(normalizeTodayTask)
@@ -100,13 +153,14 @@ function normalizeActivityRecord(record) {
     internal: record.internal ?? 0,
     external: record.external ?? 0,
     unplanned: record.unplanned ?? false,
+    ...normalizeMeta(record),
   }
 }
 export const loadActivityLog = () => loadJSON(ACTIVITY_LOG_KEY, []).map(normalizeActivityRecord)
 export const saveActivityLog = (items) => saveJSON(ACTIVITY_LOG_KEY, items)
 export function addActivityRecord(record) {
   const log = loadActivityLog()
-  log.push(record)
+  log.push(stampCreated(record))
   saveActivityLog(log)
   notifyChange()
   return log
@@ -118,7 +172,7 @@ export function removeActivityRecord(id) {
   return log
 }
 export function updateActivityRecord(id, patch) {
-  const log = loadActivityLog().map((r) => (r.id === id ? { ...r, ...patch } : r))
+  const log = loadActivityLog().map((r) => (r.id === id ? stampUpdated({ ...r, ...patch }) : r))
   saveActivityLog(log)
   notifyChange()
   return log
@@ -127,7 +181,7 @@ export function updateActivityRecord(id, patch) {
 // Settings: kullanıcı tarafından ayarlanabilen tercihler (örn. long break'e
 // kaç pomodorodan sonra geçileceği)
 const SETTINGS_KEY = 'pomodoro_settings'
-const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic' }
+const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic', userId: 'local' }
 export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
 export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
 // Merges a partial update into existing settings — saveSettings overwrites
@@ -147,13 +201,14 @@ function normalizeTick(t) {
     type: t.type,
     date: t.date,
     timestamp: t.timestamp ?? null,
+    ...normalizeMeta(t),
   }
 }
 export const loadTicks = () => loadJSON(TICKS_KEY, []).map(normalizeTick)
 export const saveTicks = (items) => saveJSON(TICKS_KEY, items)
 export function addTick(tick) {
   const ticks = loadTicks()
-  ticks.push(tick)
+  ticks.push(stampCreated(tick))
   saveTicks(ticks)
   notifyChange()
   return ticks
@@ -183,6 +238,7 @@ function normalizeTimetableBlock(block) {
     start: block.start,
     end: block.end,
     label: block.label ?? '',
+    ...normalizeMeta(block),
   }
 }
 export const loadTimetable = () => loadJSON(TIMETABLE_KEY, []).map(normalizeTimetableBlock)
@@ -199,6 +255,7 @@ function normalizeCategory(category) {
     id: category.id,
     name: category.name,
     color: category.color ?? null,
+    ...normalizeMeta(category),
   }
 }
 export const loadCategories = () => loadJSON(CATEGORIES_KEY, []).map(normalizeCategory)
@@ -217,13 +274,14 @@ function normalizeVoidEntry(entry) {
     categoryIds: Array.isArray(entry.categoryIds) ? entry.categoryIds : [],
     elapsedSeconds: entry.elapsedSeconds ?? 0,
     reason: entry.reason ?? '',
+    ...normalizeMeta(entry),
   }
 }
 export const loadVoidLog = () => loadJSON(VOID_LOG_KEY, []).map(normalizeVoidEntry)
 export const saveVoidLog = (entries) => saveJSON(VOID_LOG_KEY, entries)
 export function addVoidLogEntry(entry) {
   const log = loadVoidLog()
-  log.push(entry)
+  log.push(stampCreated(entry))
   saveVoidLog(log)
   notifyChange()
   return log
@@ -245,6 +303,7 @@ function normalizeTimerState(state) {
     sessionType: state.sessionType ?? 'work',
     secondsLeft: state.secondsLeft ?? DEFAULT_WORK_SECONDS,
     isRunning: state.isRunning ?? false,
+    ...normalizeMeta(state),
   }
 }
 export const loadTimerState = () => normalizeTimerState(loadJSON(TIMER_STATE_KEY, null))
@@ -255,43 +314,43 @@ export const saveTimerState = (state) => saveJSON(TIMER_STATE_KEY, state)
 // resetAllData() below resets it, per the "settings survive a data reset"
 // requirement.
 export function clearInventory() {
-  localStorage.removeItem(INVENTORY_KEY)
+  provider.remove(INVENTORY_KEY)
 }
 // Timetable blocks are today-scoped planning data with the same lifecycle as
 // Today's Tasks, so clearing "Today's Tasks" clears both.
 export function clearTodayTasks() {
-  localStorage.removeItem(TODAY_KEY)
-  localStorage.removeItem(TIMETABLE_KEY)
+  provider.remove(TODAY_KEY)
+  provider.remove(TIMETABLE_KEY)
 }
 export function clearActivityLog() {
-  localStorage.removeItem(ACTIVITY_LOG_KEY)
+  provider.remove(ACTIVITY_LOG_KEY)
 }
 export function clearTicks() {
-  localStorage.removeItem(TICKS_KEY)
+  provider.remove(TICKS_KEY)
 }
 export function clearTimerState() {
-  localStorage.removeItem(TIMER_STATE_KEY)
+  provider.remove(TIMER_STATE_KEY)
 }
 export function clearCategories() {
-  localStorage.removeItem(CATEGORIES_KEY)
+  provider.remove(CATEGORIES_KEY)
 }
 export function clearVoidLog() {
-  localStorage.removeItem(VOID_LOG_KEY)
+  provider.remove(VOID_LOG_KEY)
 }
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
 // first-launch state.
 export function resetAllData() {
-  localStorage.removeItem(INVENTORY_KEY)
-  localStorage.removeItem(TODAY_KEY)
-  localStorage.removeItem(TIMETABLE_KEY)
-  localStorage.removeItem(ACTIVITY_LOG_KEY)
-  localStorage.removeItem(TICKS_KEY)
-  localStorage.removeItem(TIMER_STATE_KEY)
-  localStorage.removeItem(CATEGORIES_KEY)
-  localStorage.removeItem(VOID_LOG_KEY)
-  localStorage.removeItem(SETTINGS_KEY)
+  provider.remove(INVENTORY_KEY)
+  provider.remove(TODAY_KEY)
+  provider.remove(TIMETABLE_KEY)
+  provider.remove(ACTIVITY_LOG_KEY)
+  provider.remove(TICKS_KEY)
+  provider.remove(TIMER_STATE_KEY)
+  provider.remove(CATEGORIES_KEY)
+  provider.remove(VOID_LOG_KEY)
+  provider.remove(SETTINGS_KEY)
 }
 
 // Full backup of every storage key, for the export feature.

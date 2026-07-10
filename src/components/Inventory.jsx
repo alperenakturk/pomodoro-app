@@ -50,6 +50,7 @@ function InventoryRow({
   const [notes, setNotes] = useState(item.notes ?? '')
   const [categoryIds, setCategoryIds] = useState(item.categoryIds ?? [])
   const [deadline, setDeadline] = useState(item.deadline ?? '')
+  const [unplanned, setUnplanned] = useState(item.unplanned ?? false)
   const [notesExpanded, setNotesExpanded] = useState(false)
 
   function handleSave() {
@@ -60,6 +61,7 @@ function InventoryRow({
       notes: notes.trim(),
       categoryIds,
       deadline: deadline || null,
+      unplanned,
     })
     setEditing(false)
   }
@@ -70,6 +72,7 @@ function InventoryRow({
     setNotes(item.notes ?? '')
     setCategoryIds(item.categoryIds ?? [])
     setDeadline(item.deadline ?? '')
+    setUnplanned(item.unplanned ?? false)
     setEditing(false)
   }
 
@@ -105,6 +108,18 @@ function InventoryRow({
             aria-label="Deadline"
             className={`text-xs ${inputClass}`}
           />
+          <button
+            type="button"
+            onClick={() => setUnplanned((prev) => !prev)}
+            aria-pressed={unplanned}
+            title="Mark as unplanned"
+            className={
+              'font-sans text-xs px-3 py-1 rounded-xl border whitespace-nowrap flex-shrink-0 ' +
+              (unplanned ? 'bg-amber/20 border-amber/60 text-amber' : 'border-cream/15 text-sage')
+            }
+          >
+            U
+          </button>
         </div>
         <textarea
           value={notes}
@@ -135,7 +150,12 @@ function InventoryRow({
   }
 
   return (
-    <li className="flex flex-col gap-1 font-sans text-sm text-cream border-b border-cream/10 pb-2 last:border-0">
+    <li
+      className={
+        'flex flex-col gap-1 font-sans text-sm text-cream border-b border-cream/10 pb-2 last:border-0 ' +
+        (selected ? 'bg-tomato/10 border-tomato/30 rounded-xl px-2 -mx-2' : '')
+      }
+    >
       <div className="flex items-center gap-2">
         <input
           type="checkbox"

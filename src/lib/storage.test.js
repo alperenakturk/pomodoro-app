@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   subscribeToChanges,
   loadTodayTasks,
@@ -28,6 +28,9 @@ import {
   loadVoidLog,
   addVoidLogEntry,
   removeVoidLogEntry,
+  addActivityRecord,
+  updateActivityRecord,
+  addTick,
 } from './storage'
 
 beforeEach(() => {
@@ -144,7 +147,9 @@ describe('load-time normalization', () => {
 describe('Categories', () => {
   it('round-trips a saved category and can clear all categories', () => {
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
-    expect(loadCategories()).toEqual([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
+    expect(loadCategories()).toEqual([
+      { id: 'c1', name: 'Coding', color: '#4a8c82', userId: 'local', createdAt: null, updatedAt: null },
+    ])
 
     clearCategories()
     expect(loadCategories()).toEqual([])
@@ -152,23 +157,35 @@ describe('Categories', () => {
 
   it('defaults a missing color to null instead of crashing', () => {
     localStorage.setItem('pomodoro_categories', JSON.stringify([{ id: 'c1', name: 'Coding' }]))
-    expect(loadCategories()).toEqual([{ id: 'c1', name: 'Coding', color: null }])
+    expect(loadCategories()).toEqual([
+      { id: 'c1', name: 'Coding', color: null, userId: 'local', createdAt: null, updatedAt: null },
+    ])
+  })
+
+  it('defaults userId/createdAt/updatedAt for old records, but preserves them when already present', () => {
+    localStorage.setItem('pomodoro_categories', JSON.stringify([{ id: 'c1', name: 'Coding' }]))
+    expect(loadCategories()[0]).toMatchObject({ userId: 'local', createdAt: null, updatedAt: null })
+
+    localStorage.setItem(
+      'pomodoro_categories',
+      JSON.stringify([
+        { id: 'c1', name: 'Coding', userId: 'u-42', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z' },
+      ])
+    )
+    expect(loadCategories()[0]).toMatchObject({
+      userId: 'u-42',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    })
   })
 })
 
 describe('Void log', () => {
-  it('adds and removes a void entry, normalizing missing fields', () => {
-    addVoidLogEntry({
-      id: 'v1',
-      date: '2026-01-01',
-      time: '09:12',
-      activity: 'Write report',
-      categoryIds: ['cat1'],
-      elapsedSeconds: 753,
-      reason: 'Got called into a meeting',
-    })
-    expect(loadVoidLog()).toEqual([
-      {
+  it('adds and removes a void entry, normalizing missing fields and stamping created/updated timestamps', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T09:12:00.000Z'))
+    try {
+      addVoidLogEntry({
         id: 'v1',
         date: '2026-01-01',
         time: '09:12',
@@ -176,8 +193,24 @@ describe('Void log', () => {
         categoryIds: ['cat1'],
         elapsedSeconds: 753,
         reason: 'Got called into a meeting',
-      },
-    ])
+      })
+      expect(loadVoidLog()).toEqual([
+        {
+          id: 'v1',
+          date: '2026-01-01',
+          time: '09:12',
+          activity: 'Write report',
+          categoryIds: ['cat1'],
+          elapsedSeconds: 753,
+          reason: 'Got called into a meeting',
+          userId: 'local',
+          createdAt: '2026-01-01T09:12:00.000Z',
+          updatedAt: '2026-01-01T09:12:00.000Z',
+        },
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
 
     removeVoidLogEntry('v1')
     expect(loadVoidLog()).toEqual([])
@@ -189,7 +222,18 @@ describe('Void log', () => {
       JSON.stringify([{ id: 'v1', date: '2026-01-01', elapsedSeconds: 100 }])
     )
     expect(loadVoidLog()).toEqual([
-      { id: 'v1', date: '2026-01-01', time: '', activity: null, categoryIds: [], elapsedSeconds: 100, reason: '' },
+      {
+        id: 'v1',
+        date: '2026-01-01',
+        time: '',
+        activity: null,
+        categoryIds: [],
+        elapsedSeconds: 100,
+        reason: '',
+        userId: 'local',
+        createdAt: null,
+        updatedAt: null,
+      },
     ])
   })
 
@@ -197,6 +241,63 @@ describe('Void log', () => {
     addVoidLogEntry({ id: 'v1', date: '2026-01-01', elapsedSeconds: 10 })
     clearVoidLog()
     expect(loadVoidLog()).toEqual([])
+  })
+})
+
+describe('backend-readiness metadata (userId/createdAt/updatedAt)', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stamps createdAt/updatedAt/userId on a new activity record, and bumps only updatedAt on update', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T10:00:00.000Z'))
+    addActivityRecord({ id: 'r1', date: '2026-01-01', activity: 'Write report', real: 2 })
+    let [record] = loadActivityLog()
+    expect(record).toMatchObject({
+      userId: 'local',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-01T10:00:00.000Z',
+    })
+
+    vi.setSystemTime(new Date('2026-01-01T11:30:00.000Z'))
+    updateActivityRecord('r1', { real: 3 })
+    ;[record] = loadActivityLog()
+    expect(record).toMatchObject({
+      real: 3,
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-01T11:30:00.000Z',
+    })
+  })
+
+  it('stamps createdAt/updatedAt/userId on a new tick', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T10:00:00.000Z'))
+    addTick({ id: 'k1', type: 'pomodoro', date: '2026-01-01' })
+    const [tick] = loadTicks()
+    expect(tick).toMatchObject({
+      userId: 'local',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-01T10:00:00.000Z',
+    })
+  })
+
+  it('leaves an already-stamped record\'s userId/timestamps untouched', () => {
+    addActivityRecord({
+      id: 'r1',
+      date: '2026-01-01',
+      activity: 'Legacy import',
+      real: 1,
+      userId: 'u-42',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    })
+    const [record] = loadActivityLog()
+    expect(record).toMatchObject({
+      userId: 'u-42',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    })
   })
 })
 
