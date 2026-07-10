@@ -59,6 +59,23 @@ export function useTodayTasks() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   }, [])
 
+  // Backs the "Check to bottom" setting (SettingsTab) — moves a task to the
+  // end of the array, which is the end of whichever of planned/urgent
+  // TodoToday.jsx renders it under (filter preserves relative order), rather
+  // than a global "bottom of everything." App.jsx calls this after
+  // finishTask only when that setting is on; this hook itself stays
+  // unaware of Settings, same as the rest of useTodayTasks.
+  const moveTaskToEnd = useCallback((id) => {
+    setTasks((prev) => {
+      const index = prev.findIndex((t) => t.id === id)
+      if (index === -1) return prev
+      const next = [...prev]
+      const [task] = next.splice(index, 1)
+      next.push(task)
+      return next
+    })
+  }, [])
+
   // Takes the new value directly (collected by an inline form in TaskRow)
   // rather than prompting itself, so this stays a pure updater.
   // Only two re-estimates are tracked (reestimate1/reestimate2, matching the
@@ -134,6 +151,7 @@ export function useTodayTasks() {
     addTask,
     removeTask,
     updateTask,
+    moveTaskToEnd,
     reestimateTask,
     incrementRealized,
     addInterruption,

@@ -155,6 +155,15 @@ function AppInner() {
     patchSettings({ theme: next })
   }
 
+  // "Check to bottom" (Settings): when on, a completed task moves to the end
+  // of its list (see handleFinishTask below) instead of staying in place.
+  // Default off, preserving the original behavior unless opted in.
+  const [checkToBottom, setCheckToBottomState] = useState(() => loadSettings().checkToBottom)
+  function setCheckToBottom(value) {
+    setCheckToBottomState(value)
+    patchSettings({ checkToBottom: value })
+  }
+
   // First-launch welcome card (Timer tab): shown only while every collection
   // is still empty AND the user hasn't already dismissed it — so it appears
   // once on a fresh install and never resurfaces afterward, even if the user
@@ -196,6 +205,7 @@ function AppInner() {
   function handleFinishTask(id) {
     const task = todayApi.tasks.find((t) => t.id === id)
     todayApi.finishTask(id)
+    if (checkToBottom) todayApi.moveTaskToEnd(id)
     if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
   }
 
@@ -326,16 +336,28 @@ function AppInner() {
             cycleLength={pomodoro.cycleLength}
             setCycleLength={pomodoro.setCycleLength}
             resetCycleLength={pomodoro.resetCycleLength}
+            workMinutes={pomodoro.workMinutes}
+            setWorkMinutes={pomodoro.setWorkMinutes}
             shortBreakMinutes={pomodoro.shortBreakMinutes}
             setShortBreakMinutes={pomodoro.setShortBreakMinutes}
             longBreakMinutes={pomodoro.longBreakMinutes}
             setLongBreakMinutes={pomodoro.setLongBreakMinutes}
+            autoStartBreaks={pomodoro.autoStartBreaks}
+            setAutoStartBreaks={pomodoro.setAutoStartBreaks}
+            autoStartPomodoros={pomodoro.autoStartPomodoros}
+            setAutoStartPomodoros={pomodoro.setAutoStartPomodoros}
             categories={categoriesApi.categories}
             addCategory={categoriesApi.addCategory}
             updateCategory={categoriesApi.updateCategory}
             removeCategory={categoriesApi.removeCategory}
             chimeStyle={pomodoro.chimeStyle}
             setChimeStyle={pomodoro.setChimeStyle}
+            soundVolume={pomodoro.soundVolume}
+            setSoundVolume={pomodoro.setSoundVolume}
+            tickingSoundEnabled={pomodoro.tickingSoundEnabled}
+            setTickingSoundEnabled={pomodoro.setTickingSoundEnabled}
+            checkToBottom={checkToBottom}
+            setCheckToBottom={setCheckToBottom}
             theme={theme}
             onToggleTheme={toggleTheme}
           />

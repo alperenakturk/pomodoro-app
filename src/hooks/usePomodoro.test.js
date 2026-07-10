@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { usePomodoro } from './usePomodoro'
 import { loadTicks } from '../lib/storage'
+import { setVolume, startTicking, stopTicking } from '../lib/alert'
 
 vi.mock('../lib/alert', () => ({
   unlockAudio: vi.fn(),
@@ -9,6 +10,9 @@ vi.mock('../lib/alert', () => ({
   playPing: vi.fn(),
   requestNotificationPermission: vi.fn(),
   notify: vi.fn(),
+  setVolume: vi.fn(),
+  startTicking: vi.fn(),
+  stopTicking: vi.fn(),
 }))
 
 function tick(seconds) {
@@ -20,6 +24,7 @@ function tick(seconds) {
 beforeEach(() => {
   localStorage.clear()
   vi.useFakeTimers()
+  vi.clearAllMocks()
 })
 
 describe('usePomodoro', () => {
@@ -252,6 +257,195 @@ describe('usePomodoro', () => {
 
     act(() => result.current.switchSession('longBreak'))
     expect(result.current.secondsLeft).toBe(25 * 60)
+  })
+
+  // Freely adjustable, no recommended-range clamp — only the sane 1-180 bounds.
+  it('setWorkMinutes clamps to the 1-180 range and persists', () => {
+    const { result } = renderHook(() => usePomodoro())
+
+    act(() => result.current.setWorkMinutes(-5))
+    expect(result.current.workMinutes).toBe(1)
+
+    act(() => result.current.setWorkMinutes(300))
+    expect(result.current.workMinutes).toBe(180)
+
+    act(() => result.current.setWorkMinutes(50))
+    expect(result.current.workMinutes).toBe(50)
+
+    const { result: resumed } = renderHook(() => usePomodoro())
+    expect(resumed.current.workMinutes).toBe(50)
+  })
+
+  it('a configured work duration is used for the actual work countdown', () => {
+    const { result } = renderHook(() => usePomodoro())
+    // Applies immediately while idle (not just on the next transition) —
+    // otherwise pressing Start right after changing the setting would still
+    // run the old duration for one more cycle.
+    act(() => result.current.setWorkMinutes(10))
+    expect(result.current.secondsLeft).toBe(10 * 60)
+
+    act(() => result.current.switchSession('shortBreak'))
+    act(() => result.current.switchSession('work'))
+    expect(result.current.secondsLeft).toBe(10 * 60)
+  })
+
+  it('does not resize secondsLeft while a session is actually running', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.start())
+    tick(5)
+    act(() => result.current.setWorkMinutes(10))
+
+    expect(result.current.isRunning).toBe(true)
+    expect(result.current.secondsLeft).toBe(25 * 60 - 5) // unaffected mid-run
+  })
+
+  it('voidPomodoro computes elapsed time against the configured work duration', () => {
+    const onVoid = vi.fn()
+    const { result } = renderHook(() => usePomodoro({ onVoid }))
+    act(() => result.current.setWorkMinutes(10))
+    act(() => result.current.switchSession('shortBreak'))
+    act(() => result.current.switchSession('work'))
+
+    act(() => result.current.start())
+    tick(12)
+    act(() => result.current.voidPomodoro())
+
+    expect(onVoid).toHaveBeenCalledWith({ reason: '', elapsedSeconds: 12 })
+    expect(result.current.secondsLeft).toBe(10 * 60)
+  })
+
+  describe('auto-start', () => {
+    it('does not auto-start a break after a Pomodoro completes by default', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      tick(25 * 60)
+
+      expect(result.current.sessionType).toBe('shortBreak')
+      expect(result.current.isRunning).toBe(false)
+    })
+
+    it('auto-starts the break when autoStartBreaks is enabled', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setAutoStartBreaks(true))
+
+      act(() => result.current.start())
+      tick(25 * 60)
+
+      expect(result.current.sessionType).toBe('shortBreak')
+      expect(result.current.isRunning).toBe(true)
+    })
+
+    it('does not auto-start the next Pomodoro after a break ends by default', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.switchSession('shortBreak'))
+      act(() => result.current.start())
+      tick(5 * 60)
+
+      expect(result.current.sessionType).toBe('work')
+      expect(result.current.isRunning).toBe(false)
+    })
+
+    it('auto-starts the next Pomodoro when autoStartPomodoros is enabled', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setAutoStartPomodoros(true))
+      act(() => result.current.switchSession('shortBreak'))
+      act(() => result.current.start())
+      tick(5 * 60)
+
+      expect(result.current.sessionType).toBe('work')
+      expect(result.current.isRunning).toBe(true)
+    })
+
+    it('skipBreak also honors autoStartPomodoros', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setAutoStartPomodoros(true))
+      act(() => result.current.switchSession('shortBreak'))
+      act(() => result.current.skipBreak())
+
+      expect(result.current.sessionType).toBe('work')
+      expect(result.current.isRunning).toBe(true)
+    })
+
+    it('both auto-start toggles persist independently across a remount', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setAutoStartBreaks(true))
+
+      const { result: resumed } = renderHook(() => usePomodoro())
+      expect(resumed.current.autoStartBreaks).toBe(true)
+      expect(resumed.current.autoStartPomodoros).toBe(false)
+    })
+  })
+
+  describe('sound volume', () => {
+    it('setSoundVolume clamps to 0-100, persists, and applies to alert.js', () => {
+      const { result } = renderHook(() => usePomodoro())
+
+      act(() => result.current.setSoundVolume(-10))
+      expect(result.current.soundVolume).toBe(0)
+      expect(setVolume).toHaveBeenLastCalledWith(0)
+
+      act(() => result.current.setSoundVolume(150))
+      expect(result.current.soundVolume).toBe(100)
+
+      act(() => result.current.setSoundVolume(40))
+      expect(result.current.soundVolume).toBe(40)
+      expect(setVolume).toHaveBeenLastCalledWith(40)
+
+      const { result: resumed } = renderHook(() => usePomodoro())
+      expect(resumed.current.soundVolume).toBe(40)
+    })
+
+    it('applies the persisted volume to alert.js on mount', () => {
+      renderHook(() => usePomodoro())
+      expect(setVolume).toHaveBeenCalledWith(100) // default
+    })
+  })
+
+  describe('ambient ticking sound', () => {
+    it('does not tick by default, even while working', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      expect(startTicking).not.toHaveBeenCalled()
+    })
+
+    it('starts ticking when enabled and a work session is running', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.start())
+
+      expect(startTicking).toHaveBeenCalled()
+    })
+
+    it('stops ticking when paused', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.start())
+      vi.clearAllMocks()
+
+      act(() => result.current.voidPomodoro())
+      expect(stopTicking).toHaveBeenCalled()
+    })
+
+    it('stops ticking once a work session completes into a break', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.start())
+      vi.clearAllMocks()
+
+      tick(25 * 60)
+      expect(result.current.sessionType).toBe('shortBreak')
+      expect(stopTicking).toHaveBeenCalled()
+    })
+
+    it('never ticks during a break even if enabled', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.switchSession('shortBreak'))
+      vi.clearAllMocks()
+
+      act(() => result.current.start())
+      expect(startTicking).not.toHaveBeenCalled()
+    })
   })
 
   it('restores an in-progress session after a remount (simulated page refresh)', () => {

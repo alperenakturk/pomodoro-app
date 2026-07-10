@@ -140,6 +140,32 @@ describe('useTodayTasks', () => {
     })
   })
 
+  // Backs the "Check to bottom" setting — App.jsx calls this after
+  // finishTask only when that setting is enabled (default off).
+  describe('moveTaskToEnd', () => {
+    it('moves the given task to the end, preserving the relative order of the rest', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      act(() => result.current.addTask('B', 1))
+      act(() => result.current.addTask('C', 1))
+      const idA = result.current.tasks[0].id
+
+      act(() => result.current.moveTaskToEnd(idA))
+
+      expect(result.current.tasks.map((t) => t.text)).toEqual(['B', 'C', 'A'])
+    })
+
+    it('does nothing when the id does not match any task', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      act(() => result.current.addTask('B', 1))
+
+      act(() => result.current.moveTaskToEnd('nonexistent-id'))
+
+      expect(result.current.tasks.map((t) => t.text)).toEqual(['A', 'B'])
+    })
+  })
+
   it('tracks and undoes interruptions independently of finishing', () => {
     const { result } = renderHook(() => useTodayTasks())
     act(() => result.current.addTask('Task A', 2))

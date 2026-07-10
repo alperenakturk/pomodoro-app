@@ -14,14 +14,6 @@ const LABEL_KEYS = {
 
 const SESSION_ORDER = ['work', 'shortBreak', 'longBreak']
 
-// Presentation-only mirror of usePomodoro's internal durations, used to
-// compute ring progress. usePomodoro itself is left untouched.
-const DURATIONS = {
-  work: 25 * 60,
-  shortBreak: 5 * 60,
-  longBreak: 15 * 60,
-}
-
 const RADIUS = 46
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
@@ -49,6 +41,9 @@ function Timer({
   externalCount,
   completionPulseKey,
   cycleLength,
+  workMinutes,
+  shortBreakMinutes,
+  longBreakMinutes,
   start,
   voidPomodoro,
   finishEarly,
@@ -158,7 +153,16 @@ function Timer({
   const ringClass = isWork ? 'stroke-tomato' : 'stroke-amber'
   const dotClass = isWork ? 'fill-tomato' : 'fill-amber'
 
-  const progress = 1 - secondsLeft / DURATIONS[sessionType]
+  // Mirrors usePomodoro's own per-session-type duration so the ring's
+  // progress arc stays correct regardless of the user's configured work/
+  // short/long break lengths (Settings) — usePomodoro itself owns secondsLeft.
+  const sessionDuration =
+    sessionType === 'work'
+      ? workMinutes * 60
+      : sessionType === 'longBreak'
+        ? longBreakMinutes * 60
+        : shortBreakMinutes * 60
+  const progress = 1 - secondsLeft / sessionDuration
   const dashOffset = CIRCUMFERENCE * (1 - progress)
   const angleRad = ((progress * 360 - 90) * Math.PI) / 180
   const dotX = 50 + RADIUS * Math.cos(angleRad)

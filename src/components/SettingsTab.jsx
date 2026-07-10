@@ -1,6 +1,9 @@
 import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
 import {
   DEFAULT_CYCLE_LENGTH,
+  DEFAULT_WORK_MINUTES,
+  WORK_MIN,
+  WORK_MAX,
   SHORT_BREAK_MIN,
   SHORT_BREAK_MAX,
   SHORT_BREAK_RECOMMENDED_MAX,
@@ -60,12 +63,24 @@ function SettingsTab({
   cycleLength,
   setCycleLength,
   resetCycleLength,
+  workMinutes,
+  setWorkMinutes,
   shortBreakMinutes,
   setShortBreakMinutes,
   longBreakMinutes,
   setLongBreakMinutes,
+  autoStartBreaks,
+  setAutoStartBreaks,
+  autoStartPomodoros,
+  setAutoStartPomodoros,
   chimeStyle,
   setChimeStyle,
+  soundVolume,
+  setSoundVolume,
+  tickingSoundEnabled,
+  setTickingSoundEnabled,
+  checkToBottom,
+  setCheckToBottom,
   theme,
   onToggleTheme,
   categories,
@@ -90,6 +105,34 @@ function SettingsTab({
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2">
           {t('settings.title')}
         </p>
+
+        <div className="border-b border-cream/10 py-3">
+          <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="work-minutes">{t('settings.workDurationLabel')}</label>
+              <span className="text-sage/40 text-[10px]">
+                {t('settings.minutesRangeHint', { min: WORK_MIN, max: WORK_MAX })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                id="work-minutes"
+                type="number"
+                min={WORK_MIN}
+                max={WORK_MAX}
+                value={workMinutes}
+                onChange={(e) => setWorkMinutes(Number(e.target.value))}
+                className="w-12 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream px-1 py-1"
+              />
+              <span>{t('settings.minutesUnit')}</span>
+            </div>
+          </div>
+          {workMinutes !== DEFAULT_WORK_MINUTES && (
+            <p className="text-sage/60 text-[10px] font-sans mt-1">
+              {t('settings.workDurationDeviationNote')}
+            </p>
+          )}
+        </div>
 
         <div className={rowClass}>
           <label htmlFor="cycle-length">{t('settings.longBreakEvery')}</label>
@@ -141,6 +184,36 @@ function SettingsTab({
         </div>
 
         <div className={rowClass}>
+          <label htmlFor="sound-volume">{t('settings.volumeLabel')}</label>
+          <div className="flex items-center gap-2">
+            <input
+              id="sound-volume"
+              type="range"
+              min="0"
+              max="100"
+              value={soundVolume}
+              onChange={(e) => setSoundVolume(Number(e.target.value))}
+              className="w-28 accent-tomato"
+            />
+            <span className="w-8 text-right tabular-nums">{soundVolume}%</span>
+          </div>
+        </div>
+
+        <div className={rowClass}>
+          <div className="flex flex-col gap-0.5">
+            <label htmlFor="ticking-sound">{t('settings.tickingSoundLabel')}</label>
+            <span className="text-sage/40 text-[10px]">{t('settings.tickingSoundHint')}</span>
+          </div>
+          <input
+            id="ticking-sound"
+            type="checkbox"
+            checked={tickingSoundEnabled}
+            onChange={(e) => setTickingSoundEnabled(e.target.checked)}
+            className="flex-shrink-0"
+          />
+        </div>
+
+        <div className={rowClass}>
           <span>{t('settings.themeLabel')}</span>
           <button
             type="button"
@@ -157,7 +230,7 @@ function SettingsTab({
             <div className="flex flex-col gap-0.5">
               <label htmlFor="short-break-minutes">{t('settings.shortBreakLabel')}</label>
               <span className="text-sage/40 text-[10px]">
-                {t('settings.breakRangeHint', { min: SHORT_BREAK_MIN, max: SHORT_BREAK_MAX })}
+                {t('settings.minutesRangeHint', { min: SHORT_BREAK_MIN, max: SHORT_BREAK_MAX })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -185,7 +258,7 @@ function SettingsTab({
             <div className="flex flex-col gap-0.5">
               <label htmlFor="long-break-minutes">{t('settings.longBreakLabel')}</label>
               <span className="text-sage/40 text-[10px]">
-                {t('settings.breakRangeHint', { min: LONG_BREAK_MIN, max: LONG_BREAK_MAX })}
+                {t('settings.minutesRangeHint', { min: LONG_BREAK_MIN, max: LONG_BREAK_MAX })}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -206,6 +279,48 @@ function SettingsTab({
               {t('settings.longBreakRecommendedHint')}
             </p>
           )}
+        </div>
+
+        <div className={rowClass}>
+          <div className="flex flex-col gap-0.5">
+            <label htmlFor="auto-start-breaks">{t('settings.autoStartBreaksLabel')}</label>
+            <span className="text-sage/40 text-[10px]">{t('settings.autoStartBreaksHint')}</span>
+          </div>
+          <input
+            id="auto-start-breaks"
+            type="checkbox"
+            checked={autoStartBreaks}
+            onChange={(e) => setAutoStartBreaks(e.target.checked)}
+            className="flex-shrink-0"
+          />
+        </div>
+
+        <div className={rowClass}>
+          <div className="flex flex-col gap-0.5">
+            <label htmlFor="auto-start-pomodoros">{t('settings.autoStartPomodorosLabel')}</label>
+            <span className="text-sage/40 text-[10px]">{t('settings.autoStartPomodorosHint')}</span>
+          </div>
+          <input
+            id="auto-start-pomodoros"
+            type="checkbox"
+            checked={autoStartPomodoros}
+            onChange={(e) => setAutoStartPomodoros(e.target.checked)}
+            className="flex-shrink-0"
+          />
+        </div>
+
+        <div className={rowClass}>
+          <div className="flex flex-col gap-0.5">
+            <label htmlFor="check-to-bottom">{t('settings.checkToBottomLabel')}</label>
+            <span className="text-sage/40 text-[10px]">{t('settings.checkToBottomHint')}</span>
+          </div>
+          <input
+            id="check-to-bottom"
+            type="checkbox"
+            checked={checkToBottom}
+            onChange={(e) => setCheckToBottom(e.target.checked)}
+            className="flex-shrink-0"
+          />
         </div>
 
         <div className={rowClass}>

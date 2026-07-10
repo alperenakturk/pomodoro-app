@@ -7,14 +7,29 @@ import {
   loadTimerState,
   saveTimerState,
 } from '../lib/storage'
-import { unlockAudio, playChime, playPing, requestNotificationPermission, notify } from '../lib/alert'
+import {
+  unlockAudio,
+  playChime,
+  playPing,
+  requestNotificationPermission,
+  notify,
+  setVolume as setAlertVolume,
+  startTicking,
+  stopTicking,
+} from '../lib/alert'
 import { translate } from '../lib/i18n'
 
-const DURATIONS = {
-  work: 25 * 60,
-}
-
 export const DEFAULT_CYCLE_LENGTH = 4
+
+// Unlike short/long break, the Pomodoro Technique's 25-minute work interval
+// has no "recommended range" in this app — it's freely adjustable. Only a
+// sane absolute ceiling/floor guards against a broken timer (e.g. 0 or
+// unreasonably long); SettingsTab shows an informational (non-blocking) note
+// whenever the value differs from the standard 25, rather than a
+// recommended-range hint like the break durations get.
+export const DEFAULT_WORK_MINUTES = 25
+export const WORK_MIN = 1
+export const WORK_MAX = 180
 
 // Rule 3: short break 3-5 min recommended, long break 15-30 min recommended
 // (docs/methodology.md). Min/max are hard bounds the input enforces; the
@@ -43,7 +58,7 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   // Restored on mount so a refresh doesn't lose a session in progress.
   const [sessionType, setSessionType] = useState(() => loadTimerState()?.sessionType ?? 'work')
   const [secondsLeft, setSecondsLeft] = useState(
-    () => loadTimerState()?.secondsLeft ?? DURATIONS.work
+    () => loadTimerState()?.secondsLeft ?? loadSettings().workMinutes * 60
   )
   const [isRunning, setIsRunning] = useState(() => loadTimerState()?.isRunning ?? false)
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
@@ -91,12 +106,72 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     patchSettings({ longBreakMinutes: value })
   }, [])
 
+  // Freely adjustable — no recommended-range clamp, just the sane absolute
+  // WORK_MIN/WORK_MAX bounds (see the comment on those constants above).
+  const [workMinutes, setWorkMinutesState] = useState(() => loadSettings().workMinutes)
+  const setWorkMinutes = useCallback((n) => {
+    const rounded = Math.round(n) || DEFAULT_WORK_MINUTES
+    const value = Math.min(WORK_MAX, Math.max(WORK_MIN, rounded))
+    setWorkMinutesState(value)
+    patchSettings({ workMinutes: value })
+  }, [])
+
+  // "Auto-start breaks"/"Auto-start Pomodoros" — both default off, preserving
+  // the existing manual-Start behavior unless the user opts in. Consulted in
+  // completeWork/completeBreak/skipBreak below.
+  const [autoStartBreaks, setAutoStartBreaksState] = useState(
+    () => loadSettings().autoStartBreaks
+  )
+  const setAutoStartBreaks = useCallback((value) => {
+    setAutoStartBreaksState(value)
+    patchSettings({ autoStartBreaks: value })
+  }, [])
+
+  const [autoStartPomodoros, setAutoStartPomodorosState] = useState(
+    () => loadSettings().autoStartPomodoros
+  )
+  const setAutoStartPomodoros = useCallback((value) => {
+    setAutoStartPomodorosState(value)
+    patchSettings({ autoStartPomodoros: value })
+  }, [])
+
   const [chimeStyle, setChimeStyleState] = useState(() => loadSettings().chimeStyle)
 
   const setChimeStyle = useCallback((style) => {
     setChimeStyleState(style)
     patchSettings({ chimeStyle: style })
   }, [])
+
+  // 0-100, applied to every alert.js playback call (chime/ping/task-complete/
+  // ticking) via its own module-level volume — see alert.js's setVolume.
+  const [soundVolume, setSoundVolumeState] = useState(() => loadSettings().soundVolume)
+  const setSoundVolume = useCallback((n) => {
+    const value = Math.min(100, Math.max(0, Math.round(n)))
+    setSoundVolumeState(value)
+    patchSettings({ soundVolume: value })
+  }, [])
+  useEffect(() => {
+    setAlertVolume(soundVolume)
+  }, [soundVolume])
+
+  // Ambient ticking during an active work session only — see the effect near
+  // the bottom of this hook that starts/stops it based on isRunning/sessionType.
+  const [tickingSoundEnabled, setTickingSoundEnabledState] = useState(
+    () => loadSettings().tickingSoundEnabled
+  )
+  const setTickingSoundEnabled = useCallback((value) => {
+    setTickingSoundEnabledState(value)
+    patchSettings({ tickingSoundEnabled: value })
+  }, [])
+
+  useEffect(() => {
+    if (tickingSoundEnabled && isRunning && sessionType === 'work') {
+      startTicking()
+    } else {
+      stopTicking()
+    }
+    return () => stopTicking()
+  }, [tickingSoundEnabled, isRunning, sessionType])
 
   useEffect(() => {
     saveTimerState({ sessionType, secondsLeft, isRunning })
@@ -109,6 +184,26 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     }, 1000)
     return () => clearInterval(intervalId)
   }, [isRunning])
+
+  // Keeps an *idle* countdown's displayed duration in sync with the current
+  // setting even before the next natural transition — e.g. changing the
+  // work duration while sitting on an un-started work session should apply
+  // the next time Start is pressed, not silently run the old duration for
+  // one more cycle. A session that's actually running is never resized out
+  // from under the user (guarded by isRunning). Harmless no-op the rest of
+  // the time: every transition (completeWork/completeBreak/skipBreak/
+  // switchSession) already sets secondsLeft to this same value itself, so
+  // this effect re-applies an identical value on the renders that follow.
+  useEffect(() => {
+    if (isRunning) return
+    setSecondsLeft(
+      sessionType === 'work'
+        ? workMinutes * 60
+        : sessionType === 'longBreak'
+          ? longBreakMinutes * 60
+          : shortBreakMinutes * 60
+    )
+  }, [isRunning, sessionType, workMinutes, shortBreakMinutes, longBreakMinutes])
 
   // Bir work session'ının tamamlanma mantığı: hem zil çaldığında hem de
   // kullanıcı "Pomodoro'yu bitir" ile erken tamamladığında aynı yolu izler.
@@ -137,7 +232,17 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     )
     setSessionType(nextType)
     setSecondsLeft(nextType === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60)
-  }, [completedPomodoros, cycleLength, onWorkComplete, chimeStyle, t, shortBreakMinutes, longBreakMinutes])
+    if (autoStartBreaks) setIsRunning(true)
+  }, [
+    completedPomodoros,
+    cycleLength,
+    onWorkComplete,
+    chimeStyle,
+    t,
+    shortBreakMinutes,
+    longBreakMinutes,
+    autoStartBreaks,
+  ])
 
   const completeBreak = useCallback(() => {
     setIsRunning(false)
@@ -146,8 +251,9 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
     notify(t('notifications.breakOverTitle'), t('notifications.backToWorkBody'))
     setSessionType('work')
-    setSecondsLeft(DURATIONS.work)
-  }, [sessionType, chimeStyle, t])
+    setSecondsLeft(workMinutes * 60)
+    if (autoStartPomodoros) setIsRunning(true)
+  }, [sessionType, chimeStyle, t, workMinutes, autoStartPomodoros])
 
   useEffect(() => {
     if (secondsLeft !== 0 || !isRunning) return
@@ -170,12 +276,12 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   const voidPomodoro = useCallback(
     (reason = '') => {
       if (sessionType !== 'work') return
-      const elapsedSeconds = DURATIONS.work - secondsLeft
+      const elapsedSeconds = workMinutes * 60 - secondsLeft
       onVoid && onVoid({ reason, elapsedSeconds })
       setIsRunning(false)
-      setSecondsLeft(DURATIONS.work)
+      setSecondsLeft(workMinutes * 60)
     },
-    [sessionType, secondsLeft, onVoid]
+    [sessionType, secondsLeft, onVoid, workMinutes]
   )
 
   // Kullanıcının bilinçli tercihiyle, zil beklenmeden pomodoro'yu tamamlanmış
@@ -187,14 +293,16 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   }, [sessionType, isRunning, completeWork])
 
   // Breaks aren't Pomodoros, so ending one early is a "skip" straight to
-  // the next work session, not a "void".
+  // the next work session, not a "void". Still honors autoStartPomodoros —
+  // from the user's perspective this is still "a break ending," just early.
   const skipBreak = useCallback(() => {
     if (sessionType === 'work') return
     setIsRunning(false)
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
     setSessionType('work')
-    setSecondsLeft(DURATIONS.work)
-  }, [sessionType])
+    setSecondsLeft(workMinutes * 60)
+    if (autoStartPomodoros) setIsRunning(true)
+  }, [sessionType, workMinutes, autoStartPomodoros])
 
   // Kullanıcı istediği an work/short break/long break arasında manuel geçiş
   // yapabilir. Bir work session'ından çıkılıyorsa bu bir void'dür (X yazılmaz) —
@@ -205,10 +313,10 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
       setIsRunning(false)
       setSessionType(type)
       setSecondsLeft(
-        type === 'work' ? DURATIONS.work : type === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60
+        type === 'work' ? workMinutes * 60 : type === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60
       )
     },
-    [sessionType, shortBreakMinutes, longBreakMinutes]
+    [sessionType, workMinutes, shortBreakMinutes, longBreakMinutes]
   )
 
   const logInterruption = useCallback(
@@ -250,12 +358,22 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     cycleLength,
     setCycleLength,
     resetCycleLength,
+    workMinutes,
+    setWorkMinutes,
     shortBreakMinutes,
     setShortBreakMinutes,
     longBreakMinutes,
     setLongBreakMinutes,
+    autoStartBreaks,
+    setAutoStartBreaks,
+    autoStartPomodoros,
+    setAutoStartPomodoros,
     chimeStyle,
     setChimeStyle,
+    soundVolume,
+    setSoundVolume,
+    tickingSoundEnabled,
+    setTickingSoundEnabled,
     start,
     voidPomodoro,
     finishEarly,
