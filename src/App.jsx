@@ -44,6 +44,19 @@ function nowTime() {
 function App() {
   const { user, loading: authLoading } = useAuth()
   const [dataMode, setDataMode] = useState('guest') // 'guest' | 'syncing' | 'remote'
+  // Deliberately its own piece of state rather than derived from `user`/
+  // `dataMode` at render time (e.g. `user ? user.id : 'guest'`). Deriving it
+  // that way used to remount AppInner the instant `user` flipped to null —
+  // which happens *before* the effect below has actually called
+  // signOutFromRemote(). Since a `key` change unmounts/remounts synchronously
+  // within that same render, the fresh AppInner's hooks (useInventory etc.)
+  // ran their `useState(() => loadX())` initializers while activeProvider
+  // was still remoteProvider and its cache hadn't been cleared yet — so the
+  // "guest" remount silently kept reading the just-signed-out account's
+  // data. Setting appKey explicitly, only after signOutFromRemote()/
+  // signInToRemote() have already run inside the effect, guarantees the
+  // remount can never race ahead of the provider switch.
+  const [appKey, setAppKey] = useState('guest')
   const [syncNotice, setSyncNotice] = useState(null)
   const [syncError, setSyncError] = useState(null)
   const prevUserIdRef = useRef(undefined)
@@ -57,6 +70,7 @@ function App() {
     if (!userId) {
       signOutFromRemote()
       setDataMode('guest')
+      setAppKey('guest')
       // Both notices are about *this* signed-in session — carrying either
       // one across a sign-out (and into whatever account signs in next)
       // would misreport a previous session's outcome as the new one's.
@@ -75,6 +89,7 @@ function App() {
         console.error('Failed to sync with Supabase:', result.error)
         setSyncError(result.error)
         setDataMode('guest') // fall back to local storage for this session
+        setAppKey('guest')
         return
       }
       if (result.migrated) {
@@ -82,6 +97,7 @@ function App() {
         setSyncNotice(true)
       }
       setDataMode('remote')
+      setAppKey(userId)
     })
     return () => {
       cancelled = true
@@ -89,14 +105,6 @@ function App() {
   }, [user, authLoading])
 
   if (dataMode === 'syncing') return <SyncingScreen />
-
-  // `dataMode === 'remote'` and `user` being non-null can briefly disagree:
-  // signing out updates `user` (from useAuth, a separate context) first,
-  // triggering this render, and only *after* that does this component's own
-  // effect below run and set dataMode back to 'guest'. Guarding on `user`
-  // directly here (not just dataMode) avoids reading `.id` off of `null`
-  // during that one in-between render.
-  const appKey = dataMode === 'remote' && user ? user.id : 'guest'
 
   return (
     <>
