@@ -1,0 +1,223 @@
+import { supabase } from './supabaseClient'
+import { mergeCollectionById } from './importData'
+import { mapKeysToSnake, mapKeysToCamel } from './keyCase'
+
+// Maps storage.js's localStorage key strings directly to their Supabase
+// table names — using the same key strings as cache keys (rather than a
+// separate translation layer) keeps this provider a drop-in match for
+// localStorageProvider's get(collection, fallback)/set(collection, value)
+// shape, where `collection` is already e.g. 'pomodoro_inventory'.
+const ARRAY_TABLES = {
+  pomodoro_inventory: 'inventory',
+  pomodoro_today_tasks: 'today_tasks',
+  pomodoro_activity_log: 'activity_log',
+  pomodoro_ticks: 'ticks',
+  pomodoro_timetable: 'timetable',
+  pomodoro_categories: 'categories',
+  pomodoro_void_log: 'void_log',
+}
+
+// Singletons (one row per user) — see supabase/schema.sql's file-header
+// note 3 and CLAUDE.md's Authentication section.
+const SINGLETON_TABLES = {
+  pomodoro_timer_state: 'timer_state',
+  pomodoro_settings: 'settings',
+}
+
+// In-memory cache, always read synchronously by get() — this is what lets
+// storage.js's loadX()/saveX() keep their existing synchronous-looking
+// signatures even though the actual persistence is a network call. Warmed
+// once by initializeRemoteData() before storage.js switches its active
+// provider over to this module (see storage.js's signInToRemote).
+const cache = {}
+// Array collections only: the set of ids last known to exist remotely, so
+// set() can tell which ids were removed from a freshly-saved array and
+// issue an explicit delete for them (an upsert alone never deletes rows —
+// see the file-level note in CLAUDE.md's Authentication section).
+const knownIds = {}
+let activeUserId = null
+
+function nowIso() {
+  return new Date().toISOString()
+}
+
+async function fetchArrayTable(table, userId) {
+  const { data, error } = await supabase.from(table).select('*').eq('user_id', userId)
+  if (error) throw error
+  return data.map(mapKeysToCamel)
+}
+
+async function fetchSingletonTable(table, userId) {
+  const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  return data ? mapKeysToCamel(data) : null
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+// A "no row found" result for a singleton that demonstrably exists has been
+// observed transiently right after sign-in (most reproducible with
+// concurrent sign-ins to the same account from two clients at once — e.g.
+// two devices/tabs). Since initializeRemoteData treats "no row" as "create
+// one from local guest defaults," a false negative here would upsert a
+// fresh session's defaults over an established row (onConflict: 'user_id'
+// matches the same row) — silently discarding real state, not just
+// re-writing identical data. One retry after a short delay is cheap
+// insurance against that specific failure mode.
+async function fetchSingletonTableWithRetry(table, userId) {
+  const first = await fetchSingletonTable(table, userId)
+  if (first) return first
+  await sleep(300)
+  return fetchSingletonTable(table, userId)
+}
+
+// Fills in userId (always, in case a stale/placeholder value is present)
+// and createdAt (only if genuinely missing — e.g. an item added in this
+// session, before its first sync) without overriding a createdAt a merged
+// or previously-synced item already carries. updatedAt is always bumped to
+// now: a full-array save always means "this is the current state," and any
+// finer-grained conflict resolution between devices is out of scope here
+// (see CLAUDE.md) — only the one-time migration below reads updatedAt to
+// make a keep-which-side decision.
+function toRemoteRow(item, userId) {
+  return mapKeysToSnake({
+    ...item,
+    userId,
+    createdAt: item.createdAt ?? nowIso(),
+    updatedAt: nowIso(),
+  })
+}
+
+async function upsertArrayTable(table, userId, items) {
+  if (items.length === 0) return
+  const { error } = await supabase.from(table).upsert(items.map((item) => toRemoteRow(item, userId)))
+  if (error) throw error
+}
+
+async function deleteRows(table, ids) {
+  if (ids.length === 0) return
+  const { error } = await supabase.from(table).delete().in('id', ids)
+  if (error) throw error
+}
+
+async function upsertSingleton(table, userId, value) {
+  // Reuses toRemoteRow (not a bare mapKeysToSnake) specifically because
+  // settings/timer_state can carry `createdAt: null`/`updatedAt: null` from
+  // the JS side (normalizeMeta's pre-account-era default) — sent as-is that
+  // violates the schema's NOT NULL constraint on both columns; toRemoteRow
+  // fills them in exactly like it does for array-collection rows.
+  const { error } = await supabase
+    .from(table)
+    .upsert(toRemoteRow(value, userId), { onConflict: 'user_id' })
+  if (error) throw error
+}
+
+// Runs once, right after sign-in, before storage.js switches its active
+// provider to this module — fetches every collection from Supabase, merges
+// in any existing localStorage (guest) data via the exact same
+// mergeCollectionById() the JSON import feature uses (newer `updatedAt`
+// wins; ties/no-timestamp favor the remote side, since that's the
+// established shared state), and warms the cache.
+//
+// `localSnapshots` is supplied by the caller (storage.js) rather than read
+// here directly, so this module never needs to import storage.js itself —
+// storage.js already has every loadX() function in scope and calls this
+// with their results, avoiding a circular import.
+//
+// Returns { migrated, error }. On any error, nothing about localStorage is
+// touched by the caller (see storage.js's signInToRemote) — the whole
+// point of surfacing the error instead of throwing past this function.
+export async function initializeRemoteData(userId, localSnapshots) {
+  try {
+    let migrated = false
+
+    for (const [key, table] of Object.entries(ARRAY_TABLES)) {
+      const remoteItems = await fetchArrayTable(table, userId)
+      const localItems = localSnapshots[key] ?? []
+      let finalItems = remoteItems
+      if (localItems.length > 0) {
+        finalItems = mergeCollectionById(remoteItems, localItems)
+        await upsertArrayTable(table, userId, finalItems)
+        migrated = true
+      }
+      cache[key] = finalItems
+      knownIds[key] = new Set(finalItems.map((item) => item.id))
+    }
+
+    for (const [key, table] of Object.entries(SINGLETON_TABLES)) {
+      const remoteValue = await fetchSingletonTableWithRetry(table, userId)
+      if (remoteValue) {
+        // An established account's existing preferences/timer state win
+        // outright — a fresh guest session's defaults must never silently
+        // clobber them.
+        cache[key] = remoteValue
+        continue
+      }
+      const localValue = localSnapshots[key]
+      if (localValue) {
+        await upsertSingleton(table, userId, localValue)
+        cache[key] = { ...localValue, userId }
+        migrated = true
+      } else {
+        cache[key] = null
+      }
+    }
+
+    activeUserId = userId
+    return { migrated, error: null }
+  } catch (error) {
+    return { migrated: false, error }
+  }
+}
+
+// Called on sign-out — storage.js switches its active provider back to
+// localStorageProvider right after this.
+export function resetToLocalMode() {
+  activeUserId = null
+  for (const key of Object.keys(cache)) delete cache[key]
+  for (const key of Object.keys(knownIds)) delete knownIds[key]
+}
+
+// --- The provider shape storage.js's loadJSON/saveJSON expect ------------
+
+export function get(collection, fallback) {
+  return cache[collection] ?? fallback
+}
+
+export function set(collection, value) {
+  cache[collection] = value
+  if (!activeUserId) return
+
+  if (ARRAY_TABLES[collection]) {
+    const table = ARRAY_TABLES[collection]
+    const newIds = new Set(value.map((item) => item.id))
+    const idsToDelete = [...(knownIds[collection] ?? [])].filter((id) => !newIds.has(id))
+    knownIds[collection] = newIds
+    upsertArrayTable(table, activeUserId, value)
+      .then(() => deleteRows(table, idsToDelete))
+      .catch((error) => console.error(`Failed to sync ${collection} to Supabase:`, error))
+  } else if (SINGLETON_TABLES[collection]) {
+    const table = SINGLETON_TABLES[collection]
+    upsertSingleton(table, activeUserId, value).catch((error) =>
+      console.error(`Failed to sync ${collection} to Supabase:`, error)
+    )
+  }
+}
+
+export function remove(collection) {
+  const isArray = Boolean(ARRAY_TABLES[collection])
+  cache[collection] = isArray ? [] : null
+  if (isArray) knownIds[collection] = new Set()
+  if (!activeUserId) return
+
+  const table = ARRAY_TABLES[collection] ?? SINGLETON_TABLES[collection]
+  supabase
+    .from(table)
+    .delete()
+    .eq('user_id', activeUserId)
+    .then(({ error }) => {
+      if (error) console.error(`Failed to clear ${collection} on Supabase:`, error)
+    })
+}

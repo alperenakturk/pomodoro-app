@@ -20,6 +20,9 @@ function AuthModal({ onClose }) {
   const [mode, setMode] = useState('signIn')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [error, setError] = useState(null)
   const [info, setInfo] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -34,6 +37,7 @@ function AuthModal({ onClose }) {
 
   function switchMode() {
     setMode((prev) => (prev === 'signIn' ? 'signUp' : 'signIn'))
+    setConfirmPassword('')
     setError(null)
     setInfo(null)
   }
@@ -50,6 +54,10 @@ function AuthModal({ onClose }) {
     e.preventDefault()
     setError(null)
     setInfo(null)
+    if (mode === 'signUp' && password !== confirmPassword) {
+      setError(t('auth.passwordMismatch'))
+      return
+    }
     setSubmitting(true)
     const action = mode === 'signIn' ? signInWithEmail : signUpWithEmail
     const { data, error: err } = await action(email, password)
@@ -128,17 +136,54 @@ function AuthModal({ onClose }) {
             <label htmlFor="auth-password" className="text-sage text-[10px] font-sans uppercase tracking-wide">
               {t('auth.passwordLabel')}
             </label>
-            <input
-              id="auth-password"
-              type="password"
-              autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
-            />
+            <div className="relative">
+              <input
+                id="auth-password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={inputClass}
+                style={{ paddingRight: '2.5rem' }}
+              />
+              <PasswordVisibilityToggle
+                visible={showPassword}
+                onToggle={() => setShowPassword((v) => !v)}
+                t={t}
+              />
+            </div>
           </div>
+
+          {mode === 'signUp' && (
+            <div className="flex flex-col gap-1">
+              <label
+                htmlFor="auth-confirm-password"
+                className="text-sage text-[10px] font-sans uppercase tracking-wide"
+              >
+                {t('auth.confirmPasswordLabel')}
+              </label>
+              <div className="relative">
+                <input
+                  id="auth-confirm-password"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={inputClass}
+                  style={{ paddingRight: '2.5rem' }}
+                />
+                <PasswordVisibilityToggle
+                  visible={showConfirmPassword}
+                  onToggle={() => setShowConfirmPassword((v) => !v)}
+                  t={t}
+                />
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-tomato text-xs font-sans">{error}</p>}
           {info && <p className="text-sage text-xs font-sans">{info}</p>}
@@ -169,6 +214,49 @@ function AuthModal({ onClose }) {
         </button>
       </div>
     </div>
+  )
+}
+
+// Absolutely positioned inside the relative-wrapped input above — toggles
+// the sibling input between type="password"/"text" via the `visible` state
+// its parent owns (kept in AuthModal so each password field can be shown/
+// hidden independently).
+function PasswordVisibilityToggle({ visible, onToggle, t }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      tabIndex={-1}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-sage hover:text-cream"
+      aria-label={visible ? t('auth.hidePasswordAria') : t('auth.showPasswordAria')}
+    >
+      {visible ? <EyeOffIcon /> : <EyeIcon />}
+    </button>
+  )
+}
+
+function EyeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function EyeOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M9.17 5.24A10.7 10.7 0 0 1 12 5c7 0 10.5 7 10.5 7a13.3 13.3 0 0 1-3.05 3.9M6.5 6.66C3.87 8.4 1.5 12 1.5 12a13.3 13.3 0 0 0 5.06 5.44A10.6 10.6 0 0 0 12 19"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 

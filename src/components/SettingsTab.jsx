@@ -15,7 +15,6 @@ import {
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
-import AccountStatus from './AccountStatus'
 
 const rowClass =
   'flex items-center justify-between gap-3 text-sage text-xs font-sans py-3 border-b border-cream/10 last:border-b-0'
@@ -79,8 +78,6 @@ function SettingsTab({
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2">
           {t('settings.title')}
         </p>
-
-        <AccountStatus />
 
         <div className={rowClass}>
           <label htmlFor="cycle-length">{t('settings.longBreakEvery')}</label>

@@ -1,10 +1,14 @@
 import { mergeCollectionById, csvRowsToActivityRecords, mergeActivityRecordsByNaturalKey } from './importData'
+import * as remoteProvider from './remoteProvider'
 
 // Storage provider: every load/save/clear below goes through this object
-// rather than touching localStorage directly. Swapping in a remote backend
-// later (Supabase/Firebase/REST) means replacing this one object, not every
-// call site — the collection-keyed get/set/remove shape is what a remote
-// provider's client SDK would offer too.
+// rather than touching localStorage directly. This is what the "swapping in
+// a remote backend means replacing this one object" promise (see git
+// history) actually resolves to now: `activeProvider` is mutable and
+// switches to remoteProvider.js while signed in (see signInToRemote/
+// signOutFromRemote at the bottom of this file) — every load*/save* function
+// below is unchanged either way, since both providers implement the same
+// get(collection, fallback)/set(collection, value)/remove(collection) shape.
 const localStorageProvider = {
   get(collection, fallback) {
     try {
@@ -22,14 +26,14 @@ const localStorageProvider = {
   },
 }
 
-const provider = localStorageProvider
+let activeProvider = localStorageProvider
 
 function loadJSON(key, fallback) {
-  return provider.get(key, fallback)
+  return activeProvider.get(key, fallback)
 }
 
 function saveJSON(key, value) {
-  provider.set(key, value)
+  activeProvider.set(key, value)
 }
 
 // Reports ve Records gibi bağımsız bileşenlerin, veri her değiştiğinde
@@ -329,43 +333,43 @@ export const saveTimerState = (state) => saveJSON(TIMER_STATE_KEY, state)
 // resetAllData() below resets it, per the "settings survive a data reset"
 // requirement.
 export function clearInventory() {
-  provider.remove(INVENTORY_KEY)
+  activeProvider.remove(INVENTORY_KEY)
 }
 // Timetable blocks are today-scoped planning data with the same lifecycle as
 // Today's Tasks, so clearing "Today's Tasks" clears both.
 export function clearTodayTasks() {
-  provider.remove(TODAY_KEY)
-  provider.remove(TIMETABLE_KEY)
+  activeProvider.remove(TODAY_KEY)
+  activeProvider.remove(TIMETABLE_KEY)
 }
 export function clearActivityLog() {
-  provider.remove(ACTIVITY_LOG_KEY)
+  activeProvider.remove(ACTIVITY_LOG_KEY)
 }
 export function clearTicks() {
-  provider.remove(TICKS_KEY)
+  activeProvider.remove(TICKS_KEY)
 }
 export function clearTimerState() {
-  provider.remove(TIMER_STATE_KEY)
+  activeProvider.remove(TIMER_STATE_KEY)
 }
 export function clearCategories() {
-  provider.remove(CATEGORIES_KEY)
+  activeProvider.remove(CATEGORIES_KEY)
 }
 export function clearVoidLog() {
-  provider.remove(VOID_LOG_KEY)
+  activeProvider.remove(VOID_LOG_KEY)
 }
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
 // first-launch state.
 export function resetAllData() {
-  provider.remove(INVENTORY_KEY)
-  provider.remove(TODAY_KEY)
-  provider.remove(TIMETABLE_KEY)
-  provider.remove(ACTIVITY_LOG_KEY)
-  provider.remove(TICKS_KEY)
-  provider.remove(TIMER_STATE_KEY)
-  provider.remove(CATEGORIES_KEY)
-  provider.remove(VOID_LOG_KEY)
-  provider.remove(SETTINGS_KEY)
+  activeProvider.remove(INVENTORY_KEY)
+  activeProvider.remove(TODAY_KEY)
+  activeProvider.remove(TIMETABLE_KEY)
+  activeProvider.remove(ACTIVITY_LOG_KEY)
+  activeProvider.remove(TICKS_KEY)
+  activeProvider.remove(TIMER_STATE_KEY)
+  activeProvider.remove(CATEGORIES_KEY)
+  activeProvider.remove(VOID_LOG_KEY)
+  activeProvider.remove(SETTINGS_KEY)
 }
 
 // Full backup of every storage key, for the export feature.
@@ -431,6 +435,69 @@ export function importActivityLogCSV(rows, categories, mode) {
     saveActivityLog(mergeActivityRecordsByNaturalKey(loadActivityLog(), records))
   }
   notifyChange()
+}
+
+// Provider swap (Authentication, see CLAUDE.md): called from App.jsx when
+// useAuth's `user` transitions from null to a real session. Gathers a
+// snapshot via this file's own loadX() functions (still hitting
+// localStorage — activeProvider hasn't switched yet) and hands it to
+// remoteProvider.js's initializeRemoteData(), which fetches the account's
+// existing Supabase data and merges the two by id/updatedAt (same
+// mergeCollectionById() the JSON import feature uses).
+//
+// Only flips activeProvider on success — every loadX()/saveX() call made
+// before that (including everything gathered into localSnapshots above)
+// still went through localStorageProvider, so a failure here (network
+// error, etc.) leaves localStorage completely untouched; the caller is
+// expected to keep treating the session as guest/local for this run and
+// surface `error` to the user. Clearing localStorage once migration
+// succeeds is the caller's job too (App.jsx), not this function's — this
+// file only decides which provider is active, not when it's safe to delete
+// the old data.
+export async function signInToRemote(userId) {
+  const localSnapshots = {
+    pomodoro_inventory: loadInventory(),
+    pomodoro_today_tasks: loadTodayTasks(),
+    pomodoro_activity_log: loadActivityLog(),
+    pomodoro_ticks: loadTicks(),
+    pomodoro_timetable: loadTimetable(),
+    pomodoro_categories: loadCategories(),
+    pomodoro_void_log: loadVoidLog(),
+    pomodoro_timer_state: loadTimerState(),
+    pomodoro_settings: loadSettings(),
+  }
+  const result = await remoteProvider.initializeRemoteData(userId, localSnapshots)
+  if (!result.error) activeProvider = remoteProvider
+  return result
+}
+
+// Called on sign-out — switches back to localStorage exactly as it was
+// (remoteProvider.resetToLocalMode() drops its in-memory cache so a later
+// sign-in starts clean rather than reusing a previous user's data).
+export function signOutFromRemote() {
+  remoteProvider.resetToLocalMode()
+  activeProvider = localStorageProvider
+}
+
+// Called by App.jsx only after signInToRemote() resolves with no error AND
+// result.migrated is true — i.e. there really was guest data, and it has
+// already been safely merged into Supabase. Removes the raw localStorage
+// keys directly (bypassing the provider abstraction, since this is
+// specifically about deleting the *old* local copies regardless of which
+// provider is active now) rather than calling resetAllData(), which also
+// wipes pomodoro_settings — a signed-in user's settings now live in
+// Supabase and clearing the local copy here is just tidying up the old
+// storage, not a user-facing "reset."
+export function clearLocalGuestData() {
+  localStorage.removeItem(INVENTORY_KEY)
+  localStorage.removeItem(TODAY_KEY)
+  localStorage.removeItem(ACTIVITY_LOG_KEY)
+  localStorage.removeItem(TICKS_KEY)
+  localStorage.removeItem(TIMETABLE_KEY)
+  localStorage.removeItem(CATEGORIES_KEY)
+  localStorage.removeItem(VOID_LOG_KEY)
+  localStorage.removeItem(TIMER_STATE_KEY)
+  localStorage.removeItem(SETTINGS_KEY)
 }
 
 // Cross-tab sync: the native 'storage' event fires in *other* tabs/windows

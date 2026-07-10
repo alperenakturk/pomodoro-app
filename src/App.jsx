@@ -1,9 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
-import { loadSettings, patchSettings, addVoidLogEntry, loadActivityLog, loadTicks } from './lib/storage'
+import { useAuth } from './hooks/useAuth'
+import {
+  loadSettings,
+  patchSettings,
+  addVoidLogEntry,
+  loadActivityLog,
+  loadTicks,
+  signInToRemote,
+  signOutFromRemote,
+  clearLocalGuestData,
+} from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
@@ -12,6 +22,7 @@ import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
 import TabNav from './components/TabNav'
 import SettingsTab from './components/SettingsTab'
+import AccountStatus from './components/AccountStatus'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -21,7 +32,115 @@ function nowTime() {
   return new Date().toTimeString().slice(0, 5)
 }
 
+// Auth-transition gate + notice banners live here, one level above the
+// actual app tree (AppInner) — see CLAUDE.md's Authentication section for
+// the full reasoning. In short: guest usage (the common case) never waits
+// on anything, since AppInner mounts immediately in local mode before
+// useAuth's initial session check even resolves. Only an *actual* sign-in
+// (user goes from null to a real session) pays for a brief "Syncing…"
+// state while storage.js's signInToRemote() fetches + merges Supabase data;
+// AppInner is then remounted (via `key`) so every hook's
+// `useState(() => loadX())` initializer re-runs against the now-warm cache.
 function App() {
+  const { user, loading: authLoading } = useAuth()
+  const [dataMode, setDataMode] = useState('guest') // 'guest' | 'syncing' | 'remote'
+  const [syncNotice, setSyncNotice] = useState(null)
+  const [syncError, setSyncError] = useState(null)
+  const prevUserIdRef = useRef(undefined)
+
+  useEffect(() => {
+    if (authLoading) return
+    const userId = user?.id ?? null
+    if (userId === prevUserIdRef.current) return
+    prevUserIdRef.current = userId
+
+    if (!userId) {
+      signOutFromRemote()
+      setDataMode('guest')
+      // Both notices are about *this* signed-in session — carrying either
+      // one across a sign-out (and into whatever account signs in next)
+      // would misreport a previous session's outcome as the new one's.
+      setSyncNotice(null)
+      setSyncError(null)
+      return
+    }
+
+    let cancelled = false
+    setSyncError(null)
+    setSyncNotice(null)
+    setDataMode('syncing')
+    signInToRemote(userId).then((result) => {
+      if (cancelled) return
+      if (result.error) {
+        console.error('Failed to sync with Supabase:', result.error)
+        setSyncError(result.error)
+        setDataMode('guest') // fall back to local storage for this session
+        return
+      }
+      if (result.migrated) {
+        clearLocalGuestData()
+        setSyncNotice(true)
+      }
+      setDataMode('remote')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, authLoading])
+
+  if (dataMode === 'syncing') return <SyncingScreen />
+
+  // `dataMode === 'remote'` and `user` being non-null can briefly disagree:
+  // signing out updates `user` (from useAuth, a separate context) first,
+  // triggering this render, and only *after* that does this component's own
+  // effect below run and set dataMode back to 'guest'. Guarding on `user`
+  // directly here (not just dataMode) avoids reading `.id` off of `null`
+  // during that one in-between render.
+  const appKey = dataMode === 'remote' && user ? user.id : 'guest'
+
+  return (
+    <>
+      {syncError && <NoticeBanner tone="error" onDismiss={() => setSyncError(null)} messageKey="sync.errorNotice" />}
+      {syncNotice && (
+        <NoticeBanner tone="success" onDismiss={() => setSyncNotice(null)} messageKey="sync.migratedNotice" />
+      )}
+      <AppInner key={appKey} />
+    </>
+  )
+}
+
+function SyncingScreen() {
+  const { t } = useTranslation()
+  return (
+    <div className="min-h-screen bg-pine flex items-center justify-center">
+      <p className="text-sage text-sm font-sans">{t('sync.syncingMessage')}</p>
+    </div>
+  )
+}
+
+function NoticeBanner({ tone, messageKey, onDismiss }) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className={
+        'flex items-center justify-between gap-3 px-4 sm:px-6 py-2 text-xs font-sans ' +
+        (tone === 'error' ? 'bg-tomato/15 text-tomato' : 'bg-sage/15 text-sage')
+      }
+    >
+      <span>{t(messageKey)}</span>
+      <button type="button" onClick={onDismiss} aria-label={t('sync.dismissAria')} className="leading-none">
+        ×
+      </button>
+    </div>
+  )
+}
+
+// The actual app — unchanged from before the auth/storage-provider work,
+// except that it's now mounted under App's gate above instead of being the
+// top-level export. Every hook here calls storage.js's loadX()/saveX()
+// exactly as before; which provider (localStorage vs Supabase) those hit is
+// entirely decided by App, before this component ever mounts.
+function AppInner() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
   const categoriesApi = useCategories()
@@ -135,9 +254,12 @@ function App() {
             {t('common.appTitle')}
           </p>
         </div>
-        <p className="text-sage text-xs font-sans whitespace-nowrap">
-          {today} · {time}
-        </p>
+        <div className="flex items-center gap-4">
+          <p className="text-sage text-xs font-sans whitespace-nowrap">
+            {today} · {time}
+          </p>
+          <AccountStatus />
+        </div>
       </header>
 
       <TabNav activeTab={activeTab} onChange={setActiveTab} />
