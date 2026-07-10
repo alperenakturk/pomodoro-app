@@ -111,6 +111,16 @@ function EstimationAccuracySection({ activityLog, period }) {
   const thisWeekAvg = avgAbsDiff(recordsInDates(activityLog, datesForThisWeek()))
   const lastWeekAvg = avgAbsDiff(recordsInDates(activityLog, datesForLastWeek()))
 
+  // Distinct from hasNoHistoryYet (same-day-only data overall) — this is
+  // "the selected period genuinely has zero records," most commonly hit by
+  // picking "Today" on a day nothing's been finished yet. Without this, the
+  // stat boxes show 0/0, the caption shows "(0)", and DiffTrend renders its
+  // own separate empty message below them — three redundant "nothing here"
+  // signals stacked on top of each other, which is what looked broken.
+  if (periodRecords.length === 0) {
+    return <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noDataForPeriod')}</p>
+  }
+
   return (
     <div>
       <div className="grid grid-cols-2 gap-3 font-sans mb-4">
@@ -158,7 +168,7 @@ function InterruptionTrendsSection({ activityLog, period }) {
       </div>
 
       {recentTasks.length === 0 ? (
-        <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noTasksFinishedPeriod')}</p>
+        <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noDataForPeriod')}</p>
       ) : (
         <ul className="flex flex-col gap-1.5 font-sans">
           {recentTasks.map((r) => {
@@ -195,7 +205,7 @@ function CategoryBreakdownSection({ activityLog, categories, period }) {
   if (buckets.length === 0) {
     return (
       <p className="text-sage text-xs font-sans text-center py-2">
-        {t('reports.categoryBreakdownEmpty')}
+        {t('reports.noDataForPeriod')}
       </p>
     )
   }
@@ -304,59 +314,65 @@ function Reports({ todayTasks = [], categories = [] }) {
         </button>
       </div>
 
-      <div className="flex gap-2 justify-center flex-wrap mb-4">
-        {PERIODS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setPeriod(p.id)}
-            aria-current={period === p.id ? 'page' : undefined}
-            className={
-              'font-display text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full border ' +
-              (period === p.id
-                ? 'bg-tomato/15 border-tomato/60 text-tomato'
-                : 'border-cream/15 text-sage hover:border-cream/30')
-            }
-          >
-            {t(p.labelKey)}
-          </button>
-        ))}
-      </div>
+      {ticks.length === 0 && activityLog.length === 0 ? (
+        <p className="text-sage text-sm font-sans text-center py-6">{t('reports.noDataAtAll')}</p>
+      ) : (
+        <>
+          <div className="flex gap-2 justify-center flex-wrap mb-4">
+            {PERIODS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setPeriod(p.id)}
+                aria-current={period === p.id ? 'page' : undefined}
+                className={
+                  'font-display text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full border ' +
+                  (period === p.id
+                    ? 'bg-tomato/15 border-tomato/60 text-tomato'
+                    : 'border-cream/15 text-sage hover:border-cream/30')
+                }
+              >
+                {t(p.labelKey)}
+              </button>
+            ))}
+          </div>
 
-      {hasNoHistoryYet(ticks, activityLog) && (
-        <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
-          {t('reports.noHistoryHint')}
-        </p>
+          {hasNoHistoryYet(ticks, activityLog) && (
+            <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
+              {t('reports.noHistoryHint')}
+            </p>
+          )}
+
+          <section className="mb-6">
+            <TodaySection ticks={ticks} activityLog={activityLog} todayTasks={todayTasks} />
+          </section>
+
+          <section className="mb-6 pt-4 border-t border-cream/10">
+            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+              {t('reports.estimationAccuracyTitle')}
+            </p>
+            <EstimationAccuracySection activityLog={activityLog} period={period} />
+          </section>
+
+          <section className="mb-6 pt-4 border-t border-cream/10">
+            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+              {t('reports.interruptionTrendsTitle')}
+            </p>
+            <InterruptionTrendsSection activityLog={activityLog} period={period} />
+          </section>
+
+          <section className="mb-6 pt-4 border-t border-cream/10">
+            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
+              {t('reports.categoryBreakdownTitle')}
+            </p>
+            <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
+          </section>
+
+          <section className="pt-4 border-t border-cream/10">
+            <LongTermSection ticks={ticks} activityLog={activityLog} />
+          </section>
+        </>
       )}
-
-      <section className="mb-6">
-        <TodaySection ticks={ticks} activityLog={activityLog} todayTasks={todayTasks} />
-      </section>
-
-      <section className="mb-6 pt-4 border-t border-cream/10">
-        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          {t('reports.estimationAccuracyTitle')}
-        </p>
-        <EstimationAccuracySection activityLog={activityLog} period={period} />
-      </section>
-
-      <section className="mb-6 pt-4 border-t border-cream/10">
-        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          {t('reports.interruptionTrendsTitle')}
-        </p>
-        <InterruptionTrendsSection activityLog={activityLog} period={period} />
-      </section>
-
-      <section className="mb-6 pt-4 border-t border-cream/10">
-        <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-          {t('reports.categoryBreakdownTitle')}
-        </p>
-        <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
-      </section>
-
-      <section className="pt-4 border-t border-cream/10">
-        <LongTermSection ticks={ticks} activityLog={activityLog} />
-      </section>
 
       {showReview && (
         <DayReview

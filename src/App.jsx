@@ -3,7 +3,7 @@ import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
-import { loadSettings, patchSettings, addVoidLogEntry } from './lib/storage'
+import { loadSettings, patchSettings, addVoidLogEntry, loadActivityLog, loadTicks } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
@@ -35,6 +35,25 @@ function App() {
     setTheme(next)
     patchSettings({ theme: next })
   }
+
+  // First-launch welcome card (Timer tab): shown only while every collection
+  // is still empty AND the user hasn't already dismissed it — so it appears
+  // once on a fresh install and never resurfaces afterward, even if the user
+  // later clears their data via the Danger Zone.
+  const [onboardingDismissed, setOnboardingDismissed] = useState(
+    () => loadSettings().onboardingDismissed
+  )
+  function dismissOnboarding() {
+    setOnboardingDismissed(true)
+    patchSettings({ onboardingDismissed: true })
+  }
+  const isAllDataEmpty =
+    inventoryApi.items.length === 0 &&
+    todayApi.tasks.length === 0 &&
+    categoriesApi.categories.length === 0 &&
+    loadActivityLog().length === 0 &&
+    loadTicks().length === 0
+  const showWelcome = !onboardingDismissed && isAllDataEmpty
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
@@ -132,7 +151,15 @@ function App() {
           not unmounting. */}
       <main className="max-w-7xl mx-auto p-6">
         <div className={activeTab === 'timer' ? 'flex justify-center' : 'hidden'}>
-          <Timer activeTask={activeTask} addTask={todayApi.addTask} theme={theme} {...pomodoro} />
+          <Timer
+            activeTask={activeTask}
+            addTask={todayApi.addTask}
+            theme={theme}
+            onGoToPlanning={() => setActiveTab('planning')}
+            showWelcome={showWelcome}
+            onDismissWelcome={dismissOnboarding}
+            {...pomodoro}
+          />
         </div>
 
         <div

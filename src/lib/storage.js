@@ -1,3 +1,5 @@
+import { mergeCollectionById, csvRowsToActivityRecords, mergeActivityRecordsByNaturalKey } from './importData'
+
 // Storage provider: every load/save/clear below goes through this object
 // rather than touching localStorage directly. Swapping in a remote backend
 // later (Supabase/Firebase/REST) means replacing this one object, not every
@@ -184,8 +186,17 @@ const SETTINGS_KEY = 'pomodoro_settings'
 // `language` is null until the user explicitly picks one in Settings — until
 // then the UI auto-detects from navigator.language on every load (see
 // resolveLanguage() in lib/i18n) rather than freezing in whatever was
-// detected the first time.
-const DEFAULT_SETTINGS = { cycleLength: 4, theme: 'dark', chimeStyle: 'classic', userId: 'local', language: null }
+// detected the first time. `onboardingDismissed` gates the Timer tab's
+// first-launch welcome card — set true once the user dismisses it, so it
+// never shows again even if they later clear all their data.
+const DEFAULT_SETTINGS = {
+  cycleLength: 4,
+  theme: 'dark',
+  chimeStyle: 'classic',
+  userId: 'local',
+  language: null,
+  onboardingDismissed: false,
+}
 export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
 export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
 // Merges a partial update into existing settings — saveSettings overwrites
@@ -370,6 +381,56 @@ export function exportAllData() {
     categories: loadCategories(),
     voidLog: loadVoidLog(),
   }
+}
+
+// Data import (Settings): the counterpart to exportAllData()/CSV export.
+// `data` is assumed already validated (importData.js's validateBackupShape)
+// by the caller — this function only decides how to write it, not whether
+// it's safe to.
+//
+// 'replace' wipes each collection and writes the file's contents as-is,
+// including settings (mirrors resetAllData()'s "settings included" case).
+// 'merge' resolves each array collection by id via mergeCollectionById
+// (newer `updatedAt` wins) and deliberately leaves `settings` untouched —
+// a merge is about reconciling *data*, not silently overwriting the user's
+// current preferences (theme/language/cycle length) with whatever the
+// imported file happened to have at export time.
+export function importBackup(data, mode) {
+  if (mode === 'replace') {
+    if (Array.isArray(data.inventory)) saveInventory(data.inventory)
+    if (Array.isArray(data.todayTasks)) saveTodayTasks(data.todayTasks)
+    if (Array.isArray(data.activityLog)) saveActivityLog(data.activityLog)
+    if (Array.isArray(data.ticks)) saveTicks(data.ticks)
+    if (Array.isArray(data.timetable)) saveTimetable(data.timetable)
+    if (Array.isArray(data.categories)) saveCategories(data.categories)
+    if (Array.isArray(data.voidLog)) saveVoidLog(data.voidLog)
+    if (data.settings && typeof data.settings === 'object') saveSettings(data.settings)
+  } else {
+    if (Array.isArray(data.inventory)) saveInventory(mergeCollectionById(loadInventory(), data.inventory))
+    if (Array.isArray(data.todayTasks)) saveTodayTasks(mergeCollectionById(loadTodayTasks(), data.todayTasks))
+    if (Array.isArray(data.activityLog)) saveActivityLog(mergeCollectionById(loadActivityLog(), data.activityLog))
+    if (Array.isArray(data.ticks)) saveTicks(mergeCollectionById(loadTicks(), data.ticks))
+    if (Array.isArray(data.timetable)) saveTimetable(mergeCollectionById(loadTimetable(), data.timetable))
+    if (Array.isArray(data.categories)) saveCategories(mergeCollectionById(loadCategories(), data.categories))
+    if (Array.isArray(data.voidLog)) saveVoidLog(mergeCollectionById(loadVoidLog(), data.voidLog))
+  }
+  notifyChange()
+}
+
+// CSV import (Records Log / Activity Log only). `rows` is already-validated,
+// already-parsed CSV data (importData.js's parseCSV + validateActivityCSV).
+// 'replace' wipes the Activity Log and writes the CSV's records as new,
+// fresh-id records. 'merge' adds only rows that don't match an existing
+// record by (date, time, activity) — see mergeActivityRecordsByNaturalKey's
+// comment for why CSV can't merge by id/updatedAt the way JSON does.
+export function importActivityLogCSV(rows, categories, mode) {
+  const records = csvRowsToActivityRecords(rows, categories)
+  if (mode === 'replace') {
+    saveActivityLog(records)
+  } else {
+    saveActivityLog(mergeActivityRecordsByNaturalKey(loadActivityLog(), records))
+  }
+  notifyChange()
 }
 
 // Cross-tab sync: the native 'storage' event fires in *other* tabs/windows

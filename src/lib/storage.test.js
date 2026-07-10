@@ -31,6 +31,8 @@ import {
   addActivityRecord,
   updateActivityRecord,
   addTick,
+  importBackup,
+  importActivityLogCSV,
 } from './storage'
 
 beforeEach(() => {
@@ -298,6 +300,86 @@ describe('backend-readiness metadata (userId/createdAt/updatedAt)', () => {
       createdAt: '2020-01-01T00:00:00.000Z',
       updatedAt: '2020-01-01T00:00:00.000Z',
     })
+  })
+})
+
+describe('importBackup', () => {
+  it('replace mode wipes each collection and writes the file contents as-is, including settings', () => {
+    saveInventory([{ id: 'old', text: 'stale' }])
+    patchSettings({ theme: 'dark', cycleLength: 4 })
+
+    importBackup(
+      {
+        inventory: [{ id: 'new', text: 'fresh' }],
+        settings: { theme: 'light', cycleLength: 6, chimeStyle: 'soft' },
+      },
+      'replace'
+    )
+
+    expect(loadInventory()).toMatchObject([{ id: 'new', text: 'fresh' }])
+    expect(loadSettings()).toMatchObject({ theme: 'light', cycleLength: 6 })
+  })
+
+  it('replace mode leaves a collection untouched when the import omits it', () => {
+    saveTodayTasks([{ id: 't1', text: 'kept' }])
+    importBackup({ inventory: [] }, 'replace')
+    expect(loadTodayTasks()).toHaveLength(1)
+  })
+
+  it('merge mode combines collections by id (newer updatedAt wins) and leaves settings untouched', () => {
+    saveInventory([{ id: 'a', text: 'current', updatedAt: '2026-01-01T00:00:00.000Z' }])
+    patchSettings({ theme: 'dark' })
+
+    importBackup(
+      {
+        inventory: [
+          { id: 'a', text: 'imported-newer', updatedAt: '2026-02-01T00:00:00.000Z' },
+          { id: 'b', text: 'imported-new-id' },
+        ],
+        settings: { theme: 'light' },
+      },
+      'merge'
+    )
+
+    const items = loadInventory()
+    expect(items.find((i) => i.id === 'a').text).toBe('imported-newer')
+    expect(items.find((i) => i.id === 'b').text).toBe('imported-new-id')
+    expect(loadSettings().theme).toBe('dark')
+  })
+})
+
+describe('importActivityLogCSV', () => {
+  const header =
+    'date,time,activity,category,estimate,reestimate1,reestimate2,real,diff,diffI,diffII,internal,external,unplanned,notes'
+
+  it('replace mode wipes the activity log and writes the CSV rows as new records', () => {
+    addActivityRecord({ id: 'old', date: '2020-01-01', activity: 'stale', real: 1 })
+    const rows = [
+      header.split(','),
+      '2026-01-01,09:00,Write report,,2,,,3,1,,,0,0,false,'.split(','),
+    ]
+
+    importActivityLogCSV(rows, [], 'replace')
+
+    const log = loadActivityLog()
+    expect(log).toHaveLength(1)
+    expect(log[0]).toMatchObject({ activity: 'Write report', real: 3 })
+  })
+
+  it('merge mode only adds rows that do not match an existing record by date+time+activity', () => {
+    addActivityRecord({ id: 'r1', date: '2026-01-01', time: '09:00', activity: 'Write report', real: 1 })
+    const rows = [
+      header.split(','),
+      '2026-01-01,09:00,Write report,,,,,999,,,,0,0,false,'.split(','),
+      '2026-01-02,10:00,Fix bug,,,,,2,,,,0,0,false,'.split(','),
+    ]
+
+    importActivityLogCSV(rows, [], 'merge')
+
+    const log = loadActivityLog()
+    expect(log).toHaveLength(2)
+    expect(log.find((r) => r.activity === 'Write report').real).toBe(1)
+    expect(log.find((r) => r.activity === 'Fix bug').real).toBe(2)
   })
 })
 

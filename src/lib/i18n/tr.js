@@ -32,7 +32,8 @@ export default {
     longBreak: 'Uzun mola',
     switchTo: "{{label}} moduna geç",
     currentTask: 'Aktif görev',
-    noActiveTask: 'Seçili bir görev yok',
+    noActiveTask: 'Aktif görev yok. Başlamak için Planlama\'da bir görev ekle.',
+    goToPlanningButton: "Planlama'ya git",
     start: 'Başlat',
     voidPomodoro: "Pomodoro'yu İptal Et",
     finishPomodoro: "Pomodoro'yu Bitir",
@@ -99,7 +100,7 @@ export default {
     combinePrompt: '{{count}} görev seçildi — birleştirilsin mi? (Kural 5)',
     combineButton: 'Birleştir',
     combineConfirm: '{{count}} görev tek görevde birleştirilsin mi? Orijinaller kaldırılır ve bu geri alınamaz.',
-    emptyState: 'Envanter boş.',
+    emptyState: 'Görev listeni oluşturmaya başlamak için yukarıdan ilk görevini ekle.',
   },
 
   today: {
@@ -119,7 +120,7 @@ export default {
     colEstimate: 'Tahmin',
     colReal: 'Gerçek',
     colDiff: 'Fark',
-    emptyState: 'Henüz görev yok.',
+    emptyState: 'Bugün için planlanmış bir şey yok. Envanterinden bir görev seç ya da doğrudan ekle.',
     unplannedUrgentTitle: 'Plansız ve Acil',
     unplannedBadgeTitle: 'Plansız',
     makeActiveAria: 'aktif görev yap',
@@ -213,6 +214,8 @@ export default {
     periodMonth: 'Bu Ay',
     periodYear: 'Bu Yıl',
     noHistoryHint: 'Henüz yeterli geçmiş yok — uygulamayı daha çok gün kullandıkça filtreler farklılaşacak.',
+    noDataForPeriod: 'Bu dönem için henüz veri yok.',
+    noDataAtAll: 'Eğilimlerini burada görmek için birkaç pomodoro tamamla.',
     pomodorosToday: 'Bugünkü pomodorolar',
     tasksToday: 'Bugünkü görevler',
     tasksTodayValue: '{{active}} aktif · {{done}} bitti',
@@ -227,10 +230,8 @@ export default {
     avgInterruptionsPerTask: 'görev başına ort. kesinti',
     thisWeek: 'bu hafta: {{value}}',
     lastWeek: 'geçen hafta: {{value}}',
-    noTasksFinishedPeriod: 'Bu dönemde tamamlanan görev yok.',
     interruptionCount: '{{count}} ({{internal}} iç · {{external}} dış)',
     categoryBreakdownTitle: 'Kategoriye Göre Pomodorolar',
-    categoryBreakdownEmpty: 'Bu dönemde tamamlanan görevlere işlenmiş pomodoro yok.',
     pomSuffix: '{{count}} pom.',
     uncategorized: 'Kategorisiz',
     longTermTitle: 'Uzun Vadeli',
@@ -270,12 +271,10 @@ export default {
 
   recordsLog: {
     title: 'Kayıt Günlüğü',
-    exportCsvTitle: "Kayıtları CSV olarak dışa aktar",
-    exportJsonTitle: 'Tüm verinin tam JSON yedeğini dışa aktar',
     filterDateAria: 'Tarihe göre filtrele',
     clearFilters: 'Filtreleri temizle',
     noRecordsFiltered: 'Bu filtrelere uyan kayıt yok.',
-    noRecordsEmpty: 'Henüz tamamlanmış görev yok.',
+    noRecordsEmpty: 'Tamamlanan görevlerin burada görünecek.',
     activityAria: 'Etkinlik adı',
     editAria: 'kaydı düzenle',
     editTitle: 'Düzenle',
@@ -298,6 +297,13 @@ export default {
     classic: 'Klasik',
     soft: 'Yumuşak',
     alert: 'Uyarı',
+  },
+
+  onboarding: {
+    title: 'Hoş geldin',
+    body: "Planlama sekmesinde bir görev ekle, sonra ilk Pomodoro'nu başlatmak için buraya dön — 25 dakikalık odaklanmış çalışmanın ardından kısa bir mola.",
+    dismiss: 'Anladım',
+    dismissAria: 'hoş geldin mesajını kapat',
   },
 
   settings: {
@@ -343,5 +349,32 @@ export default {
       'Bu, İptal günlüğünü (iptal edilen Pomodorolar ve nedenleri) kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
     factoryResetConfirm:
       "Bu, HER ŞEYİ kalıcı olarak silecek — Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü VE ayarların (döngü uzunluğu, ses, tema). Uygulama ilk açılış durumuna dönecek. Bu geri alınamaz. Devam edilsin mi?",
+  },
+
+  dataImport: {
+    title: 'Veri İçe/Dışa Aktarma',
+    jsonExportLabel: 'JSON Dışa Aktarma',
+    jsonExportDesc: 'Her şeyi indirir: görevler, kategoriler, kayıtlar, ayarlar. Tam yedek.',
+    csvExportLabel: 'CSV Dışa Aktarma',
+    csvExportDesc: 'Sadece tamamlanmış görev kayıtlarını, bir e-tablo olarak indirir.',
+    jsonImportLabel: 'JSON İçe Aktarma',
+    jsonImportDesc: 'Tam bir yedeği geri yükler. Görevler dahil her şeyi geri getirir.',
+    csvImportLabel: 'CSV İçe Aktarma',
+    csvImportDesc: 'Sadece kayıtları içe aktarır. Görevleri veya kategorileri geri getirmez.',
+    exportButton: 'Dışa Aktar',
+    chooseFileButton: 'Dosya seç',
+    invalidJsonError: 'Bu dosya geçerli bir yedek gibi görünmüyor — hiçbir değişiklik yapılmadı.',
+    invalidCsvError: 'Bu dosya geçerli bir Kayıtlar CSV dosyası gibi görünmüyor — hiçbir değişiklik yapılmadı.',
+    choosePrompt: 'Bu nasıl içe aktarılsın?',
+    replaceButton: 'Tüm veriyi değiştir',
+    mergeButton: 'Mevcut veriyle birleştir',
+    jsonReplaceConfirm:
+      "Bu, tüm verini — Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü VE ayarların — bu dosyanın içeriğiyle kalıcı olarak DEĞİŞTİRECEK. Bu geri alınamaz. Devam edilsin mi?",
+    jsonMergeConfirm:
+      'Bu, içe aktarılan dosyayı mevcut verinle birleştirecek: eşleşen kayıtlar daha yeniyse korunur, sadece dosyada olanlar eklenir. Mevcut ayarların değişmez. Devam edilsin mi?',
+    csvReplaceConfirm:
+      'Bu, Kayıtlar / Etkinlik Günlüğünü bu CSV dosyasının içeriğiyle kalıcı olarak DEĞİŞTİRECEK. Bu geri alınamaz. Devam edilsin mi?',
+    csvMergeConfirm:
+      'Bu, CSV\'de olup henüz mevcut olmayan kayıtları ekleyecek (tarih, saat ve etkinlik adına göre eşleştirilir). Mevcut kayıtlar değişmez. Devam edilsin mi?',
   },
 }

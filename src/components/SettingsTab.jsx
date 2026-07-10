@@ -14,6 +14,7 @@ import {
 } from '../lib/storage'
 import Select from './Select'
 import CategoryManager from './CategoryManager'
+import DataTransfer from './DataTransfer'
 
 const rowClass =
   'flex items-center justify-between gap-3 text-sage text-xs font-sans py-3 border-b border-cream/10 last:border-b-0'
@@ -165,6 +166,8 @@ function SettingsTab({
         updateCategory={updateCategory}
         removeCategory={removeCategory}
       />
+
+      <DataTransfer categories={categories} />
 
       <div className="bg-black/20 border border-tomato/30 rounded-3xl px-6 py-6 shadow-lg w-full mt-6">
         <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1">

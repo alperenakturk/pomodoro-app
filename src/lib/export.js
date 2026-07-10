@@ -1,4 +1,6 @@
-const CSV_COLUMNS = [
+// Exported so importData.js's CSV parser can validate an imported file's
+// header row against this exact same list, rather than duplicating it.
+export const CSV_COLUMNS = [
   'date',
   'time',
   'activity',

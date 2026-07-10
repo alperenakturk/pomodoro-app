@@ -1,5 +1,23 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { detectBrowserLanguage, resolveLanguage, translate, formatDateLocalized } from './index'
+import en from './en'
+import tr from './tr'
+
+function flattenKeys(obj, prefix = '') {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const path = prefix ? `${prefix}.${key}` : key
+    return typeof value === 'object' && value !== null ? flattenKeys(value, path) : [path]
+  })
+}
+
+describe('en.js / tr.js key parity', () => {
+  it('has an identical set of keys in both dictionaries (no missing translations)', () => {
+    const enKeys = new Set(flattenKeys(en))
+    const trKeys = new Set(flattenKeys(tr))
+    expect([...enKeys].filter((k) => !trKeys.has(k))).toEqual([])
+    expect([...trKeys].filter((k) => !enKeys.has(k))).toEqual([])
+  })
+})
 
 describe('detectBrowserLanguage', () => {
   afterEach(() => {

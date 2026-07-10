@@ -38,6 +38,9 @@ function Timer({
   activeTask,
   addTask,
   theme,
+  onGoToPlanning,
+  showWelcome,
+  onDismissWelcome,
   sessionType,
   secondsLeft,
   isRunning,
@@ -263,9 +266,33 @@ function Timer({
       className={
         isFullscreen
           ? 'bg-pine w-full h-full flex items-center justify-center p-6'
-          : 'flex justify-center w-full'
+          : 'flex flex-col items-center gap-4 w-full'
       }
     >
+      {!isFullscreen && showWelcome && (
+        <div className="relative bg-black/20 border border-cream/10 rounded-3xl px-6 py-5 shadow-lg w-full max-w-md">
+          <button
+            type="button"
+            onClick={onDismissWelcome}
+            className="absolute top-3 right-3 text-sage hover:text-cream text-lg leading-none"
+            aria-label={t('onboarding.dismissAria')}
+          >
+            ×
+          </button>
+          <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2 pr-6">
+            {t('onboarding.title')}
+          </p>
+          <p className="font-sans text-sage text-sm">{t('onboarding.body')}</p>
+          <button
+            type="button"
+            onClick={onDismissWelcome}
+            className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream mt-3"
+          >
+            {t('onboarding.dismiss')}
+          </button>
+        </div>
+      )}
+
       <div
         className={
           isFullscreen
@@ -361,9 +388,22 @@ function Timer({
 
         <div className="text-center">
           <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
-          <p className="font-sans text-cream font-semibold">
-            {activeTask ? activeTask.text : t('timer.noActiveTask')}
-          </p>
+          {activeTask ? (
+            <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
+          ) : (
+            <div>
+              <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
+              {!isFullscreen && onGoToPlanning && (
+                <button
+                  type="button"
+                  onClick={onGoToPlanning}
+                  className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
+                >
+                  {t('timer.goToPlanningButton')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

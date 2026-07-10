@@ -28,7 +28,8 @@ export default {
     longBreak: 'Long break',
     switchTo: 'Switch to {{label}}',
     currentTask: 'Current task',
-    noActiveTask: 'No active task selected',
+    noActiveTask: 'No active task. Add one in Planning to get started.',
+    goToPlanningButton: 'Go to Planning',
     start: 'Start',
     voidPomodoro: 'Void Pomodoro',
     finishPomodoro: 'Finish Pomodoro',
@@ -95,7 +96,7 @@ export default {
     combinePrompt: '{{count}} tasks selected — combine into one? (Rule 5)',
     combineButton: 'Combine',
     combineConfirm: "Combine {{count}} tasks into one? The originals will be replaced and this can't be undone.",
-    emptyState: 'Inventory is empty.',
+    emptyState: 'Add your first task above to start building your backlog.',
   },
 
   today: {
@@ -115,7 +116,7 @@ export default {
     colEstimate: 'Est.',
     colReal: 'Real',
     colDiff: 'Diff',
-    emptyState: 'No tasks yet.',
+    emptyState: 'Nothing planned for today. Pick a task from your Inventory or add one directly.',
     unplannedUrgentTitle: 'Unplanned & Urgent',
     unplannedBadgeTitle: 'Unplanned',
     makeActiveAria: 'make active task',
@@ -209,6 +210,8 @@ export default {
     periodMonth: 'This Month',
     periodYear: 'This Year',
     noHistoryHint: 'Not enough history yet — filters will differ as you use the app across more days.',
+    noDataForPeriod: 'No data for this period yet.',
+    noDataAtAll: 'Complete a few Pomodoros to see your trends here.',
     pomodorosToday: 'Pomodoros today',
     tasksToday: 'Tasks today',
     tasksTodayValue: '{{active}} active · {{done}} done',
@@ -223,10 +226,8 @@ export default {
     avgInterruptionsPerTask: 'avg interruptions per task',
     thisWeek: 'this week: {{value}}',
     lastWeek: 'last week: {{value}}',
-    noTasksFinishedPeriod: 'No tasks finished in this period.',
     interruptionCount: '{{count}} ({{internal}} int · {{external}} ext)',
     categoryBreakdownTitle: 'Pomodoros by Category',
-    categoryBreakdownEmpty: 'No pomodoros logged against finished tasks in this period.',
     pomSuffix: '{{count}} pom.',
     uncategorized: 'Uncategorized',
     longTermTitle: 'Long-term',
@@ -266,12 +267,10 @@ export default {
 
   recordsLog: {
     title: 'Records Log',
-    exportCsvTitle: 'Export records as CSV',
-    exportJsonTitle: 'Export a full JSON backup of all data',
     filterDateAria: 'Filter by date',
     clearFilters: 'Clear filters',
     noRecordsFiltered: 'No records match these filters.',
-    noRecordsEmpty: 'No completed tasks yet.',
+    noRecordsEmpty: 'Your completed tasks will show up here.',
     activityAria: 'Activity name',
     editAria: 'edit record',
     editTitle: 'Edit',
@@ -294,6 +293,13 @@ export default {
     classic: 'Classic',
     soft: 'Soft',
     alert: 'Alert',
+  },
+
+  onboarding: {
+    title: 'Welcome',
+    body: "Add a task in the Planning tab, then come back here to start your first Pomodoro — 25 minutes of focused work, followed by a short break.",
+    dismiss: 'Got it',
+    dismissAria: 'dismiss welcome message',
   },
 
   settings: {
@@ -339,5 +345,32 @@ export default {
       'This will permanently delete your Void log (voided Pomodoros and their reasons). This cannot be undone. Continue?',
     factoryResetConfirm:
       "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?",
+  },
+
+  dataImport: {
+    title: 'Import & Export Data',
+    jsonExportLabel: 'JSON Export',
+    jsonExportDesc: 'Downloads everything: tasks, categories, records, settings. Full backup.',
+    csvExportLabel: 'CSV Export',
+    csvExportDesc: 'Downloads completed task records only, as a spreadsheet.',
+    jsonImportLabel: 'JSON Import',
+    jsonImportDesc: 'Restore a full backup. Brings back everything including tasks.',
+    csvImportLabel: 'CSV Import',
+    csvImportDesc: "Import records only. Won't bring back tasks or categories.",
+    exportButton: 'Export',
+    chooseFileButton: 'Choose file',
+    invalidJsonError: "This file doesn't look like a valid backup — no changes were made.",
+    invalidCsvError: "This file doesn't look like a valid Records CSV export — no changes were made.",
+    choosePrompt: 'How should this be imported?',
+    replaceButton: 'Replace all data',
+    mergeButton: 'Merge with existing',
+    jsonReplaceConfirm:
+      "This will permanently REPLACE all your data — Activity Inventory, Today's Tasks, Records, interruption history, Categories, Void log, AND settings — with the contents of this file. This cannot be undone. Continue?",
+    jsonMergeConfirm:
+      'This will merge the imported file into your existing data: matching records are kept if newer, and anything only in the file is added. Your current settings are not changed. Continue?',
+    csvReplaceConfirm:
+      'This will permanently REPLACE your Records / Activity Log with the contents of this CSV file. This cannot be undone. Continue?',
+    csvMergeConfirm:
+      "This will add records from the CSV that don't already exist (matched by date, time, and activity name). Existing records are not changed. Continue?",
   },
 }

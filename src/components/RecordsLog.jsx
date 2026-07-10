@@ -4,11 +4,9 @@ import {
   subscribeToChanges,
   removeActivityRecord,
   updateActivityRecord,
-  exportAllData,
   loadVoidLog,
   removeVoidLogEntry,
 } from '../lib/storage'
-import { activityLogToCSV, downloadFile } from '../lib/export'
 import { compactInputClass as inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
 import { useTranslation } from '../hooks/useTranslation'
@@ -250,18 +248,6 @@ function RecordsLog({ categories = [] }) {
     }
   }
 
-  function handleExportCSV() {
-    downloadFile('pomodoro-records.csv', activityLogToCSV(log, categories), 'text/csv')
-  }
-
-  function handleExportJSON() {
-    downloadFile(
-      'pomodoro-backup.json',
-      JSON.stringify(exportAllData(), null, 2),
-      'application/json'
-    )
-  }
-
   const filtersActive = dateFilter !== '' || categoryFilter !== undefined
   // categoryFilter is one of: undefined (no filter), null ("Uncategorized"
   // only — records with an empty categoryIds array), or a category id (match
@@ -288,24 +274,6 @@ function RecordsLog({ categories = [] }) {
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('recordsLog.title')}
         </p>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="text-sage text-xs"
-            title={t('recordsLog.exportCsvTitle')}
-          >
-            CSV
-          </button>
-          <button
-            type="button"
-            onClick={handleExportJSON}
-            className="text-sage text-xs"
-            title={t('recordsLog.exportJsonTitle')}
-          >
-            JSON
-          </button>
-        </div>
       </div>
 
       <div className="flex items-center gap-2 mb-4 flex-wrap">
