@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (Supabase keys, etc.) — .env.example stays tracked
+# as the template other developers copy from.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

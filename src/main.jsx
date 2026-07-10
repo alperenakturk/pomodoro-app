@@ -11,11 +11,14 @@ import '@fontsource/jetbrains-mono/700.css'
 import './index.css'
 import App from './App.jsx'
 import { LanguageProvider } from './lib/i18n/LanguageContext.jsx'
+import { AuthProvider } from './lib/auth/AuthContext.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <LanguageProvider>
-      <App />
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <App />
+      </LanguageProvider>
+    </AuthProvider>
   </StrictMode>,
 )

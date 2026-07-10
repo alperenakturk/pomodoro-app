@@ -308,6 +308,9 @@ export default {
 
   settings: {
     title: 'Ayarlar',
+    signedInAs: '{{email}} olarak giriş yapıldı',
+    notSignedIn: 'Giriş yapılmadı',
+    signOutButton: 'Çıkış yap',
     longBreakEvery: 'Uzun mola sıklığı',
     pomodoroUnit: 'pomodoroda bir',
     resetTitle: 'Varsayılana sıfırla ({{value}})',
@@ -376,5 +379,22 @@ export default {
       'Bu, Kayıtlar / Etkinlik Günlüğünü bu CSV dosyasının içeriğiyle kalıcı olarak DEĞİŞTİRECEK. Bu geri alınamaz. Devam edilsin mi?',
     csvMergeConfirm:
       'Bu, CSV\'de olup henüz mevcut olmayan kayıtları ekleyecek (tarih, saat ve etkinlik adına göre eşleştirilir). Mevcut kayıtlar değişmez. Devam edilsin mi?',
+  },
+
+  auth: {
+    signInTitle: 'Giriş yap',
+    signUpTitle: 'Hesap oluştur',
+    closeAria: 'giriş penceresini kapat',
+    googleButton: "Google ile devam et",
+    orDivider: 'veya',
+    emailLabel: 'E-posta',
+    emailPlaceholder: 'sen@ornek.com',
+    passwordLabel: 'Şifre',
+    signInButton: 'Giriş yap',
+    signUpButton: 'Kayıt ol',
+    switchToSignUp: 'Hesabın yok mu? Kayıt ol',
+    switchToSignIn: 'Zaten hesabın var mı? Giriş yap',
+    continueWithoutAccount: 'Hesap olmadan devam et',
+    signUpSuccessMessage: 'Hesabını onaylamak için e-postana bak.',
   },
 }

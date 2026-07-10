@@ -304,6 +304,9 @@ export default {
 
   settings: {
     title: 'Settings',
+    signedInAs: 'Signed in as {{email}}',
+    notSignedIn: 'Not signed in',
+    signOutButton: 'Sign out',
     longBreakEvery: 'Long break every',
     pomodoroUnit: 'pomodoro',
     resetTitle: 'Reset to default ({{value}})',
@@ -372,5 +375,22 @@ export default {
       'This will permanently REPLACE your Records / Activity Log with the contents of this CSV file. This cannot be undone. Continue?',
     csvMergeConfirm:
       "This will add records from the CSV that don't already exist (matched by date, time, and activity name). Existing records are not changed. Continue?",
+  },
+
+  auth: {
+    signInTitle: 'Sign in',
+    signUpTitle: 'Create an account',
+    closeAria: 'close sign-in dialog',
+    googleButton: 'Continue with Google',
+    orDivider: 'or',
+    emailLabel: 'Email',
+    emailPlaceholder: 'you@example.com',
+    passwordLabel: 'Password',
+    signInButton: 'Sign in',
+    signUpButton: 'Sign up',
+    switchToSignUp: "Don't have an account? Sign up",
+    switchToSignIn: 'Already have an account? Sign in',
+    continueWithoutAccount: 'Continue without an account',
+    signUpSuccessMessage: 'Check your email to confirm your account.',
   },
 }
