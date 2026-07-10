@@ -51,6 +51,36 @@ describe('usePomodoro', () => {
     expect(loadTicks().filter((t) => t.type === 'pomodoro')).toHaveLength(0)
   })
 
+  it('voidPomodoro reports the elapsed time and optional reason via onVoid', () => {
+    const onVoid = vi.fn()
+    const { result } = renderHook(() => usePomodoro({ onVoid }))
+    act(() => result.current.start())
+    tick(12) // 12s elapsed out of 25*60
+    act(() => result.current.voidPomodoro('Got interrupted'))
+
+    expect(onVoid).toHaveBeenCalledTimes(1)
+    expect(onVoid).toHaveBeenCalledWith({ reason: 'Got interrupted', elapsedSeconds: 12 })
+  })
+
+  it('voidPomodoro defaults to an empty reason when none is given', () => {
+    const onVoid = vi.fn()
+    const { result } = renderHook(() => usePomodoro({ onVoid }))
+    act(() => result.current.start())
+    tick(5)
+    act(() => result.current.voidPomodoro())
+
+    expect(onVoid).toHaveBeenCalledWith({ reason: '', elapsedSeconds: 5 })
+  })
+
+  it('voidPomodoro does not call onVoid outside of a running work session', () => {
+    const onVoid = vi.fn()
+    const { result } = renderHook(() => usePomodoro({ onVoid }))
+    act(() => result.current.switchSession('shortBreak'))
+    act(() => result.current.voidPomodoro('irrelevant'))
+
+    expect(onVoid).not.toHaveBeenCalled()
+  })
+
   it('ringing a full work session records a tick and moves to short break', () => {
     const onWorkComplete = vi.fn()
     const { result } = renderHook(() => usePomodoro({ onWorkComplete }))

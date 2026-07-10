@@ -21,9 +21,13 @@ import {
   clearTicks,
   clearTimerState,
   clearCategories,
+  clearVoidLog,
   resetAllData,
   loadCategories,
   saveCategories,
+  loadVoidLog,
+  addVoidLogEntry,
+  removeVoidLogEntry,
 } from './storage'
 
 beforeEach(() => {
@@ -152,6 +156,50 @@ describe('Categories', () => {
   })
 })
 
+describe('Void log', () => {
+  it('adds and removes a void entry, normalizing missing fields', () => {
+    addVoidLogEntry({
+      id: 'v1',
+      date: '2026-01-01',
+      time: '09:12',
+      activity: 'Write report',
+      categoryIds: ['cat1'],
+      elapsedSeconds: 753,
+      reason: 'Got called into a meeting',
+    })
+    expect(loadVoidLog()).toEqual([
+      {
+        id: 'v1',
+        date: '2026-01-01',
+        time: '09:12',
+        activity: 'Write report',
+        categoryIds: ['cat1'],
+        elapsedSeconds: 753,
+        reason: 'Got called into a meeting',
+      },
+    ])
+
+    removeVoidLogEntry('v1')
+    expect(loadVoidLog()).toEqual([])
+  })
+
+  it('defaults a missing reason/categoryIds/activity instead of crashing', () => {
+    localStorage.setItem(
+      'pomodoro_void_log',
+      JSON.stringify([{ id: 'v1', date: '2026-01-01', elapsedSeconds: 100 }])
+    )
+    expect(loadVoidLog()).toEqual([
+      { id: 'v1', date: '2026-01-01', time: '', activity: null, categoryIds: [], elapsedSeconds: 100, reason: '' },
+    ])
+  })
+
+  it('clearVoidLog removes only the void log', () => {
+    addVoidLogEntry({ id: 'v1', date: '2026-01-01', elapsedSeconds: 10 })
+    clearVoidLog()
+    expect(loadVoidLog()).toEqual([])
+  })
+})
+
 describe('Danger Zone: category clears', () => {
   function seedEverything() {
     saveInventory([{ id: 'i1', text: 'inv' }])
@@ -161,6 +209,7 @@ describe('Danger Zone: category clears', () => {
     saveTimetable([{ id: 'b1', date: '2026-01-01', start: '09:00', end: '10:00' }])
     saveTimerState({ sessionType: 'work', secondsLeft: 100, isRunning: true })
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
+    addVoidLogEntry({ id: 'v1', date: '2026-01-01', elapsedSeconds: 10 })
     patchSettings({ cycleLength: 6, theme: 'light', chimeStyle: 'soft' })
   }
 
@@ -175,6 +224,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTimetable()).toHaveLength(1)
     expect(loadTimerState()).not.toBeNull()
     expect(loadCategories()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6, theme: 'light', chimeStyle: 'soft' })
   })
 
@@ -189,6 +239,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTicks()).toHaveLength(1)
     expect(loadTimerState()).not.toBeNull()
     expect(loadCategories()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -202,6 +253,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTicks()).toHaveLength(1)
     expect(loadTimetable()).toHaveLength(1)
     expect(loadCategories()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -215,6 +267,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadActivityLog()).toHaveLength(1)
     expect(loadTimetable()).toHaveLength(1)
     expect(loadCategories()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -228,6 +281,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadActivityLog()).toHaveLength(1)
     expect(loadTicks()).toHaveLength(1)
     expect(loadCategories()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -240,6 +294,20 @@ describe('Danger Zone: category clears', () => {
     expect(loadTodayTasks()).toHaveLength(1)
     expect(loadActivityLog()).toHaveLength(1)
     expect(loadTicks()).toHaveLength(1)
+    expect(loadVoidLog()).toHaveLength(1)
+    expect(loadSettings()).toMatchObject({ cycleLength: 6 })
+  })
+
+  it('clearVoidLog removes only the Void log, leaving everything else (incl. Settings) intact', () => {
+    seedEverything()
+    clearVoidLog()
+
+    expect(loadVoidLog()).toEqual([])
+    expect(loadInventory()).toHaveLength(1)
+    expect(loadTodayTasks()).toHaveLength(1)
+    expect(loadActivityLog()).toHaveLength(1)
+    expect(loadTicks()).toHaveLength(1)
+    expect(loadCategories()).toHaveLength(1)
     expect(loadSettings()).toMatchObject({ cycleLength: 6 })
   })
 
@@ -254,6 +322,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTimetable()).toEqual([])
     expect(loadTimerState()).toBeNull()
     expect(loadCategories()).toEqual([])
+    expect(loadVoidLog()).toEqual([])
     // loadSettings() always merges defaults back in, so the honest check is
     // that the underlying key is gone, not that loadSettings() returns {}.
     expect(localStorage.getItem('pomodoro_settings')).toBeNull()

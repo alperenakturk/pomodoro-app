@@ -80,6 +80,30 @@ function Timer({
     return () => clearTimeout(timeoutId)
   }, [completionPulseKey])
 
+  // Fullscreen Focus Mode. isFullscreen is driven entirely by the native
+  // 'fullscreenchange' event rather than set optimistically on click — that
+  // keeps it correct if the request is rejected (fullscreen requires a user
+  // gesture, but browsers can still refuse it in some contexts) or if the
+  // user exits some other way the button doesn't know about.
+  const containerRef = useRef(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(document.fullscreenElement === containerRef.current)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      containerRef.current?.requestFullscreen().catch(() => {})
+    }
+  }
+
   const isWork = sessionType === 'work'
   const accentClass = isWork ? 'text-tomato' : 'text-amber'
   const ringClass = isWork ? 'stroke-tomato' : 'stroke-amber'
@@ -96,10 +120,26 @@ function Timer({
       ? cycleLength
       : completedPomodoros % cycleLength
 
-  function handleVoid() {
-    if (window.confirm('This Pomodoro will be voided and won\'t count. Are you sure?')) {
-      voidPomodoro()
-    }
+  // Void Reason Logging: replaces the old plain window.confirm with an
+  // inline panel (matching TaskRow's re-estimate panel elsewhere in the app)
+  // that both confirms the void and collects an optional reason in one calm
+  // step, instead of stacking a confirm() and a second prompt().
+  const [voidPromptOpen, setVoidPromptOpen] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
+
+  function openVoidPrompt() {
+    setVoidReason('')
+    setVoidPromptOpen(true)
+  }
+
+  function confirmVoid(e) {
+    e.preventDefault()
+    voidPomodoro(voidReason.trim())
+    setVoidPromptOpen(false)
+  }
+
+  function cancelVoid() {
+    setVoidPromptOpen(false)
   }
 
   // Rule 2 says a Pomodoro always rings and there's no "finish early" —
@@ -108,7 +148,9 @@ function Timer({
   // (spells out what overlearning is and why finishing early isn't the
   // default), but leaves the actual call to the user rather than blocking
   // it outright. Confirming still finishes the Pomodoro as complete (an X
-  // is recorded), same as letting it ring naturally.
+  // is recorded), same as letting it ring naturally. Not offered at all in
+  // Fullscreen Focus Mode — that view keeps only Start/Void/Skip, the
+  // methodology-clean core controls.
   function handleFinishEarly() {
     if (
       window.confirm(
@@ -146,11 +188,29 @@ function Timer({
         if (!isRunning) start()
         return
       }
-      if (e.key === 'Escape' && isRunning && isWork) {
-        handleVoid()
+      if (e.key === 'Escape') {
+        // While fullscreen, Escape is the browser's own "exit fullscreen"
+        // gesture — fullscreenchange syncs isFullscreen, nothing to do here,
+        // and it must NOT also open the void prompt underneath.
+        if (isFullscreen) return
+        if (voidPromptOpen) {
+          cancelVoid()
+          return
+        }
+        if (isRunning && isWork) {
+          openVoidPrompt()
+          return
+        }
         return
       }
-      if ((e.key === 'f' || e.key === 'F') && isRunning && isWork) {
+      // 'F' toggles Fullscreen Focus Mode. Previously bound to Finish
+      // Pomodoro — moved to 'E' (below) to make room, since fullscreen is
+      // the more frequently reached-for shortcut of the two.
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen()
+        return
+      }
+      if ((e.key === 'e' || e.key === 'E') && isRunning && isWork) {
         handleFinishEarly()
         return
       }
@@ -164,165 +224,235 @@ function Timer({
   })
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 sm:px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6">
-      <div className="flex gap-2">
-        {SESSION_ORDER.map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => handleSwitch(type)}
-            title={sessionType === type ? undefined : `Switch to ${LABELS[type]}`}
-            className={
-              'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
-              (sessionType === type
-                ? 'bg-tomato/15 border-tomato/60 text-tomato'
-                : 'border-cream/15 text-sage hover:border-cream/30')
-            }
-          >
-            {LABELS[type]}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative w-60 h-60 sm:w-72 sm:h-72">
-        <svg
-          viewBox="0 0 100 100"
-          className={`w-full h-full ${accentClass} ${pulsing ? 'animate-ring-pulse' : ''}`}
+    <div
+      ref={containerRef}
+      className={
+        isFullscreen
+          ? 'bg-pine w-full h-full flex items-center justify-center p-6'
+          : 'flex justify-center w-full'
+      }
+    >
+      <div
+        className={
+          isFullscreen
+            ? 'relative flex flex-col items-center gap-6 w-full max-w-md'
+            : 'relative bg-black/20 border border-cream/10 rounded-3xl px-6 sm:px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6'
+        }
+      >
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="absolute top-3 right-3 text-sage hover:text-cream text-sm leading-none"
+          aria-label={isFullscreen ? 'Exit fullscreen focus mode' : 'Enter fullscreen focus mode'}
+          title={isFullscreen ? 'Exit fullscreen (F or Esc)' : 'Fullscreen focus mode (F)'}
         >
-          <circle cx="50" cy="50" r={RADIUS} fill="none" strokeWidth="1.5" className="stroke-cream/10" />
-          <circle
-            cx="50"
-            cy="50"
-            r={RADIUS}
-            fill="none"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            className={ringClass}
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={dashOffset}
-            transform="rotate(-90 50 50)"
-          />
-          <circle cx={dotX} cy={dotY} r="2.2" className={dotClass} />
-        </svg>
+          ⛶
+        </button>
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
-            {LABELS[sessionType]}
-          </p>
-          <p className="font-display text-6xl text-cream tracking-tight tabular-nums">
-            {formatTime(secondsLeft)}
-          </p>
+        {!isFullscreen && (
           <div className="flex gap-2">
-            {Array.from({ length: cycleLength }, (_, i) => (
-              <span
-                key={i}
+            {SESSION_ORDER.map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleSwitch(type)}
+                title={sessionType === type ? undefined : `Switch to ${LABELS[type]}`}
                 className={
-                  'w-2 h-2 rounded-full ' +
-                  (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
+                  'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
+                  (sessionType === type
+                    ? 'bg-tomato/15 border-tomato/60 text-tomato'
+                    : 'border-cream/15 text-sage hover:border-cream/30')
                 }
-              />
+              >
+                {LABELS[type]}
+              </button>
             ))}
           </div>
-        </div>
-      </div>
-
-      <div className="text-center">
-        <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">Current task</p>
-        <p className="font-sans text-cream font-semibold">
-          {activeTask ? activeTask.text : 'No active task selected'}
-        </p>
-      </div>
-
-      <div className="flex gap-3">
-        {!isRunning && (
-          <button
-            type="button"
-            onClick={start}
-            className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
-          >
-            Start
-          </button>
         )}
-        {isRunning && isWork && (
-          <button
-            type="button"
-            onClick={handleVoid}
-            className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
-          >
-            Void Pomodoro
-          </button>
-        )}
-        {isRunning && isWork && (
-          <button
-            type="button"
-            onClick={handleFinishEarly}
-            className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
-          >
-            Finish Pomodoro
-          </button>
-        )}
-        {isRunning && !isWork && (
-          <button
-            type="button"
-            onClick={skipBreak}
-            className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
-          >
-            Skip break
-          </button>
-        )}
-      </div>
 
-      <p className="text-sage/60 text-[10px] font-sans tracking-wide" title="Keyboard shortcuts">
-        Space start · Esc void · F finish · 1/2/3 switch
-      </p>
+        <div className="relative w-60 h-60 sm:w-72 sm:h-72">
+          <svg
+            viewBox="0 0 100 100"
+            className={`w-full h-full ${accentClass} ${pulsing ? 'animate-ring-pulse' : ''}`}
+          >
+            <circle cx="50" cy="50" r={RADIUS} fill="none" strokeWidth="1.5" className="stroke-cream/10" />
+            <circle
+              cx="50"
+              cy="50"
+              r={RADIUS}
+              fill="none"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              className={ringClass}
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={dashOffset}
+              transform="rotate(-90 50 50)"
+            />
+            <circle cx={dotX} cy={dotY} r="2.2" className={dotClass} />
+          </svg>
 
-      {isWork && isRunning && (
-        <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-          <p className="text-sage text-xs font-sans">Had an interruption?</p>
-          <div className="flex gap-3">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => logInterruption('internal')}
-                className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
-              >
-                Internal interruption ({internalCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => undoInterruption('internal')}
-                disabled={internalCount === 0}
-                className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                aria-label="undo internal interruption"
-              >
-                -1
-              </button>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => logInterruption('external')}
-                className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
-              >
-                External interruption ({externalCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => undoInterruption('external')}
-                disabled={externalCount === 0}
-                className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                aria-label="undo external interruption"
-              >
-                -1
-              </button>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
+              {LABELS[sessionType]}
+            </p>
+            <p className="font-display text-6xl text-cream tracking-tight tabular-nums">
+              {formatTime(secondsLeft)}
+            </p>
+            <div className="flex gap-2">
+              {Array.from({ length: cycleLength }, (_, i) => (
+                <span
+                  key={i}
+                  className={
+                    'w-2 h-2 rounded-full ' +
+                    (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
+                  }
+                />
+              ))}
             </div>
           </div>
         </div>
-      )}
 
-      <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-        <p className="text-sage text-xs font-sans">Unplanned & urgent? Jot it and keep going.</p>
-        <UnplannedCapture addTask={addTask} className="w-full" />
+        <div className="text-center">
+          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">Current task</p>
+          <p className="font-sans text-cream font-semibold">
+            {activeTask ? activeTask.text : 'No active task selected'}
+          </p>
+        </div>
+
+        <div className="flex gap-3">
+          {!isRunning && (
+            <button
+              type="button"
+              onClick={start}
+              className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
+            >
+              Start
+            </button>
+          )}
+          {isRunning && isWork && (
+            <button
+              type="button"
+              onClick={openVoidPrompt}
+              className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
+            >
+              Void Pomodoro
+            </button>
+          )}
+          {!isFullscreen && isRunning && isWork && (
+            <button
+              type="button"
+              onClick={handleFinishEarly}
+              className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
+            >
+              Finish Pomodoro
+            </button>
+          )}
+          {isRunning && !isWork && (
+            <button
+              type="button"
+              onClick={skipBreak}
+              className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
+            >
+              Skip break
+            </button>
+          )}
+        </div>
+
+        {voidPromptOpen && (
+          <form
+            onSubmit={confirmVoid}
+            className="w-full bg-tomato/5 border border-tomato/20 rounded-xl p-3 flex flex-col gap-2"
+          >
+            <p className="text-tomato text-xs font-sans">
+              This Pomodoro will be voided and won't count.
+            </p>
+            <label htmlFor="void-reason" className="text-sage text-xs font-sans">
+              Why did you void this Pomodoro? (optional)
+            </label>
+            <input
+              id="void-reason"
+              type="text"
+              autoFocus
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+              placeholder="e.g. got called into a meeting"
+              aria-label="Void reason (optional)"
+              className="bg-cream/5 border border-cream/15 rounded-lg text-cream placeholder:text-sage/50 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-3 py-2 text-sm font-sans"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="submit"
+                className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
+              >
+                Void Pomodoro
+              </button>
+              <button
+                type="button"
+                onClick={cancelVoid}
+                className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        {!isFullscreen && (
+          <p className="text-sage/60 text-[10px] font-sans tracking-wide" title="Keyboard shortcuts">
+            Space start · Esc void · E finish · F fullscreen · 1/2/3 switch
+          </p>
+        )}
+
+        {isWork && isRunning && (
+          <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
+            <p className="text-sage text-xs font-sans">Had an interruption?</p>
+            <div className="flex gap-3">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => logInterruption('internal')}
+                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+                >
+                  Internal interruption ({internalCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => undoInterruption('internal')}
+                  disabled={internalCount === 0}
+                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                  aria-label="undo internal interruption"
+                >
+                  -1
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => logInterruption('external')}
+                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+                >
+                  External interruption ({externalCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => undoInterruption('external')}
+                  disabled={externalCount === 0}
+                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                  aria-label="undo external interruption"
+                >
+                  -1
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!isFullscreen && (
+          <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
+            <p className="text-sage text-xs font-sans">Unplanned & urgent? Jot it and keep going.</p>
+            <UnplannedCapture addTask={addTask} className="w-full" />
+          </div>
+        )}
       </div>
     </div>
   )

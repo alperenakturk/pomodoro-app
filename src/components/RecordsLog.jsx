@@ -5,6 +5,8 @@ import {
   removeActivityRecord,
   updateActivityRecord,
   exportAllData,
+  loadVoidLog,
+  removeVoidLogEntry,
 } from '../lib/storage'
 import { activityLogToCSV, downloadFile } from '../lib/export'
 import { compactInputClass as inputClass } from '../lib/constants'
@@ -14,6 +16,13 @@ import CategoryTagPicker from './CategoryTagPicker'
 
 function recomputeDiff(estimate, real) {
   return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
+}
+
+const WORK_SECONDS = 25 * 60
+function formatElapsed(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 function CategoryTag({ category }) {
@@ -181,21 +190,58 @@ function RecordRow({ record, categories, onDelete }) {
   )
 }
 
+// A simple, unobtrusive daily-journal entry — no estimate/real/diff, no
+// styling weight, and deliberately not touched by the date/category filters
+// above (those exist for Records Log's aggregation-adjacent use, not this;
+// see storage.js's pomodoro_void_log comment on why Reports never reads it).
+function VoidLogRow({ entry, categories, onDelete }) {
+  const category = categories.find((c) => entry.categoryIds.includes(c.id)) ?? null
+  return (
+    <li className="text-sage text-xs font-sans flex items-center gap-2">
+      <span className="flex-1">
+        Voided at {formatElapsed(entry.elapsedSeconds)} / {formatElapsed(WORK_SECONDS)}
+        {entry.activity && <> — {entry.activity}</>}
+        {category && <CategoryTag category={category} />}
+        {entry.reason && <> — {entry.reason}</>}
+      </span>
+      <button
+        type="button"
+        onClick={() => onDelete(entry.id)}
+        className="text-sage hover:text-cream flex-shrink-0"
+        aria-label="delete void log entry"
+        title="Delete"
+      >
+        ✕
+      </button>
+    </li>
+  )
+}
+
 function RecordsLog({ categories = [] }) {
   const [log, setLog] = useState(() => loadActivityLog())
+  const [voidLog, setVoidLog] = useState(() => loadVoidLog())
   const [dateFilter, setDateFilter] = useState('')
   // undefined = no category filter ("all"); null = filter to uncategorized
   // only — those two must stay distinct, see CategorySelect's allowAll note.
   const [categoryFilter, setCategoryFilter] = useState(undefined)
 
   useEffect(() => {
-    const unsubscribe = subscribeToChanges(() => setLog(loadActivityLog()))
+    const unsubscribe = subscribeToChanges(() => {
+      setLog(loadActivityLog())
+      setVoidLog(loadVoidLog())
+    })
     return unsubscribe
   }, [])
 
   function handleDelete(id) {
     if (window.confirm('Delete this record?')) {
       removeActivityRecord(id)
+    }
+  }
+
+  function handleDeleteVoidEntry(id) {
+    if (window.confirm('Delete this void log entry?')) {
+      removeVoidLogEntry(id)
     }
   }
 
@@ -295,6 +341,27 @@ function RecordsLog({ categories = [] }) {
           <RecordRow key={r.id} record={r} categories={categories} onDelete={handleDelete} />
         ))}
       </ul>
+
+      {voidLog.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-cream/10">
+          <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2">
+            Voided Pomodoros
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {[...voidLog]
+              .reverse()
+              .slice(0, 5)
+              .map((entry) => (
+                <VoidLogRow
+                  key={entry.id}
+                  entry={entry}
+                  categories={categories}
+                  onDelete={handleDeleteVoidEntry}
+                />
+              ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

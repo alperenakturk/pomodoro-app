@@ -3,7 +3,7 @@ import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
-import { loadSettings, patchSettings } from './lib/storage'
+import { loadSettings, patchSettings, addVoidLogEntry } from './lib/storage'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
@@ -11,6 +11,14 @@ import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
 import TabNav from './components/TabNav'
 import SettingsTab from './components/SettingsTab'
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function nowTime() {
+  return new Date().toTimeString().slice(0, 5)
+}
 
 function App() {
   const inventoryApi = useInventory()
@@ -60,6 +68,21 @@ function App() {
     },
     onInterruption: (kind, delta) => {
       if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind, delta)
+    },
+    // Void reason logging: a simple daily-journal entry (task/category/elapsed
+    // time/optional reason), deliberately never read by Reports — see
+    // storage.js's pomodoro_void_log comment.
+    onVoid: ({ reason, elapsedSeconds }) => {
+      const task = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
+      addVoidLogEntry({
+        id: crypto.randomUUID(),
+        date: todayString(),
+        time: nowTime(),
+        activity: task ? task.text : null,
+        categoryIds: task ? task.categoryIds : [],
+        elapsedSeconds,
+        reason,
+      })
     },
   })
 

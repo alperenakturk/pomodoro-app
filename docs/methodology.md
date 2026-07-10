@@ -56,6 +56,11 @@ A Pomodoro cannot be split, paused, or partially counted.
 - No tick/X is written to storage for that session.
 - The interruption marker (internal `'` or external `-`) is still recorded.
 - UI must make it clear the Pomodoro is void, not paused.
+- Voiding opens an inline prompt for an optional free-text reason. This is
+  logged to the Void log (see Data Model below) purely as a daily
+  self-observation journal, in the same reflective spirit as end-of-day
+  Processing/Visualizing — it is deliberately NOT fed into Reports as an
+  aggregated metric.
 
 ---
 
@@ -232,6 +237,26 @@ Records Sheet on every render.
 
 ---
 
+### Void log
+
+A simple daily journal of voided Pomodoros (Rule 1), each with an optional
+free-text reason — self-observation, not a metric. Reports never reads this
+key; RecordsLog shows it as a separate, unobtrusive list.
+
+| Field          | Description                                              |
+|----------------|-----------------------------------------------------------|
+| id             | Unique identifier                                          |
+| date           | ISO date string                                             |
+| time           | Time of the void (HH:MM)                                    |
+| activity       | Active task's name at the time of the void, or `null`       |
+| categoryIds    | Active task's category tags at the time of the void          |
+| elapsedSeconds | How much of the 25-minute Pomodoro had elapsed (e.g. shown as "12:33 / 25:00") |
+| reason         | Optional free-text reason, or `''` if skipped                |
+
+**Storage key:** `pomodoro_void_log`
+
+---
+
 ## Interruption Taxonomy
 
 Interruptions are tracked differently based on their origin.
@@ -347,6 +372,7 @@ WORK (25 min)
 - **Second/third estimate tracking (Diff I, Diff II)** — a running task can be re-estimated (up to twice) when it's taking longer than planned; Records shows Diff (vs. original estimate), Diff I and Diff II (vs. each re-estimate) side by side.
 - **Task combination** — select 2+ small Inventory tasks and combine them into one (Rule 5), summing their estimates.
 - **Categories** (Settings tab) — user-defined name + color labels for Inventory/Today/Records tasks, replacing the old free-text "type" field; see the Categories data-model section above.
+- **Fullscreen Focus Mode** (Timer tab) — a toggle (button or `F`) that uses the browser Fullscreen API to show only the ring, current task, interruption buttons, and Start/Void/Skip controls — no navigation, no other chrome. `Esc` (or the toggle) exits back to the normal Timer tab.
 
 ---
 

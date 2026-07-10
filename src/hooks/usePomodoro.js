@@ -21,7 +21,7 @@ function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
+export function usePomodoro({ onWorkComplete, onInterruption, onVoid } = {}) {
   // Restored on mount so a refresh doesn't lose a session in progress.
   const [sessionType, setSessionType] = useState(() => loadTimerState()?.sessionType ?? 'work')
   const [secondsLeft, setSecondsLeft] = useState(
@@ -125,11 +125,20 @@ export function usePomodoro({ onWorkComplete, onInterruption } = {}) {
 
   // Rule 1: voiding only applies to a Pomodoro (work session) — it resets
   // the timer as if it never started and writes no tick, so no X is recorded.
-  const voidPomodoro = useCallback(() => {
-    if (sessionType !== 'work') return
-    setIsRunning(false)
-    setSecondsLeft(DURATIONS.work)
-  }, [sessionType])
+  // The interruption marker itself is still logged elsewhere (logInterruption);
+  // this is a separate, optional journal entry — task/category/elapsed time
+  // and an optional free-text reason — for daily self-observation only (per
+  // methodology, never fed into Reports as an aggregated metric).
+  const voidPomodoro = useCallback(
+    (reason = '') => {
+      if (sessionType !== 'work') return
+      const elapsedSeconds = DURATIONS.work - secondsLeft
+      onVoid && onVoid({ reason, elapsedSeconds })
+      setIsRunning(false)
+      setSecondsLeft(DURATIONS.work)
+    },
+    [sessionType, secondsLeft, onVoid]
+  )
 
   // Kullanıcının bilinçli tercihiyle, zil beklenmeden pomodoro'yu tamamlanmış
   // sayan çıkış yolu (Void'in aksine X alır). Timer.jsx bunu onay diyaloğu

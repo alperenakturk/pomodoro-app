@@ -7,6 +7,7 @@ import {
   clearTicks,
   clearTimerState,
   clearCategories,
+  clearVoidLog,
   resetAllData,
 } from '../lib/storage'
 import Select from './Select'
@@ -61,6 +62,12 @@ const RESET_CATEGORIES = [
       'This will permanently delete all your Categories. Tasks and records using them will show as uncategorized. This cannot be undone. Continue?',
     action: clearCategories,
   },
+  {
+    label: 'Void log',
+    confirmText:
+      'This will permanently delete your Void log (voided Pomodoros and their reasons). This cannot be undone. Continue?',
+    action: clearVoidLog,
+  },
 ]
 
 function handleCategoryDelete(category) {
@@ -73,7 +80,7 @@ function handleCategoryDelete(category) {
 function handleFactoryReset() {
   if (
     window.confirm(
-      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?"
+      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?"
     )
   ) {
     resetAllData()

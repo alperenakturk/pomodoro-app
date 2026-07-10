@@ -204,6 +204,37 @@ function normalizeCategory(category) {
 export const loadCategories = () => loadJSON(CATEGORIES_KEY, []).map(normalizeCategory)
 export const saveCategories = (categories) => saveJSON(CATEGORIES_KEY, categories)
 
+// Void log: a Pomodoro void (Rule 1) with an optional reason — deliberately a
+// simple daily journal, not an aggregated metric. Reports never reads this
+// key; it only shows up as a plain per-entry line in RecordsLog.
+const VOID_LOG_KEY = 'pomodoro_void_log'
+function normalizeVoidEntry(entry) {
+  return {
+    id: entry.id,
+    date: entry.date,
+    time: entry.time ?? '',
+    activity: entry.activity ?? null,
+    categoryIds: Array.isArray(entry.categoryIds) ? entry.categoryIds : [],
+    elapsedSeconds: entry.elapsedSeconds ?? 0,
+    reason: entry.reason ?? '',
+  }
+}
+export const loadVoidLog = () => loadJSON(VOID_LOG_KEY, []).map(normalizeVoidEntry)
+export const saveVoidLog = (entries) => saveJSON(VOID_LOG_KEY, entries)
+export function addVoidLogEntry(entry) {
+  const log = loadVoidLog()
+  log.push(entry)
+  saveVoidLog(log)
+  notifyChange()
+  return log
+}
+export function removeVoidLogEntry(id) {
+  const log = loadVoidLog().filter((e) => e.id !== id)
+  saveVoidLog(log)
+  notifyChange()
+  return log
+}
+
 // Timer state: sayfa yenilenince devam eden pomodoro'nun kaybolmaması için
 // sessionType/secondsLeft/isRunning'in anlık görüntüsü.
 const TIMER_STATE_KEY = 'pomodoro_timer_state'
@@ -244,6 +275,9 @@ export function clearTimerState() {
 export function clearCategories() {
   localStorage.removeItem(CATEGORIES_KEY)
 }
+export function clearVoidLog() {
+  localStorage.removeItem(VOID_LOG_KEY)
+}
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
@@ -256,6 +290,7 @@ export function resetAllData() {
   localStorage.removeItem(TICKS_KEY)
   localStorage.removeItem(TIMER_STATE_KEY)
   localStorage.removeItem(CATEGORIES_KEY)
+  localStorage.removeItem(VOID_LOG_KEY)
   localStorage.removeItem(SETTINGS_KEY)
 }
 
@@ -270,6 +305,7 @@ export function exportAllData() {
     settings: loadSettings(),
     timetable: loadTimetable(),
     categories: loadCategories(),
+    voidLog: loadVoidLog(),
   }
 }
 
@@ -286,6 +322,7 @@ const SYNCED_KEYS = [
   TICKS_KEY,
   TIMETABLE_KEY,
   CATEGORIES_KEY,
+  VOID_LOG_KEY,
 ]
 
 window.addEventListener('storage', (e) => {
