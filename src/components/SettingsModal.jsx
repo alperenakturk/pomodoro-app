@@ -201,6 +201,7 @@ function SettingsModal({
   addCategory,
   updateCategory,
   removeCategory,
+  onReplayWelcome,
 }) {
   const { t, language, setLanguage } = useTranslation()
   const { user, deleteAccount } = useAuth()
@@ -782,6 +783,18 @@ function SettingsModal({
               <p className="text-sage/60 text-[11px] pt-3 border-t border-cream/10">
                 {t('settings.aboutAttribution')}
               </p>
+
+              {onReplayWelcome && (
+                <div className="pt-3 border-t border-cream/10">
+                  <button
+                    type="button"
+                    onClick={onReplayWelcome}
+                    className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream hover:border-cream/40"
+                  >
+                    {t('settings.replayWelcome')}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

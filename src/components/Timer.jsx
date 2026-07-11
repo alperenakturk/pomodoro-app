@@ -70,14 +70,15 @@ function Timer({
   completedPomodoros,
   internalCount,
   externalCount,
+  pauseCount,
   completionPulseKey,
   cycleLength,
   workMinutes,
   shortBreakMinutes,
   longBreakMinutes,
   start,
+  pause,
   voidPomodoro,
-  finishEarly,
   skipBreak,
   switchSession,
   logInterruption,
@@ -249,20 +250,17 @@ function Timer({
 
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
 
-  // Rule 2 says a Pomodoro always rings and there's no "finish early" —
-  // overrunning time is meant for overlearning, not for stopping the clock.
-  // We deliberately deviate from that: the confirm dialog *teaches* the rule
-  // (spells out what overlearning is and why finishing early isn't the
-  // default), but leaves the actual call to the user rather than blocking
-  // it outright. Confirming still finishes the Pomodoro as complete (an X
-  // is recorded), same as letting it ring naturally. Not offered at all in
-  // Fullscreen Focus Mode — that view keeps only Start/Void/Skip, the
-  // methodology-clean core controls.
-  function handleFinishEarly() {
-    if (window.confirm(t('timer.finishEarlyConfirm'))) {
-      finishEarly()
-    }
-  }
+  // A session that's idle with 0 < secondsLeft < its full duration can only
+  // be in that state because pause() left it there — a fresh/just-switched
+  // session always starts at the full duration. Used to relabel the Start
+  // button "Resume" (see docs/methodology.md's Rule 2 section and
+  // usePomodoro.js's pause() for why Pause exists as a deliberate deviation).
+  const isPaused = !isRunning && secondsLeft > 0 && secondsLeft < sessionDuration
+
+  // Running an untracked Pomodoro (no active task selected) defeats the
+  // whole point of estimate-vs-actual tracking, so a work session simply
+  // can't be started without one — breaks have no such requirement.
+  const startDisabled = isWork && !activeTask
 
   function handleSwitch(type) {
     if (type === sessionType) return
@@ -284,7 +282,8 @@ function Timer({
 
       if (e.code === 'Space') {
         e.preventDefault()
-        if (!isRunning) start()
+        if (isRunning) pause()
+        else if (!startDisabled) start()
         return
       }
       if (e.key === 'Escape') {
@@ -306,15 +305,9 @@ function Timer({
         }
         return
       }
-      // 'F' toggles Fullscreen Focus Mode. Previously bound to Finish
-      // Pomodoro — moved to 'E' (below) to make room, since fullscreen is
-      // the more frequently reached-for shortcut of the two.
+      // 'F' toggles Fullscreen Focus Mode.
       if (e.key === 'f' || e.key === 'F') {
         toggleFullscreen()
-        return
-      }
-      if ((e.key === 'e' || e.key === 'E') && isRunning && isWork) {
-        handleFinishEarly()
         return
       }
       // '?' opens the keyboard-shortcuts reference (also reachable via the
@@ -504,18 +497,20 @@ function Timer({
               <button
                 type="button"
                 onClick={start}
-                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
+                disabled={startDisabled}
+                title={startDisabled ? t('timer.startDisabledTitle') : undefined}
+                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {t('timer.start')}
+                {isPaused ? t('timer.resume') : t('timer.start')}
               </button>
             )}
-            {!isFullscreen && isRunning && isWork && (
+            {isRunning && (
               <button
                 type="button"
-                onClick={handleFinishEarly}
+                onClick={pause}
                 className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
               >
-                {t('timer.finishPomodoro')}
+                {t('timer.pause')}
               </button>
             )}
             {isRunning && !isWork && (
@@ -528,6 +523,15 @@ function Timer({
               </button>
             )}
           </div>
+
+          {/* Subtle, non-alarming — mirrors the interruption counters'
+              treatment. Shown whenever this session has been paused at
+              least once, even after Pause is pressed again (isRunning
+              false), so the count doesn't disappear the moment it's most
+              relevant to see. */}
+          {pauseCount > 0 && (
+            <p className="text-sage text-xs font-sans">{t('timer.pauseCount', { count: pauseCount })}</p>
+          )}
 
           {/* Softened on purpose — voiding is the "give up on this one"
               path, so it shouldn't carry the same visual weight as Start

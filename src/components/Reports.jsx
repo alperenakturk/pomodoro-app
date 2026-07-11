@@ -23,6 +23,8 @@ import {
   pomodorosByCategory,
   totalFocusMinutes,
   formatFocusDuration,
+  pausesByDate,
+  avgPausesPerDay,
 } from '../lib/reportsMath'
 import DayReview from './DayReview'
 
@@ -42,6 +44,7 @@ const SECTIONS = [
   { id: 'today', labelKey: 'reports.todaySummaryTitle' },
   { id: 'estimation', labelKey: 'reports.estimationAccuracyTitle', subtitleKey: 'reports.estimationAccuracySubtitle' },
   { id: 'interruptions', labelKey: 'reports.interruptionTrendsTitle', subtitleKey: 'reports.interruptionTrendsSubtitle' },
+  { id: 'pauses', labelKey: 'reports.pauseTrendsTitle', subtitleKey: 'reports.pauseTrendsSubtitle' },
   { id: 'category', labelKey: 'reports.categoryBreakdownTitle', subtitleKey: 'reports.categoryBreakdownSubtitle' },
   { id: 'longterm', labelKey: 'reports.longTermTitle', subtitleKey: 'reports.longTermSubtitle' },
 ]
@@ -112,6 +115,9 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
     countTicksInDates(ticks, 'interruption-internal', yesterday) +
     countTicksInDates(ticks, 'interruption-external', yesterday)
 
+  const todayPauses = countTicksInDates(ticks, 'pause', today)
+  const yesterdayPauses = countTicksInDates(ticks, 'pause', yesterday)
+
   const completedToday = recordsInDates(activityLog, today).length
   const activeToday = todayTasks.filter((t) => !t.done).length
 
@@ -125,7 +131,18 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
   return (
     <div className="grid grid-cols-2 gap-3 font-sans">
       <Stat
-        label={t('reports.totalFocusTime')}
+        label={
+          <span className="inline-flex items-center gap-1">
+            {t('reports.totalFocusTime')}
+            <span
+              className="text-sage/70 cursor-help"
+              title={t('reports.totalFocusTimeTooltip')}
+              aria-label={t('reports.totalFocusTimeTooltip')}
+            >
+              ⓘ
+            </span>
+          </span>
+        }
         value={formatFocusDuration(focusMinutes)}
       />
       <Stat
@@ -147,6 +164,11 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
             goodDirection="down"
           />
         }
+      />
+      <Stat
+        label={t('reports.pausesToday')}
+        value={todayPauses}
+        trend={<TrendArrow direction={trendDirection(todayPauses, yesterdayPauses)} goodDirection="down" />}
       />
     </div>
   )
@@ -242,6 +264,55 @@ function InterruptionTrendsSection({ activityLog, period }) {
           })}
         </ul>
       )}
+    </div>
+  )
+}
+
+function PauseTrendsSection({ ticks, period }) {
+  const { t, localeTag } = useTranslation()
+  const periodDates = datesForPeriod(period)
+  const avgPerDay = avgPausesPerDay(ticks, periodDates)
+
+  const thisWeekAvg = avgPausesPerDay(ticks, datesForThisWeek())
+  const lastWeekAvg = avgPausesPerDay(ticks, datesForLastWeek())
+
+  const totalPauses = countTicksInDates(ticks, 'pause', periodDates)
+  const dayBars = takeLast(pausesByDate(ticks, periodDates), 14)
+  const maxPauses = Math.max(1, ...dayBars.map((d) => d.count))
+
+  if (totalPauses === 0) {
+    return <EmptyChartState message={t('reports.noDataForPeriod')} />
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-center gap-2 font-sans text-sm text-cream mb-1">
+        <span className="font-display text-xl">{avgPerDay == null ? '-' : avgPerDay.toFixed(1)}</span>
+        <span className="text-sage text-xs">{t('reports.avgPausesPerDay')}</span>
+      </div>
+      <div className="flex items-center justify-center gap-2 font-sans text-xs text-sage mb-4">
+        <span>{t('reports.thisWeek', { value: thisWeekAvg == null ? '-' : thisWeekAvg.toFixed(1) })}</span>
+        <span>·</span>
+        <span>{t('reports.lastWeek', { value: lastWeekAvg == null ? '-' : lastWeekAvg.toFixed(1) })}</span>
+        <TrendArrow direction={trendDirection(thisWeekAvg, lastWeekAvg)} goodDirection="down" />
+      </div>
+
+      <ul className="flex flex-col gap-1.5 font-sans">
+        {dayBars.map((d) => (
+          <li key={d.date} className="flex items-center gap-2 text-xs">
+            <span className="text-cream truncate w-20 flex-shrink-0">
+              {formatDateLocalized(d.date, localeTag)}
+            </span>
+            <span className="flex-1 h-2 bg-cream/5 rounded-full overflow-hidden">
+              <span
+                className="block h-full bg-tomato/60 rounded-full"
+                style={{ width: `${(d.count / maxPauses) * 100}%` }}
+              />
+            </span>
+            <span className="text-sage w-8 text-right flex-shrink-0">{d.count}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -495,6 +566,9 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
               )}
               {activeSection === 'interruptions' && (
                 <InterruptionTrendsSection activityLog={activityLog} period={period} />
+              )}
+              {activeSection === 'pauses' && (
+                <PauseTrendsSection ticks={ticks} period={period} />
               )}
               {activeSection === 'category' && (
                 <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />

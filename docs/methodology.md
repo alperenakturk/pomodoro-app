@@ -55,7 +55,10 @@ A Pomodoro cannot be split, paused, or partially counted.
 - When the user voids a Pomodoro (gives up mid-session), the timer resets to 0.
 - No tick/X is written to storage for that session.
 - The interruption marker (internal `'` or external `-`) is still recorded.
-- UI must make it clear the Pomodoro is void, not paused.
+- UI must make it clear the Pomodoro is void, not paused — voiding and
+  pausing are two distinct, separately-tracked outcomes (see Rule 2's Pause
+  deviation below): voiding discards the session with no X and no time
+  saved, pausing holds it in place to resume later.
 - Voiding opens an inline prompt for an optional free-text reason. This is
   logged to the Void log (see Data Model below) purely as a daily
   self-observation journal, in the same reflective spirit as end-of-day
@@ -74,10 +77,26 @@ Instead, they use remaining time for **overlearning**: reviewing, refining, noti
 what was learned. The Pomodoro still rings at 25 minutes.
 
 **Implementation note:**
-- There is no "finish early" button that stops the timer mid-Pomodoro.
-- The timer always runs to completion unless the user explicitly voids it.
+- There is no "finish early" button that stops the timer mid-Pomodoro and
+  counts it as complete — completion only ever happens by the timer actually
+  ringing (or the user explicitly voiding it under Rule 1).
 - After task completion, the UI can suggest switching to review mode, but the
   timer continues counting.
+- **Deliberate deviation — Pause.** A real Pause/Resume control exists on the
+  Timer: pressing it stops the countdown in place; pressing Start again
+  resumes from exactly where it left off, with no time lost and no X
+  recorded. This is not "finish early" — the session isn't completed or
+  discarded, it's just held. The reasoning: users do sometimes have a
+  genuine, short-lived need to step away mid-Pomodoro (a knock at the door,
+  a bathroom break) that doesn't rise to the level of Rule 1's "definitively
+  interrupted, void it" — forcing a choice between only "let it keep
+  running unattended" or "void the whole thing" isn't more faithful to the
+  method, just less honest about how people actually work. Rather than
+  hiding this as an unmeasured escape hatch, it's tracked transparently: a
+  live pause counter for the current session, plus a historical pause tick
+  surfaced in Reports (average pauses per day, a trend chart) — so "I'm
+  pausing a lot" stays visible as its own signal instead of disappearing
+  into the completed-Pomodoro count.
 
 ---
 
@@ -115,9 +134,9 @@ Tasks estimated at less than 1 Pomodoro should be combined with other similar ta
 until they fill a full Pomodoro.
 
 **Implementation note:**
-- In the Inventory, tasks can be grouped/combined.
-- The UI should support this pattern (e.g., selecting multiple tasks to combine for Today).
-- Currently not fully implemented — a known gap.
+- Implemented in the Activity Inventory: checking 2+ small tasks' selection
+  boxes surfaces a "Combine" action, which merges them into a single task
+  (summing their estimates) via `combineItems` in `useInventory`.
 
 ---
 

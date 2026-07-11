@@ -79,6 +79,23 @@ export function formatFocusDuration(totalMinutes) {
   return `${hours}:${String(minutes).padStart(2, '0')}`
 }
 
+// Per-day pause counts across `dates`, oldest first — unlike interruptions
+// (tied to a finished task's record) a pause tick has no associated task, so
+// the only meaningful grouping is by day, not by activity.
+export function pausesByDate(ticks, dates) {
+  const countByDate = new Map()
+  for (const tick of ticks) {
+    if (tick.type !== 'pause') continue
+    countByDate.set(tick.date, (countByDate.get(tick.date) || 0) + 1)
+  }
+  return [...dates].reverse().map((date) => ({ date, count: countByDate.get(date) || 0 }))
+}
+
+export function avgPausesPerDay(ticks, dates) {
+  if (dates.length === 0) return null
+  return countTicksInDates(ticks, 'pause', dates) / dates.length
+}
+
 export function recordsInDates(records, dates) {
   const dateSet = new Set(dates)
   return records.filter((r) => dateSet.has(r.date))

@@ -18,6 +18,8 @@ import {
   pomodorosByCategory,
   totalFocusMinutes,
   formatFocusDuration,
+  pausesByDate,
+  avgPausesPerDay,
 } from './reportsMath'
 
 describe('effectiveDiff', () => {
@@ -117,6 +119,41 @@ describe('totalFocusMinutes', () => {
 
   it('returns 0 when there are no completed Pomodoros in range', () => {
     expect(totalFocusMinutes([], ['2026-01-01'], 25)).toBe(0)
+  })
+})
+
+describe('pausesByDate', () => {
+  it('counts pause ticks per date, oldest first, zero-filling dates with none', () => {
+    const ticks = [
+      { type: 'pause', date: '2026-01-01' },
+      { type: 'pause', date: '2026-01-01' },
+      { type: 'pause', date: '2026-01-02' },
+      { type: 'pomodoro', date: '2026-01-02' }, // wrong type
+    ]
+    // datesForPeriod-style arrays are newest-first
+    expect(pausesByDate(ticks, ['2026-01-02', '2026-01-01'])).toEqual([
+      { date: '2026-01-01', count: 2 },
+      { date: '2026-01-02', count: 1 },
+    ])
+  })
+
+  it('returns zero counts when there are no pause ticks', () => {
+    expect(pausesByDate([], ['2026-01-01'])).toEqual([{ date: '2026-01-01', count: 0 }])
+  })
+})
+
+describe('avgPausesPerDay', () => {
+  it('divides total pauses in range by the number of days in the window', () => {
+    const ticks = [
+      { type: 'pause', date: '2026-01-01' },
+      { type: 'pause', date: '2026-01-01' },
+      { type: 'pause', date: '2026-01-02' },
+    ]
+    expect(avgPausesPerDay(ticks, ['2026-01-01', '2026-01-02'])).toBeCloseTo(1.5)
+  })
+
+  it('returns null for an empty date window', () => {
+    expect(avgPausesPerDay([], [])).toBeNull()
   })
 })
 

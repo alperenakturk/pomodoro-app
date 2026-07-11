@@ -256,9 +256,21 @@ function AppInner() {
   const [onboardingDismissed, setOnboardingDismissed] = useState(
     () => loadSettings().onboardingDismissed
   )
+  // Transient (not persisted) — lets Settings' "Show welcome message again"
+  // bring the card back even for a user who already has data, which the
+  // isAllDataEmpty condition alone would never allow. Cleared again on
+  // dismiss so it behaves like a one-time replay, not a second permanent
+  // on state.
+  const [welcomeReplay, setWelcomeReplay] = useState(false)
   function dismissOnboarding() {
     setOnboardingDismissed(true)
     patchSettings({ onboardingDismissed: true })
+    setWelcomeReplay(false)
+  }
+  function replayWelcome() {
+    setWelcomeReplay(true)
+    setActiveTab('timer')
+    setSettingsOpen(false)
   }
   const isAllDataEmpty =
     inventoryApi.items.length === 0 &&
@@ -266,7 +278,7 @@ function AppInner() {
     categoriesApi.categories.length === 0 &&
     loadActivityLog().length === 0 &&
     loadTicks().length === 0
-  const showWelcome = !onboardingDismissed && isAllDataEmpty
+  const showWelcome = (!onboardingDismissed && isAllDataEmpty) || welcomeReplay
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
@@ -536,6 +548,7 @@ function AppInner() {
           setCustomThemeShortBreak={setCustomThemeShortBreak}
           customThemeLongBreak={customThemeLongBreak}
           setCustomThemeLongBreak={setCustomThemeLongBreak}
+          onReplayWelcome={replayWelcome}
         />
       )}
     </div>

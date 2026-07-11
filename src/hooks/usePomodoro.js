@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   addTick,
   removeLastTick,
@@ -55,15 +55,45 @@ function todayString() {
 // otherwise know about cross-cutting concerns, App.jsx supplies the real
 // translator from useTranslation() since it does.
 export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, vars) => translate('en', key, vars) } = {}) {
-  // Restored on mount so a refresh doesn't lose a session in progress.
-  const [sessionType, setSessionType] = useState(() => loadTimerState()?.sessionType ?? 'work')
-  const [secondsLeft, setSecondsLeft] = useState(
-    () => loadTimerState()?.secondsLeft ?? loadSettings().workMinutes * 60
-  )
-  const [isRunning, setIsRunning] = useState(() => loadTimerState()?.isRunning ?? false)
+  // Restored on mount so a refresh doesn't lose a session in progress. If a
+  // countdown was actually running when the page closed/reloaded, secondsLeft
+  // is recomputed from the persisted `endAt` timestamp against the current
+  // wall clock — not trusted literally — so real time that passed while the
+  // tab was gone (closed, or just heavily throttled in the background)
+  // isn't silently dropped. See the endAtRef/interval effect below for why
+  // this matters even while the tab stays open.
+  const restored = loadTimerState()
+  const [sessionType, setSessionType] = useState(() => restored?.sessionType ?? 'work')
+  const [secondsLeft, setSecondsLeft] = useState(() => {
+    if (restored?.isRunning && restored?.endAt) {
+      return Math.max(0, Math.round((restored.endAt - Date.now()) / 1000))
+    }
+    return restored?.secondsLeft ?? loadSettings().workMinutes * 60
+  })
+  const [isRunning, setIsRunning] = useState(() => restored?.isRunning ?? false)
+  // Not React state — read/written inside the once-a-second interval tick,
+  // which only needs the latest value, not a re-render of its own. Wall-
+  // clock timestamp (Date.now() + secondsLeft*1000) for exactly when the
+  // running countdown should reach 0; recomputing secondsLeft from this each
+  // tick (rather than decrementing the previous value) means a throttled or
+  // delayed tick still lands on the correct remaining time instead of
+  // compounding lost ticks into permanent drift.
+  const endAtRef = useRef(restored?.isRunning && restored?.endAt ? restored.endAt : null)
+  // True only right after pause() — distinguishes "idle because paused
+  // mid-session" from "idle because never started/just transitioned",
+  // which the idle-resync effect below needs: a paused session's partial
+  // secondsLeft must survive that effect, while a genuinely fresh idle
+  // session should still pick up duration-setting changes immediately.
+  const pausedRef = useRef(false)
   const [completedPomodoros, setCompletedPomodoros] = useState(0)
   const [internalCount, setInternalCount] = useState(0)
   const [externalCount, setExternalCount] = useState(0)
+  // How many times the *current* session (work or break) has been paused —
+  // reset to 0 at every transition to a fresh session (see completeWork/
+  // completeBreak/skipBreak/switchSession/voidPomodoro below). Purely a
+  // live/session-scoped display counter; the historical record for Reports
+  // is the 'pause' tick pause() also writes.
+  const [pauseCount, setPauseCount] = useState(0)
   // Bumped only when a Pomodoro (work session) actually completes — Timer.jsx
   // watches this to trigger a brief one-shot ring-pulse animation. A counter
   // rather than a boolean so consecutive completions each retrigger the
@@ -174,13 +204,14 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   }, [ambientSound, isRunning, sessionType])
 
   useEffect(() => {
-    saveTimerState({ sessionType, secondsLeft, isRunning })
+    saveTimerState({ sessionType, secondsLeft, isRunning, endAt: endAtRef.current })
   }, [sessionType, secondsLeft, isRunning])
 
   useEffect(() => {
     if (!isRunning) return
     const intervalId = setInterval(() => {
-      setSecondsLeft((prev) => (prev <= 1 ? 0 : prev - 1))
+      const remaining = endAtRef.current ? Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000)) : 0
+      setSecondsLeft(remaining)
     }, 1000)
     return () => clearInterval(intervalId)
   }, [isRunning])
@@ -195,7 +226,7 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   // switchSession) already sets secondsLeft to this same value itself, so
   // this effect re-applies an identical value on the renders that follow.
   useEffect(() => {
-    if (isRunning) return
+    if (isRunning || pausedRef.current) return
     setSecondsLeft(
       sessionType === 'work'
         ? workMinutes * 60
@@ -205,10 +236,11 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     )
   }, [isRunning, sessionType, workMinutes, shortBreakMinutes, longBreakMinutes])
 
-  // Bir work session'ının tamamlanma mantığı: hem zil çaldığında hem de
-  // kullanıcı "Pomodoro'yu bitir" ile erken tamamladığında aynı yolu izler.
+  // Sadece zil çaldığında (secondsLeft === 0) tetiklenir — Rule 2 gereği artık
+  // erken bitirme yolu yok (bkz. kaldırılan finishEarly/"Finish Pomodoro").
   const completeWork = useCallback(() => {
     setIsRunning(false)
+    endAtRef.current = null
     // Per methodology, a "Pomodoro" is specifically the work session — breaks
     // aren't Pomodoros — so the ping + ring-pulse (Pomodoro completion feedback)
     // live only here, not in completeBreak. playChime is the separate,
@@ -218,6 +250,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     setCompletionPulseKey((k) => k + 1)
     const newCount = completedPomodoros + 1
     setCompletedPomodoros(newCount)
+    setPauseCount(0)
+    pausedRef.current = false
     addTick({
       id: crypto.randomUUID(),
       type: 'pomodoro',
@@ -231,8 +265,12 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
       nextType === 'longBreak' ? t('notifications.longBreakBody') : t('notifications.shortBreakBody')
     )
     setSessionType(nextType)
-    setSecondsLeft(nextType === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60)
-    if (autoStartBreaks) setIsRunning(true)
+    const nextDuration = nextType === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60
+    setSecondsLeft(nextDuration)
+    if (autoStartBreaks) {
+      endAtRef.current = Date.now() + nextDuration * 1000
+      setIsRunning(true)
+    }
   }, [
     completedPomodoros,
     cycleLength,
@@ -246,13 +284,19 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
 
   const completeBreak = useCallback(() => {
     setIsRunning(false)
+    endAtRef.current = null
     playChime(chimeStyle)
     // Rule 3: the pomodoro count resets only when a long break ends.
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
+    setPauseCount(0)
+    pausedRef.current = false
     notify(t('notifications.breakOverTitle'), t('notifications.backToWorkBody'))
     setSessionType('work')
     setSecondsLeft(workMinutes * 60)
-    if (autoStartPomodoros) setIsRunning(true)
+    if (autoStartPomodoros) {
+      endAtRef.current = Date.now() + workMinutes * 60 * 1000
+      setIsRunning(true)
+    }
   }, [sessionType, chimeStyle, t, workMinutes, autoStartPomodoros])
 
   useEffect(() => {
@@ -261,11 +305,43 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     else completeBreak()
   }, [secondsLeft, isRunning, sessionType, completeWork, completeBreak])
 
+  // Also doubles as "resume" after pause() — secondsLeft already holds
+  // however much time was left when paused (pause() doesn't reset it), so
+  // recomputing endAt from the *current* secondsLeft is correct for both a
+  // fresh start and a resume, with no separate resume() needed.
   const start = useCallback(() => {
     unlockAudio()
     requestNotificationPermission()
+    endAtRef.current = Date.now() + secondsLeft * 1000
+    pausedRef.current = false
     setIsRunning(true)
-  }, [])
+  }, [secondsLeft])
+
+  // Rule 2 deviation, made deliberately: real Pomodoro sessions do get
+  // interrupted by things a user needs to genuinely step away for, and
+  // pretending that never happens (by offering only Void, which throws the
+  // whole session away) isn't more faithful to the method, just less
+  // honest about how people actually use it. Pausing keeps the same
+  // session running (no X lost, no reason-journal entry needed) but is
+  // tracked openly — a per-session counter (pauseCount, reset at every
+  // fresh session) plus a 'pause' tick for Reports — so "I paused a lot
+  // today" stays visible instead of being a silent, unmeasured escape
+  // hatch. See docs/methodology.md's Rule 2 section for the same note.
+  const pause = useCallback(() => {
+    if (!isRunning) return
+    const remaining = endAtRef.current ? Math.max(0, Math.round((endAtRef.current - Date.now()) / 1000)) : secondsLeft
+    setSecondsLeft(remaining)
+    endAtRef.current = null
+    pausedRef.current = true
+    setIsRunning(false)
+    setPauseCount((c) => c + 1)
+    addTick({
+      id: crypto.randomUUID(),
+      type: 'pause',
+      date: todayString(),
+      timestamp: new Date().toISOString(),
+    })
+  }, [isRunning, secondsLeft])
 
   // Rule 1: voiding only applies to a Pomodoro (work session) — it resets
   // the timer as if it never started and writes no tick, so no X is recorded.
@@ -279,18 +355,13 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
       const elapsedSeconds = workMinutes * 60 - secondsLeft
       onVoid && onVoid({ reason, elapsedSeconds })
       setIsRunning(false)
+      endAtRef.current = null
       setSecondsLeft(workMinutes * 60)
+      setPauseCount(0)
+    pausedRef.current = false
     },
     [sessionType, secondsLeft, onVoid, workMinutes]
   )
-
-  // Kullanıcının bilinçli tercihiyle, zil beklenmeden pomodoro'yu tamamlanmış
-  // sayan çıkış yolu (Void'in aksine X alır). Timer.jsx bunu onay diyaloğu
-  // arkasına koyuyor.
-  const finishEarly = useCallback(() => {
-    if (sessionType !== 'work' || !isRunning) return
-    completeWork()
-  }, [sessionType, isRunning, completeWork])
 
   // Breaks aren't Pomodoros, so ending one early is a "skip" straight to
   // the next work session, not a "void". Still honors autoStartPomodoros —
@@ -298,10 +369,16 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   const skipBreak = useCallback(() => {
     if (sessionType === 'work') return
     setIsRunning(false)
+    endAtRef.current = null
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
+    setPauseCount(0)
+    pausedRef.current = false
     setSessionType('work')
     setSecondsLeft(workMinutes * 60)
-    if (autoStartPomodoros) setIsRunning(true)
+    if (autoStartPomodoros) {
+      endAtRef.current = Date.now() + workMinutes * 60 * 1000
+      setIsRunning(true)
+    }
   }, [sessionType, workMinutes, autoStartPomodoros])
 
   // Kullanıcı istediği an work/short break/long break arasında manuel geçiş
@@ -311,6 +388,9 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     (type) => {
       if (type === sessionType) return
       setIsRunning(false)
+      endAtRef.current = null
+      setPauseCount(0)
+    pausedRef.current = false
       setSessionType(type)
       setSecondsLeft(
         type === 'work' ? workMinutes * 60 : type === 'longBreak' ? longBreakMinutes * 60 : shortBreakMinutes * 60
@@ -354,6 +434,7 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     completedPomodoros,
     internalCount,
     externalCount,
+    pauseCount,
     completionPulseKey,
     cycleLength,
     setCycleLength,
@@ -375,8 +456,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     ambientSound,
     setAmbientSound,
     start,
+    pause,
     voidPomodoro,
-    finishEarly,
     skipBreak,
     switchSession,
     logInterruption,

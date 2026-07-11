@@ -98,26 +98,45 @@ describe('usePomodoro', () => {
     expect(loadTicks().filter((t) => t.type === 'pomodoro')).toHaveLength(1)
   })
 
-  // finishEarly is the deliberate "Finish Pomodoro" escape hatch — unlike void,
-  // it counts as a completed Pomodoro (writes a tick).
-  it('finishEarly completes the work session early and still records a tick', () => {
-    const onWorkComplete = vi.fn()
-    const { result } = renderHook(() => usePomodoro({ onWorkComplete }))
+  // Pause is the deliberate Rule 2 deviation that replaced the old "Finish
+  // Pomodoro" escape hatch — unlike finishing early (or void), it doesn't
+  // complete or discard the session, just stops the countdown in place,
+  // resumable via the same start() from wherever secondsLeft was left.
+  it('pause stops the countdown in place and resumes from where it left off', () => {
+    const { result } = renderHook(() => usePomodoro())
     act(() => result.current.start())
     tick(10)
-    act(() => result.current.finishEarly())
+    act(() => result.current.pause())
 
-    expect(result.current.sessionType).toBe('shortBreak')
-    expect(result.current.completedPomodoros).toBe(1)
-    expect(onWorkComplete).toHaveBeenCalledTimes(1)
-    expect(loadTicks().filter((t) => t.type === 'pomodoro')).toHaveLength(1)
+    expect(result.current.isRunning).toBe(false)
+    expect(result.current.secondsLeft).toBe(25 * 60 - 10)
+    expect(result.current.completedPomodoros).toBe(0)
+    expect(result.current.pauseCount).toBe(1)
+    expect(loadTicks().filter((t) => t.type === 'pause')).toHaveLength(1)
+
+    act(() => result.current.start())
+    tick(5)
+    expect(result.current.secondsLeft).toBe(25 * 60 - 15)
   })
 
-  it('finishEarly does nothing outside of a running work session', () => {
+  it('pause does nothing while not running', () => {
     const { result } = renderHook(() => usePomodoro())
-    act(() => result.current.finishEarly())
-    expect(result.current.sessionType).toBe('work')
-    expect(result.current.completedPomodoros).toBe(0)
+    act(() => result.current.pause())
+    expect(result.current.pauseCount).toBe(0)
+    expect(result.current.isRunning).toBe(false)
+    expect(loadTicks().filter((t) => t.type === 'pause')).toHaveLength(0)
+  })
+
+  it('pauseCount accumulates across repeated pauses within one session, and resets on the next transition', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.start())
+    act(() => result.current.pause())
+    act(() => result.current.start())
+    act(() => result.current.pause())
+    expect(result.current.pauseCount).toBe(2)
+
+    act(() => result.current.voidPomodoro())
+    expect(result.current.pauseCount).toBe(0)
   })
 
   // Rule 3: after `cycleLength` Pomodoros, a long break follows instead of a short one.
@@ -454,6 +473,25 @@ describe('usePomodoro', () => {
       const { result: resumed } = renderHook(() => usePomodoro())
       expect(resumed.current.ambientSound).toBe('rain')
     })
+  })
+
+  // The countdown is driven by an absolute end timestamp, not a per-tick
+  // decrement. A remount can't rely on any decrementing history at all — it
+  // has to recompute purely from Date.now() vs. the persisted endAt — so
+  // this is the clearest way to prove a large real-time gap (the same shape
+  // of gap a throttled/backgrounded tab produces, where far fewer interval
+  // ticks fire than real seconds actually elapsed) still lands on the exact
+  // correct remaining time instead of drifting.
+  it('recovers the correct remaining time across a large real-time gap (e.g. a throttled/backgrounded tab)', () => {
+    const { result, unmount } = renderHook(() => usePomodoro())
+    act(() => result.current.start())
+    unmount()
+
+    vi.setSystemTime(new Date(Date.now() + 90 * 1000))
+
+    const { result: resumed } = renderHook(() => usePomodoro())
+    expect(resumed.current.secondsLeft).toBe(25 * 60 - 90)
+    expect(resumed.current.isRunning).toBe(true)
   })
 
   it('restores an in-progress session after a remount (simulated page refresh)', () => {

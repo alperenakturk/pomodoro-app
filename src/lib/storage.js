@@ -358,6 +358,12 @@ function normalizeTimerState(state) {
     sessionType: state.sessionType ?? 'work',
     secondsLeft: state.secondsLeft ?? DEFAULT_WORK_SECONDS,
     isRunning: state.isRunning ?? false,
+    // Epoch-ms timestamp the running countdown should hit 0 at, or `null`
+    // while idle/paused. Lets usePomodoro recompute secondsLeft from the
+    // wall clock (Date.now() vs endAt) instead of trusting an accumulated
+    // per-tick decrement, which drifts under browser tab-throttling and
+    // goes stale entirely across a reload/tab-close.
+    endAt: state.endAt ?? null,
     ...normalizeMeta(state),
   }
 }
