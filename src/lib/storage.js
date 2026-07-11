@@ -223,6 +223,12 @@ const DEFAULT_SETTINGS = {
   customThemeFocus: 'light-terracotta',
   customThemeShortBreak: 'light-terracotta',
   customThemeLongBreak: 'light-terracotta',
+  // Signed-in only (see backgroundStorage.js + SettingsModal's `user &&`
+  // gate) — a Supabase Storage path (not a URL; the bucket is private, so
+  // Timer.jsx resolves a short-lived signed URL from this path only while
+  // actually in Fullscreen Focus Mode). null for guests and for signed-in
+  // users who haven't uploaded one. Always shown as-is, no dimming overlay.
+  fullscreenBackgroundPath: null,
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map

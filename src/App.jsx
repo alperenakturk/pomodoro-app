@@ -230,6 +230,21 @@ function AppInner() {
     patchSettings({ customThemeLongBreak: next })
   }
 
+  // Custom Fullscreen Focus Mode background (signed-in only — see
+  // SettingsModal's `user &&` gate and backgroundStorage.js). App only owns
+  // the settings-persisted path; the actual Storage upload/remove calls
+  // happen in SettingsModal itself (same pattern as its existing direct
+  // storage.js calls for the Danger Zone), which then calls this setter
+  // with the resulting path. Always shown without a dimming overlay — the
+  // image is shown as-is.
+  const [fullscreenBackgroundPath, setFullscreenBackgroundPathState] = useState(
+    () => loadSettings().fullscreenBackgroundPath
+  )
+  function setFullscreenBackgroundPath(path) {
+    setFullscreenBackgroundPathState(path)
+    patchSettings({ fullscreenBackgroundPath: path })
+  }
+
   // "Check to bottom" (Settings): when on, a completed task moves to the end
   // of its list (see handleFinishTask below) instead of staying in place.
   // Default off, preserving the original behavior unless opted in.
@@ -442,6 +457,7 @@ function AppInner() {
             theme={timerThemeId}
             onGoToPlanning={() => setActiveTab('planning')}
             onNavigateTab={setActiveTab}
+            fullscreenBackgroundPath={fullscreenBackgroundPath}
             showWelcome={showWelcome}
             onDismissWelcome={dismissOnboarding}
             {...pomodoro}
@@ -549,6 +565,8 @@ function AppInner() {
           setCustomThemeShortBreak={setCustomThemeShortBreak}
           customThemeLongBreak={customThemeLongBreak}
           setCustomThemeLongBreak={setCustomThemeLongBreak}
+          fullscreenBackgroundPath={fullscreenBackgroundPath}
+          setFullscreenBackgroundPath={setFullscreenBackgroundPath}
           onReplayWelcome={replayWelcome}
         />
       )}

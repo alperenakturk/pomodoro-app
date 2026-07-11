@@ -423,3 +423,82 @@ end;
 $$;
 
 grant execute on function public.delete_user() to authenticated;
+
+-- ============================================================================
+-- Custom Fullscreen Focus Mode backgrounds (Settings > General, signed-in
+-- users only — see src/lib/backgroundStorage.js, src/components/
+-- SettingsModal.jsx, and CLAUDE.md's Fullscreen Focus Mode section).
+--
+-- Two parts:
+--   1. One new column on the existing `settings` singleton table — the
+--      Storage *path* (not a URL; the bucket below is private, so the app
+--      resolves a short-lived signed URL at read time — see
+--      getFullscreenBackgroundUrl() in backgroundStorage.js). The image is
+--      always shown as-is (no dimming overlay setting).
+--   2. A new private Storage bucket, `fullscreen-backgrounds`, with RLS
+--      policies restricting every operation to the caller's own folder.
+--      Path convention: `{user_id}/background` — one fixed key per user
+--      (no extension; content-type is set via upload options), so
+--      re-uploading always overwrites the same object instead of
+--      accumulating orphaned files. RLS is enforced via
+--      `storage.foldername(name)`, the standard Supabase per-user-folder
+--      recipe: for a path like `abc123/background`,
+--      `storage.foldername(name)` returns `{abc123}`, so
+--      `(storage.foldername(name))[1] = auth.uid()::text` is exactly
+--      "the first path segment is my own user id."
+--
+--      The bucket is deliberately NOT public — a public bucket would let
+--      anyone with the URL view the image with no auth check at all, which
+--      doesn't satisfy "each user can only access their own image." Size/
+--      type limits are set on the bucket itself (file_size_limit,
+--      allowed_mime_types) as a server-side backstop alongside the
+--      client-side check in backgroundStorage.js's validateBackgroundFile —
+--      a client-only check is trivially bypassable.
+-- ============================================================================
+
+alter table public.settings
+  add column if not exists fullscreen_background_path text;
+
+comment on column public.settings.fullscreen_background_path is
+  'Supabase Storage path (fullscreen-backgrounds bucket), e.g. "{user_id}/background" — '
+  'null when no custom background is set. Never a URL: the bucket is private, '
+  'so the client resolves a short-lived signed URL from this path on demand.';
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'fullscreen-backgrounds',
+  'fullscreen-backgrounds',
+  false,
+  5242880, -- 5 MB, matches backgroundStorage.js's MAX_BACKGROUND_BYTES
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "fullscreen_backgrounds_select_own" on storage.objects
+  for select using (
+    bucket_id = 'fullscreen-backgrounds'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "fullscreen_backgrounds_insert_own" on storage.objects
+  for insert with check (
+    bucket_id = 'fullscreen-backgrounds'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "fullscreen_backgrounds_update_own" on storage.objects
+  for update using (
+    bucket_id = 'fullscreen-backgrounds'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  ) with check (
+    bucket_id = 'fullscreen-backgrounds'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+create policy "fullscreen_backgrounds_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'fullscreen-backgrounds'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

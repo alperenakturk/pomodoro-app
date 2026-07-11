@@ -4,9 +4,14 @@ import UnplannedCapture from './UnplannedCapture'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 import { useTranslation } from '../hooks/useTranslation'
+import { useFullscreenBackgroundUrl } from '../hooks/useFullscreenBackgroundUrl'
 import { themeClassName } from '../lib/theme'
 
 const RING_PULSE_MS = 500
+
+// Fullscreen Focus Mode's auto-hiding chrome (YouTube-style): how long the
+// mouse can sit still, with no shortcut pressed, before controls fade out.
+const FULLSCREEN_IDLE_HIDE_MS = 2500
 
 const LABEL_KEYS = {
   work: 'timer.focus',
@@ -54,6 +59,36 @@ function formatTime(totalSeconds) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+// Fullscreen Focus Mode's auto-hiding chrome needs to both fade out AND
+// collapse to zero height so the ring can recenter in the freed space (the
+// content wrapper's flex `gap` is symmetric once both this and its sibling
+// chrome block collapse, so the ring ends up dead-center for free — see
+// Timer's own render below). A plain max-height/height transition can't
+// animate to/from an intrinsic "auto" size, but a single-row CSS grid track
+// can animate between 0fr and 1fr (the standard "grid accordion" trick),
+// which is what the outer wrapper here does; the inner div layers an
+// independent opacity fade on top so content visibly dims rather than just
+// clipping away. Only ever rendered while isFullscreen — the normal Timer
+// view never mounts this at all.
+function CollapsibleChrome({ visible, children }) {
+  return (
+    <div
+      className={`w-full grid transition-[grid-template-rows] duration-300 ease-in-out ${
+        visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+      }`}
+    >
+      <div className="overflow-hidden">
+        <div
+          className={`transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          inert={!visible}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Purely presentational — usePomodoro is instantiated once in App.jsx (not
 // here) so the countdown keeps running and is controllable from the Settings
 // tab even while the Timer tab isn't the one showing.
@@ -63,6 +98,7 @@ function Timer({
   theme,
   onGoToPlanning,
   onNavigateTab,
+  fullscreenBackgroundPath,
   showWelcome,
   onDismissWelcome,
   sessionType,
@@ -139,6 +175,12 @@ function Timer({
       containerRef.current?.requestFullscreen().catch(() => {})
     }
   }
+
+  // Custom Fullscreen Focus Mode background (signed-in users only — see
+  // backgroundStorage.js/SettingsModal.jsx). Only resolved while actually
+  // fullscreen: the bucket is private, so this is a fresh signed URL each
+  // time, not a value read straight off settings.
+  const backgroundUrl = useFullscreenBackgroundUrl(fullscreenBackgroundPath, isFullscreen)
 
   // Picture-in-Picture mini timer. pipWindow is the open PiP Window object
   // (or null when closed); its content is a React portal, so it re-renders
@@ -251,6 +293,66 @@ function Timer({
 
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
 
+  // Fullscreen Focus Mode's auto-hiding chrome (YouTube-style): after
+  // FULLSCREEN_IDLE_HIDE_MS of no mouse movement and no keyboard shortcut,
+  // every control fades out (see CollapsibleChrome above) and the ring
+  // recenters in the freed space. Only active while isFullscreen — normal
+  // Timer view never touches controlsVisible at all. Refs (not state) back
+  // the "don't hide while a dialog needs the user's attention" check inside
+  // the timeout callback below: that callback is scheduled once and fires
+  // later, so it must read the *current* dialog state at fire time, not
+  // whatever was true when it was scheduled — a plain closure over the
+  // voidPromptOpen/shortcutsModalOpen state variables would go stale.
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const hideControlsTimeoutRef = useRef(null)
+  const voidPromptOpenRef = useRef(voidPromptOpen)
+  const shortcutsModalOpenRef = useRef(shortcutsModalOpen)
+
+  useEffect(() => {
+    voidPromptOpenRef.current = voidPromptOpen
+  }, [voidPromptOpen])
+
+  useEffect(() => {
+    shortcutsModalOpenRef.current = shortcutsModalOpen
+  }, [shortcutsModalOpen])
+
+  function clearHideControlsTimeout() {
+    if (hideControlsTimeoutRef.current) {
+      clearTimeout(hideControlsTimeoutRef.current)
+      hideControlsTimeoutRef.current = null
+    }
+  }
+
+  function wakeControls() {
+    setControlsVisible(true)
+    clearHideControlsTimeout()
+    hideControlsTimeoutRef.current = setTimeout(() => {
+      // A dialog that needs the user's attention (void reason, shortcuts
+      // reference) suppresses hiding entirely — reading it here (not at
+      // schedule time) is what makes that correct even if the dialog opened
+      // after this timeout was already scheduled.
+      if (voidPromptOpenRef.current || shortcutsModalOpenRef.current) return
+      setControlsVisible(false)
+    }, FULLSCREEN_IDLE_HIDE_MS)
+  }
+
+  useEffect(() => {
+    if (!isFullscreen) {
+      setControlsVisible(true)
+      clearHideControlsTimeout()
+      return
+    }
+    wakeControls()
+    function handleMouseMove() {
+      wakeControls()
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      clearHideControlsTimeout()
+    }
+  }, [isFullscreen])
+
   // A session that's idle with 0 < secondsLeft < its full duration can only
   // be in that state because pause() left it there — a fresh/just-switched
   // session always starts at the full duration. Used to relabel the Start
@@ -280,6 +382,11 @@ function Timer({
   // always see the latest state instead of going stale.
   useEffect(() => {
     function handleKeyDown(e) {
+      // Any keyboard activity counts as "not idle," same as mouse movement
+      // — checked before the input/textarea early-return below so typing
+      // into the void-reason field also keeps the chrome awake.
+      if (isFullscreen) wakeControls()
+
       const tag = e.target.tagName
       if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return
 
@@ -352,13 +459,271 @@ function Timer({
     return () => window.removeEventListener('keydown', handleKeyDown)
   })
 
+  // Extracted so both regions can be rendered either plain (normal Timer
+  // view — identical output to before this feature existed, since Fragments
+  // add no DOM node of their own) or wrapped in CollapsibleChrome (Fullscreen
+  // Focus Mode only) without duplicating their JSX.
+  const iconRowRegion = (
+    <div className="w-full flex flex-col items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-0">
+      <div className="hidden sm:block sm:col-start-1" aria-hidden="true" />
+
+      {!isFullscreen && (
+        <div className="flex gap-2 order-2 sm:order-none sm:col-start-2 sm:justify-self-center">
+          {SESSION_ORDER.map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => handleSwitch(type)}
+              title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
+              className={
+                'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
+                (sessionType === type
+                  ? SESSION_COLORS[type].pillActive
+                  : 'border-cream/15 text-sage hover:border-cream/30')
+              }
+            >
+              {t(LABEL_KEYS[type])}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 justify-end w-full order-1 sm:order-none sm:w-auto sm:col-start-3 sm:justify-self-end">
+        {!isFullscreen && (
+          <button
+            type="button"
+            onClick={() => setShortcutsModalOpen(true)}
+            className="text-sage hover:text-cream text-sm leading-none font-display"
+            aria-label={t('timer.keyboardShortcutsTitle')}
+            title={t('timer.keyboardShortcutsTitle')}
+          >
+            ?
+          </button>
+        )}
+        {!isFullscreen && pipSupported && (
+          <button
+            type="button"
+            onClick={togglePip}
+            className="text-sage hover:text-cream text-xs leading-none"
+            aria-label={pipWindow ? t('timer.closeMiniTimerAria') : t('timer.openMiniTimerAria')}
+            title={pipWindow ? t('timer.closeMiniTimerTitle') : t('timer.openMiniTimerTitle')}
+          >
+            PiP
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="text-sage hover:text-cream text-sm leading-none"
+          aria-label={isFullscreen ? t('timer.exitFullscreenAria') : t('timer.enterFullscreenAria')}
+          title={isFullscreen ? t('timer.exitFullscreenTitle') : t('timer.enterFullscreenTitle')}
+        >
+          ⛶
+        </button>
+      </div>
+    </div>
+  )
+
+  const chromeBelowRingRegion = (
+    <>
+      <div className="text-center flex flex-col items-center gap-3">
+        <div>
+          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
+          {activeTask ? (
+            <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
+          ) : (
+            <div>
+              <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
+              {!isFullscreen && onGoToPlanning && (
+                <button
+                  type="button"
+                  onClick={onGoToPlanning}
+                  className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
+                >
+                  {t('timer.goToPlanningButton')}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          {Array.from({ length: cycleLength }, (_, i) => (
+            <span
+              key={i}
+              className={
+                'w-2 h-2 rounded-full ' +
+                (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex gap-3">
+          {!isRunning && (
+            <button
+              type="button"
+              onClick={start}
+              className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
+            >
+              {isPaused ? t('timer.resume') : t('timer.start')}
+            </button>
+          )}
+          {isRunning && (
+            <button
+              type="button"
+              onClick={pause}
+              className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
+            >
+              {t('timer.pause')}
+            </button>
+          )}
+          {isRunning && !isWork && (
+            <button
+              type="button"
+              onClick={skipBreak}
+              className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
+            >
+              {t('timer.skipBreak')}
+            </button>
+          )}
+        </div>
+
+        {/* Informational, not blocking — Start stays clickable with no
+            active task (see noActiveTaskForWork above); this just makes
+            the tradeoff visible so the choice is a conscious one. Only
+            shown pre-start, since once running the moment for that
+            choice has passed. */}
+        {!isRunning && noActiveTaskForWork && (
+          <p className="text-sage text-xs font-sans text-center max-w-xs">
+            {t('timer.noTaskStartHint')}
+          </p>
+        )}
+
+        {/* Subtle, non-alarming — mirrors the interruption counters'
+            treatment. Shown whenever this session has been paused at
+            least once, even after Pause is pressed again (isRunning
+            false), so the count doesn't disappear the moment it's most
+            relevant to see. */}
+        {pauseCount > 0 && (
+          <p className="text-sage text-xs font-sans">{t('timer.pauseCount', { count: pauseCount })}</p>
+        )}
+
+        {/* Softened on purpose — voiding is the "give up on this one"
+            path, so it shouldn't carry the same visual weight as Start
+            (previously an equally-bold tomato-bordered pill sitting right
+            next to it). A quiet underlined link reads as secondary
+            without hiding the control. */}
+        {isRunning && isWork && (
+          <button
+            type="button"
+            onClick={openVoidPrompt}
+            className="font-sans text-xs text-sage hover:text-tomato underline decoration-dotted underline-offset-4 transition-colors"
+          >
+            {t('timer.voidPomodoro')}
+          </button>
+        )}
+      </div>
+
+      {voidPromptOpen && (
+        <form
+          onSubmit={confirmVoid}
+          className="w-full bg-tomato/5 border border-tomato/20 rounded-xl p-3 flex flex-col gap-2"
+        >
+          <p className="text-tomato text-xs font-sans">
+            {t('timer.voidPanelWarning')}
+          </p>
+          <label htmlFor="void-reason" className="text-sage text-xs font-sans">
+            {t('timer.voidReasonLabel')}
+          </label>
+          <input
+            id="void-reason"
+            type="text"
+            autoFocus
+            value={voidReason}
+            onChange={(e) => setVoidReason(e.target.value)}
+            placeholder={t('timer.voidReasonPlaceholder')}
+            aria-label={t('timer.voidReasonAria')}
+            className="bg-cream/5 border border-cream/15 rounded-lg text-cream placeholder:text-sage/50 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-3 py-2 text-sm font-sans"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              type="submit"
+              className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
+            >
+              {t('timer.voidPomodoro')}
+            </button>
+            <button
+              type="button"
+              onClick={cancelVoid}
+              className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream"
+            >
+              {t('common.cancel')}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {isWork && isRunning && (
+        <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
+          <p className="text-sage text-xs font-sans">{t('timer.hadInterruption')}</p>
+          <div className="flex gap-3">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => logInterruption('internal')}
+                className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+              >
+                {t('timer.internalInterruption', { count: internalCount })}
+              </button>
+              <button
+                type="button"
+                onClick={() => undoInterruption('internal')}
+                disabled={internalCount === 0}
+                className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                aria-label={t('timer.undoInternalAria')}
+              >
+                -1
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => logInterruption('external')}
+                className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+              >
+                {t('timer.externalInterruption', { count: externalCount })}
+              </button>
+              <button
+                type="button"
+                onClick={() => undoInterruption('external')}
+                disabled={externalCount === 0}
+                className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                aria-label={t('timer.undoExternalAria')}
+              >
+                -1
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div
       ref={containerRef}
       className={
         isFullscreen
-          ? 'bg-pine w-full h-full flex items-center justify-center p-6'
+          ? 'relative bg-pine w-full h-full flex items-center justify-center p-6'
           : 'flex flex-col items-center gap-6 w-full'
+      }
+      style={
+        isFullscreen && backgroundUrl
+          ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : undefined
       }
     >
       {!isFullscreen && showWelcome && (
@@ -389,7 +754,7 @@ function Timer({
           the ring and controls sitting directly on the page background,
           not boxed. `relative` is kept only as the positioning anchor for
           the PiP/fullscreen/help icons in the corner. */}
-      <div className="relative flex flex-col items-center gap-8 w-full max-w-xl py-4">
+      <div className="relative z-10 flex flex-col items-center gap-8 w-full max-w-xl py-4">
         {/* True 3-column layout at `sm`+ (spacer / pills / icons) so the
             pills land centered relative to the full row width, with the
             icon cluster balanced symmetrically in its own right-hand
@@ -397,65 +762,13 @@ function Timer({
             matching it on the left, which read as lopsided. Below `sm`,
             falls back to two stacked rows (icons above pills, via the
             order-1/order-2 pair) since there isn't room for three columns
-            side by side on a phone. */}
-        <div className="w-full flex flex-col items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-0">
-          <div className="hidden sm:block sm:col-start-1" aria-hidden="true" />
-
-          {!isFullscreen && (
-            <div className="flex gap-2 order-2 sm:order-none sm:col-start-2 sm:justify-self-center">
-              {SESSION_ORDER.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleSwitch(type)}
-                  title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
-                  className={
-                    'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
-                    (sessionType === type
-                      ? SESSION_COLORS[type].pillActive
-                      : 'border-cream/15 text-sage hover:border-cream/30')
-                  }
-                >
-                  {t(LABEL_KEYS[type])}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 justify-end w-full order-1 sm:order-none sm:w-auto sm:col-start-3 sm:justify-self-end">
-            {!isFullscreen && (
-              <button
-                type="button"
-                onClick={() => setShortcutsModalOpen(true)}
-                className="text-sage hover:text-cream text-sm leading-none font-display"
-                aria-label={t('timer.keyboardShortcutsTitle')}
-                title={t('timer.keyboardShortcutsTitle')}
-              >
-                ?
-              </button>
-            )}
-            {!isFullscreen && pipSupported && (
-              <button
-                type="button"
-                onClick={togglePip}
-                className="text-sage hover:text-cream text-xs leading-none"
-                aria-label={pipWindow ? t('timer.closeMiniTimerAria') : t('timer.openMiniTimerAria')}
-                title={pipWindow ? t('timer.closeMiniTimerTitle') : t('timer.openMiniTimerTitle')}
-              >
-                PiP
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={toggleFullscreen}
-              className="text-sage hover:text-cream text-sm leading-none"
-              aria-label={isFullscreen ? t('timer.exitFullscreenAria') : t('timer.enterFullscreenAria')}
-              title={isFullscreen ? t('timer.exitFullscreenTitle') : t('timer.enterFullscreenTitle')}
-            >
-              ⛶
-            </button>
-          </div>
-        </div>
+            side by side on a phone. In Fullscreen Focus Mode this whole
+            region fades/collapses on inactivity (see controlsVisible). */}
+        {isFullscreen ? (
+          <CollapsibleChrome visible={controlsVisible}>{iconRowRegion}</CollapsibleChrome>
+        ) : (
+          iconRowRegion
+        )}
 
         <div className="relative w-64 h-64 sm:w-80 sm:h-80">
           <svg
@@ -488,188 +801,15 @@ function Timer({
           </div>
         </div>
 
-        <div className="text-center flex flex-col items-center gap-3">
-          <div>
-            <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
-            {activeTask ? (
-              <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
-            ) : (
-              <div>
-                <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
-                {!isFullscreen && onGoToPlanning && (
-                  <button
-                    type="button"
-                    onClick={onGoToPlanning}
-                    className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
-                  >
-                    {t('timer.goToPlanningButton')}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {Array.from({ length: cycleLength }, (_, i) => (
-              <span
-                key={i}
-                className={
-                  'w-2 h-2 rounded-full ' +
-                  (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
-                }
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex gap-3">
-            {!isRunning && (
-              <button
-                type="button"
-                onClick={start}
-                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
-              >
-                {isPaused ? t('timer.resume') : t('timer.start')}
-              </button>
-            )}
-            {isRunning && (
-              <button
-                type="button"
-                onClick={pause}
-                className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
-              >
-                {t('timer.pause')}
-              </button>
-            )}
-            {isRunning && !isWork && (
-              <button
-                type="button"
-                onClick={skipBreak}
-                className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
-              >
-                {t('timer.skipBreak')}
-              </button>
-            )}
-          </div>
-
-          {/* Informational, not blocking — Start stays clickable with no
-              active task (see noActiveTaskForWork above); this just makes
-              the tradeoff visible so the choice is a conscious one. Only
-              shown pre-start, since once running the moment for that
-              choice has passed. */}
-          {!isRunning && noActiveTaskForWork && (
-            <p className="text-sage text-xs font-sans text-center max-w-xs">
-              {t('timer.noTaskStartHint')}
-            </p>
-          )}
-
-          {/* Subtle, non-alarming — mirrors the interruption counters'
-              treatment. Shown whenever this session has been paused at
-              least once, even after Pause is pressed again (isRunning
-              false), so the count doesn't disappear the moment it's most
-              relevant to see. */}
-          {pauseCount > 0 && (
-            <p className="text-sage text-xs font-sans">{t('timer.pauseCount', { count: pauseCount })}</p>
-          )}
-
-          {/* Softened on purpose — voiding is the "give up on this one"
-              path, so it shouldn't carry the same visual weight as Start
-              (previously an equally-bold tomato-bordered pill sitting right
-              next to it). A quiet underlined link reads as secondary
-              without hiding the control. */}
-          {isRunning && isWork && (
-            <button
-              type="button"
-              onClick={openVoidPrompt}
-              className="font-sans text-xs text-sage hover:text-tomato underline decoration-dotted underline-offset-4 transition-colors"
-            >
-              {t('timer.voidPomodoro')}
-            </button>
-          )}
-        </div>
-
-        {voidPromptOpen && (
-          <form
-            onSubmit={confirmVoid}
-            className="w-full bg-tomato/5 border border-tomato/20 rounded-xl p-3 flex flex-col gap-2"
-          >
-            <p className="text-tomato text-xs font-sans">
-              {t('timer.voidPanelWarning')}
-            </p>
-            <label htmlFor="void-reason" className="text-sage text-xs font-sans">
-              {t('timer.voidReasonLabel')}
-            </label>
-            <input
-              id="void-reason"
-              type="text"
-              autoFocus
-              value={voidReason}
-              onChange={(e) => setVoidReason(e.target.value)}
-              placeholder={t('timer.voidReasonPlaceholder')}
-              aria-label={t('timer.voidReasonAria')}
-              className="bg-cream/5 border border-cream/15 rounded-lg text-cream placeholder:text-sage/50 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-3 py-2 text-sm font-sans"
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                type="submit"
-                className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
-              >
-                {t('timer.voidPomodoro')}
-              </button>
-              <button
-                type="button"
-                onClick={cancelVoid}
-                className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream"
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {isWork && isRunning && (
-          <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-            <p className="text-sage text-xs font-sans">{t('timer.hadInterruption')}</p>
-            <div className="flex gap-3">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => logInterruption('internal')}
-                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
-                >
-                  {t('timer.internalInterruption', { count: internalCount })}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => undoInterruption('internal')}
-                  disabled={internalCount === 0}
-                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                  aria-label={t('timer.undoInternalAria')}
-                >
-                  -1
-                </button>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => logInterruption('external')}
-                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
-                >
-                  {t('timer.externalInterruption', { count: externalCount })}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => undoInterruption('external')}
-                  disabled={externalCount === 0}
-                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                  aria-label={t('timer.undoExternalAria')}
-                >
-                  -1
-                </button>
-              </div>
-            </div>
-          </div>
+        {/* Task info, controls, void panel, and interruption buttons all
+            fade/collapse together in Fullscreen Focus Mode on inactivity —
+            same controlsVisible-driven behavior as the icon row above. */}
+        {isFullscreen ? (
+          <CollapsibleChrome visible={controlsVisible}>
+            <div className="flex flex-col items-center gap-8 w-full">{chromeBelowRingRegion}</div>
+          </CollapsibleChrome>
+        ) : (
+          chromeBelowRingRegion
         )}
 
         {!isFullscreen && (

@@ -31,6 +31,13 @@ import DataTransfer from './DataTransfer'
 import { THEMES } from '../lib/theme'
 import ChangePasswordModal from './ChangePasswordModal'
 import AuthModal from './AuthModal'
+import {
+  validateBackgroundFile,
+  uploadFullscreenBackground,
+  removeFullscreenBackground,
+  MAX_BACKGROUND_BYTES,
+  ALLOWED_BACKGROUND_TYPES,
+} from '../lib/backgroundStorage'
 
 const rowClass =
   'flex items-center justify-between gap-3 text-sage text-xs font-sans py-3 border-b border-cream/10 last:border-b-0'
@@ -197,6 +204,8 @@ function SettingsModal({
   setCustomThemeShortBreak,
   customThemeLongBreak,
   setCustomThemeLongBreak,
+  fullscreenBackgroundPath,
+  setFullscreenBackgroundPath,
   categories,
   addCategory,
   updateCategory,
@@ -208,6 +217,9 @@ function SettingsModal({
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [activeCategory, setActiveCategory] = useState('general')
+  const [backgroundBusy, setBackgroundBusy] = useState(false)
+  const [backgroundError, setBackgroundError] = useState(null)
+  const backgroundFileInputRef = useRef(null)
   const closeButtonRef = useRef(null)
   const previouslyFocused = useRef(document.activeElement)
 
@@ -226,6 +238,43 @@ function SettingsModal({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
+
+  // Fullscreen background upload/remove — talks directly to
+  // backgroundStorage.js's Supabase Storage calls (same pattern as this
+  // modal's existing direct storage.js calls for Danger Zone), then
+  // persists the resulting path via the setter prop from App.jsx.
+  async function handleBackgroundFileChange(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allows re-selecting the same file later
+    if (!file || !user) return
+    const { valid, reason } = validateBackgroundFile(file)
+    if (!valid) {
+      setBackgroundError(reason === 'size' ? 'size' : 'type')
+      return
+    }
+    setBackgroundError(null)
+    setBackgroundBusy(true)
+    const { path, error } = await uploadFullscreenBackground(file, user.id)
+    setBackgroundBusy(false)
+    if (error) {
+      setBackgroundError('upload')
+      return
+    }
+    setFullscreenBackgroundPath(path)
+  }
+
+  async function handleRemoveBackground() {
+    if (!user) return
+    setBackgroundError(null)
+    setBackgroundBusy(true)
+    const { error } = await removeFullscreenBackground(user.id)
+    setBackgroundBusy(false)
+    if (error) {
+      setBackgroundError('upload')
+      return
+    }
+    setFullscreenBackgroundPath(null)
+  }
 
   const chimeLabels = {
     classic: t('chime.classic'),
@@ -440,6 +489,67 @@ function SettingsModal({
                   </div>
                 )}
               </div>
+
+              {/* Signed-in only — Fullscreen Focus Mode backgrounds are
+                  stored in Supabase Storage (see backgroundStorage.js),
+                  which guests have no account to store anything in. Hidden
+                  entirely rather than shown-disabled, same treatment as
+                  Change Password / Delete Account below. */}
+              {user && (
+                <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-0.5">
+                      <span>{t('settings.backgroundLabel')}</span>
+                      <span className="text-sage/40 text-[10px]">{t('settings.backgroundHint')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <input
+                        ref={backgroundFileInputRef}
+                        type="file"
+                        accept={ALLOWED_BACKGROUND_TYPES.join(',')}
+                        onChange={handleBackgroundFileChange}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => backgroundFileInputRef.current?.click()}
+                        disabled={backgroundBusy}
+                        className="text-cream border border-cream/15 rounded-full px-3 py-1 disabled:opacity-50"
+                      >
+                        {backgroundBusy ? t('settings.backgroundUploading') : t('settings.backgroundUploadButton')}
+                      </button>
+                      {fullscreenBackgroundPath && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveBackground}
+                          disabled={backgroundBusy}
+                          className="text-tomato border border-tomato/40 rounded-full px-3 py-1 disabled:opacity-50"
+                        >
+                          {t('settings.backgroundRemoveButton')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {backgroundError && (
+                    <p className="text-tomato text-[10px]">
+                      {t(
+                        backgroundError === 'size'
+                          ? 'settings.backgroundErrorSize'
+                          : backgroundError === 'type'
+                            ? 'settings.backgroundErrorType'
+                            : 'settings.backgroundErrorUpload',
+                        { max: MAX_BACKGROUND_BYTES / (1024 * 1024) }
+                      )}
+                    </p>
+                  )}
+
+                  {/* Not built yet — see chat/CLAUDE.md: a curated preset
+                      gallery (no upload needed) is planned for a future
+                      iteration, this upload flow is the first one. */}
+                  <p className="text-sage/40 text-[10px] italic">{t('settings.backgroundPresetGalleryHint')}</p>
+                </div>
+              )}
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
