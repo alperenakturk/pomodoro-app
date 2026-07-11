@@ -24,7 +24,7 @@ export const DEFAULT_CYCLE_LENGTH = 4
 // Unlike short/long break, the Pomodoro Technique's 25-minute work interval
 // has no "recommended range" in this app — it's freely adjustable. Only a
 // sane absolute ceiling/floor guards against a broken timer (e.g. 0 or
-// unreasonably long); SettingsTab shows an informational (non-blocking) note
+// unreasonably long); SettingsModal shows an informational (non-blocking) note
 // whenever the value differs from the standard 25, rather than a
 // recommended-range hint like the break durations get.
 export const DEFAULT_WORK_MINUTES = 25
@@ -34,7 +34,7 @@ export const WORK_MAX = 180
 // Rule 3: short break 3-5 min recommended, long break 15-30 min recommended
 // (docs/methodology.md). Min/max are hard bounds the input enforces; the
 // recommended range is only ever surfaced as a non-blocking hint in
-// SettingsTab — values outside it are still valid and fully allowed.
+// SettingsModal — values outside it are still valid and fully allowed.
 export const DEFAULT_SHORT_BREAK_MINUTES = 5
 export const SHORT_BREAK_MIN = 3
 export const SHORT_BREAK_MAX = 10

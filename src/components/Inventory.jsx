@@ -3,6 +3,7 @@ import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
 import CategoryTagPicker from './CategoryTagPicker'
+import CollapseToggle from './CollapseToggle'
 
 function isOverdue(deadline) {
   if (!deadline) return false
@@ -273,6 +274,7 @@ function Inventory({
   const [notes, setNotes] = useState('')
   const [categoryIds, setCategoryIds] = useState([])
   const [deadline, setDeadline] = useState('')
+  const [open, setOpen] = useState(true)
   const [unplanned, setUnplanned] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const { t } = useTranslation()
@@ -311,13 +313,25 @@ function Inventory({
   }
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4 shadow-lg w-full">
+      <div className="flex items-center justify-between gap-2 mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('inventory.title')}
         </p>
-        <span className="text-sage text-xs font-sans">{t('inventory.itemsCount', { count: items.length })}</span>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sage text-xs font-sans">{t('inventory.itemsCount', { count: items.length })}</span>
+          <CollapseToggle
+            open={open}
+            onToggle={() => setOpen((prev) => !prev)}
+            label={t(open ? 'common.collapseSectionAria' : 'common.expandSectionAria', {
+              section: t('inventory.title'),
+            })}
+          />
+        </div>
       </div>
+
+      {open && (
+      <>
 
       <form onSubmit={handleAdd} className="flex gap-2 mb-4 items-end">
         <input
@@ -427,6 +441,8 @@ function Inventory({
           />
         ))}
       </ul>
+      </>
+      )}
     </div>
   )
 }

@@ -7,7 +7,7 @@ import PasswordVisibilityToggle from './PasswordVisibilityToggle'
 // Same modal shell/form style as AuthModal.jsx (and the same
 // PasswordVisibilityToggle it uses) for visual consistency, just without the
 // email field or Google/sign-up branches — the user is already signed in
-// with a real session by the time this can open (see SettingsTab.jsx's
+// with a real session by the time this can open (see SettingsModal.jsx's
 // `hasPasswordProvider` gate, which also keeps this hidden for Google-only
 // accounts that have no password to change).
 function ChangePasswordModal({ onClose }) {

@@ -3,6 +3,7 @@ import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
+import { useTimetable } from './hooks/useTimetable'
 import { useAuth } from './hooks/useAuth'
 import {
   loadSettings,
@@ -15,13 +16,17 @@ import {
   clearLocalGuestData,
 } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
+import { themeClassName } from './lib/theme'
+import { totalTimetableHours } from './lib/timetable'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
+import AvailablePomodoros from './components/AvailablePomodoros'
+import Timetable from './components/Timetable'
 import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
 import TabNav from './components/TabNav'
-import SettingsTab from './components/SettingsTab'
+import SettingsModal from './components/SettingsModal'
 import ProfileMenu from './components/ProfileMenu'
 
 function todayString() {
@@ -165,13 +170,22 @@ function AppInner() {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
   const categoriesApi = useCategories()
+  // Lifted up from TodoToday (design-mockups/07): AvailablePomodoros and
+  // Timetable moved to Planning's secondary column, as Inventory's
+  // neighbors rather than TodoToday's children, so the hook has to live
+  // somewhere both TodoToday and the secondary column can reach — App is
+  // that shared ancestor, same reasoning as every other hook here.
+  const timetableApi = useTimetable()
   const { t, localeTag } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
 
+  // Settings is a modal now (design-mockups/05's sidebar-categorized dialog),
+  // not a fourth tab — it no longer occupies an activeTab value at all.
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   const [theme, setTheme] = useState(() => loadSettings().theme)
 
-  function toggleTheme() {
-    const next = theme === 'dark' ? 'light' : 'dark'
+  function selectTheme(next) {
     setTheme(next)
     patchSettings({ theme: next })
   }
@@ -183,6 +197,16 @@ function AppInner() {
   function setCheckToBottom(value) {
     setCheckToBottomState(value)
     patchSettings({ checkToBottom: value })
+  }
+
+  // Header's personalized greeting (Settings > General) — a plain local
+  // preference, not tied to auth, so it works the same for guests and
+  // signed-in users. Empty means "not set", which hides the greeting
+  // entirely rather than showing "Hello, !".
+  const [displayName, setDisplayNameState] = useState(() => loadSettings().displayName)
+  function setDisplayName(value) {
+    setDisplayNameState(value)
+    patchSettings({ displayName: value })
   }
 
   // First-launch welcome card (Timer tab): shown only while every collection
@@ -277,34 +301,53 @@ function AppInner() {
   })
 
   return (
-    <div className={`min-h-screen bg-pine ${theme === 'light' ? 'light' : ''}`}>
-      <header className="border-b border-cream/10 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
+    <div className={`min-h-screen bg-pine ${themeClassName(theme)}`}>
+      {/* Mobile: plain flex-wrap (logo + right cluster on row 1, nav pushed
+          to row 2 via order-3). Desktop: an explicit 3-column grid instead —
+          flex with only `ml-auto` on the right cluster and `mx-auto` on nav
+          looks similar but isn't true centering: with 3 items sharing the
+          row, auto-margins split the *leftover* space between all of them
+          (CSS distributes free space across every auto margin present, not
+          per-item), so nav lands off-center by however wide the logo is.
+          A grid's 1fr center column is centered relative to the whole header
+          regardless of the other two columns' widths. */}
+      <header className="border-b border-cream/10 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-x-6 sm:gap-y-0">
+        <button
+          type="button"
+          onClick={() => setActiveTab('timer')}
+          aria-label={t('header.homeAria')}
+          title={t('header.homeAria')}
+          className="flex items-center gap-3 flex-shrink-0"
+        >
           <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
           <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
             {t('common.appTitle')}
           </p>
-        </div>
-        <div className="flex items-center gap-3">
+        </button>
+
+        <TabNav activeTab={activeTab} onChange={setActiveTab} className="order-3 w-full sm:order-none sm:w-full" />
+
+        <div className="flex items-center gap-3 ml-auto flex-shrink-0">
+          {displayName.trim() && (
+            <p className="text-cream text-xs font-sans whitespace-nowrap hidden sm:block">
+              {t('header.greeting', { name: displayName.trim() })}
+            </p>
+          )}
           <p className="text-sage text-xs font-sans whitespace-nowrap">
             {today} · {time}
           </p>
           <button
             type="button"
-            onClick={() => setActiveTab('settings')}
+            onClick={() => setSettingsOpen(true)}
             aria-label={t('header.settingsAria')}
             title={t('header.settingsAria')}
-            className={
-              'text-sage hover:text-cream flex-shrink-0 ' + (activeTab === 'settings' ? 'text-tomato' : '')
-            }
+            className={'text-sage hover:text-cream flex-shrink-0 ' + (settingsOpen ? 'text-tomato' : '')}
           >
             <GearIcon className="w-4 h-4" />
           </button>
           <ProfileMenu />
         </div>
       </header>
-
-      <TabNav activeTab={activeTab} onChange={setActiveTab} />
 
       {/* All four panels stay mounted — only the active one is shown (CSS
           `hidden`, not conditional rendering). Unmounting the Timer panel on
@@ -329,20 +372,14 @@ function AppInner() {
         <div
           className={
             activeTab === 'planning'
-              ? 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6 items-start'
+              ? 'grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start'
               : 'hidden'
           }
         >
-          <Inventory
-            items={inventoryApi.items}
-            addItem={inventoryApi.addItem}
-            removeItem={inventoryApi.removeItem}
-            toggleDone={inventoryApi.toggleDone}
-            updateItem={inventoryApi.updateItem}
-            combineItems={inventoryApi.combineItems}
-            onSendToToday={handleSendToToday}
-            categories={categoriesApi.categories}
-          />
+          {/* Today's Tasks is the dominant panel now (design-mockups/07) —
+              Inventory/Available Pomodoros/Timetable moved to a narrower,
+              compact secondary column alongside it, reversed from the old
+              Inventory-first layout. */}
           <TodoToday
             tasks={todayApi.tasks}
             activeTaskId={todayApi.activeTaskId}
@@ -356,6 +393,28 @@ function AppInner() {
             finishTask={handleFinishTask}
             categories={categoriesApi.categories}
           />
+
+          <div className="flex flex-col gap-4">
+            <AvailablePomodoros
+              plannedTotal={todayApi.tasks.reduce((sum, task) => sum + (task.estimate || 0), 0)}
+              suggestedHours={totalTimetableHours(timetableApi.blocks)}
+            />
+            <Timetable
+              blocks={timetableApi.blocks}
+              addBlock={timetableApi.addBlock}
+              removeBlock={timetableApi.removeBlock}
+            />
+            <Inventory
+              items={inventoryApi.items}
+              addItem={inventoryApi.addItem}
+              removeItem={inventoryApi.removeItem}
+              toggleDone={inventoryApi.toggleDone}
+              updateItem={inventoryApi.updateItem}
+              combineItems={inventoryApi.combineItems}
+              onSendToToday={handleSendToToday}
+              categories={categoriesApi.categories}
+            />
+          </div>
         </div>
 
         <div
@@ -369,38 +428,42 @@ function AppInner() {
           <RecordsLog categories={categoriesApi.categories} />
         </div>
 
-        <div className={activeTab === 'settings' ? '' : 'hidden'}>
-          <SettingsTab
-            cycleLength={pomodoro.cycleLength}
-            setCycleLength={pomodoro.setCycleLength}
-            resetCycleLength={pomodoro.resetCycleLength}
-            workMinutes={pomodoro.workMinutes}
-            setWorkMinutes={pomodoro.setWorkMinutes}
-            shortBreakMinutes={pomodoro.shortBreakMinutes}
-            setShortBreakMinutes={pomodoro.setShortBreakMinutes}
-            longBreakMinutes={pomodoro.longBreakMinutes}
-            setLongBreakMinutes={pomodoro.setLongBreakMinutes}
-            autoStartBreaks={pomodoro.autoStartBreaks}
-            setAutoStartBreaks={pomodoro.setAutoStartBreaks}
-            autoStartPomodoros={pomodoro.autoStartPomodoros}
-            setAutoStartPomodoros={pomodoro.setAutoStartPomodoros}
-            categories={categoriesApi.categories}
-            addCategory={categoriesApi.addCategory}
-            updateCategory={categoriesApi.updateCategory}
-            removeCategory={categoriesApi.removeCategory}
-            chimeStyle={pomodoro.chimeStyle}
-            setChimeStyle={pomodoro.setChimeStyle}
-            soundVolume={pomodoro.soundVolume}
-            setSoundVolume={pomodoro.setSoundVolume}
-            ambientSound={pomodoro.ambientSound}
-            setAmbientSound={pomodoro.setAmbientSound}
-            checkToBottom={checkToBottom}
-            setCheckToBottom={setCheckToBottom}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-          />
-        </div>
       </main>
+
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          cycleLength={pomodoro.cycleLength}
+          setCycleLength={pomodoro.setCycleLength}
+          resetCycleLength={pomodoro.resetCycleLength}
+          workMinutes={pomodoro.workMinutes}
+          setWorkMinutes={pomodoro.setWorkMinutes}
+          shortBreakMinutes={pomodoro.shortBreakMinutes}
+          setShortBreakMinutes={pomodoro.setShortBreakMinutes}
+          longBreakMinutes={pomodoro.longBreakMinutes}
+          setLongBreakMinutes={pomodoro.setLongBreakMinutes}
+          autoStartBreaks={pomodoro.autoStartBreaks}
+          setAutoStartBreaks={pomodoro.setAutoStartBreaks}
+          autoStartPomodoros={pomodoro.autoStartPomodoros}
+          setAutoStartPomodoros={pomodoro.setAutoStartPomodoros}
+          categories={categoriesApi.categories}
+          addCategory={categoriesApi.addCategory}
+          updateCategory={categoriesApi.updateCategory}
+          removeCategory={categoriesApi.removeCategory}
+          chimeStyle={pomodoro.chimeStyle}
+          setChimeStyle={pomodoro.setChimeStyle}
+          soundVolume={pomodoro.soundVolume}
+          setSoundVolume={pomodoro.setSoundVolume}
+          ambientSound={pomodoro.ambientSound}
+          setAmbientSound={pomodoro.setAmbientSound}
+          checkToBottom={checkToBottom}
+          setCheckToBottom={setCheckToBottom}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          theme={theme}
+          onSelectTheme={selectTheme}
+        />
+      )}
     </div>
   )
 }

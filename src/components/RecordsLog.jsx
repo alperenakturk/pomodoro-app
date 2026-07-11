@@ -269,7 +269,7 @@ function RecordsLog({ categories = [] }) {
   }
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('recordsLog.title')}

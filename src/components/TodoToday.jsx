@@ -1,18 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { useTimetable } from '../hooks/useTimetable'
 import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
-import AvailablePomodoros from './AvailablePomodoros'
-import Timetable from './Timetable'
 import UnplannedCapture from './UnplannedCapture'
 import CategoryTagPicker from './CategoryTagPicker'
-
-function blockMinutes(block) {
-  const [sh, sm] = block.start.split(':').map(Number)
-  const [eh, em] = block.end.split(':').map(Number)
-  return Math.max(0, eh * 60 + em - (sh * 60 + sm))
-}
 
 const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_26px_26px_26px_16px_16px_16px] gap-1.5 items-center'
 
@@ -398,11 +389,6 @@ function TodoToday({
   // (bugün plan dışı çıktığını) belirtir, hangi bölümde görüneceğini değil.
   const planned = tasks.filter((t) => !t.urgent)
   const urgentTasks = tasks.filter((t) => t.urgent)
-  const plannedTotal = tasks.reduce((sum, t) => sum + (t.estimate || 0), 0)
-
-  const timetable = useTimetable()
-  const timetableHours =
-    timetable.blocks.reduce((sum, b) => sum + blockMinutes(b), 0) / 60
 
   function handleAddPlanned(e) {
     e.preventDefault()
@@ -418,7 +404,7 @@ function TodoToday({
   }
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('today.title')}
@@ -430,13 +416,6 @@ function TodoToday({
           onClearAll={clearAllTasks}
         />
       </div>
-
-      <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={timetableHours} />
-      <Timetable
-        blocks={timetable.blocks}
-        addBlock={timetable.addBlock}
-        removeBlock={timetable.removeBlock}
-      />
 
       <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4 items-end">
         <input

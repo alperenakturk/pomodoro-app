@@ -33,6 +33,19 @@ const PERIODS = [
   { id: 'year', labelKey: 'reports.periodYear' },
 ]
 
+const HEATMAP_WEEKS = 13
+
+// Step-through navigation (design-mockups/04) — one section visible at a
+// time instead of all five stacked vertically, with Previous/Next plus a
+// sidebar list to jump directly. Order here is also step order.
+const SECTIONS = [
+  { id: 'today', labelKey: 'reports.todaySummaryTitle' },
+  { id: 'estimation', labelKey: 'reports.estimationAccuracyTitle', subtitleKey: 'reports.estimationAccuracySubtitle' },
+  { id: 'interruptions', labelKey: 'reports.interruptionTrendsTitle', subtitleKey: 'reports.interruptionTrendsSubtitle' },
+  { id: 'category', labelKey: 'reports.categoryBreakdownTitle', subtitleKey: 'reports.categoryBreakdownSubtitle' },
+  { id: 'longterm', labelKey: 'reports.longTermTitle', subtitleKey: 'reports.longTermSubtitle' },
+]
+
 // direction: 'up' | 'down' | 'flat' from trendDirection().
 // goodDirection: which raw direction counts as improvement — 'up', 'down',
 // or null for metrics (like raw pomodoro count) the methodology doesn't
@@ -57,6 +70,22 @@ function Stat({ label, value, trend }) {
         {trend}
       </p>
       <p className="text-sage text-xs mt-1">{label}</p>
+    </div>
+  )
+}
+
+// Shared "nothing to chart yet" treatment (design-mockups/04's dashed
+// placeholder box) — replaces what used to be a single plain line of text
+// wherever EstimationAccuracySection/InterruptionTrendsSection/
+// CategoryBreakdownSection have zero records for the selected period. Same
+// message as before (reports.noDataForPeriod), just given the visual
+// weight of an actual empty chart frame instead of a stray sentence.
+function EmptyChartState({ message }) {
+  const { t } = useTranslation()
+  return (
+    <div className="border border-dashed border-cream/15 rounded-xl px-6 py-10 flex flex-col items-center gap-1">
+      <p className="text-sage text-xs font-sans font-semibold">{t('reports.noChartDataTitle')}</p>
+      <p className="text-sage/70 text-xs font-sans">{message}</p>
     </div>
   )
 }
@@ -131,7 +160,7 @@ function EstimationAccuracySection({ activityLog, period }) {
   // own separate empty message below them — three redundant "nothing here"
   // signals stacked on top of each other, which is what looked broken.
   if (periodRecords.length === 0) {
-    return <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noDataForPeriod')}</p>
+    return <EmptyChartState message={t('reports.noDataForPeriod')} />
   }
 
   return (
@@ -181,7 +210,7 @@ function InterruptionTrendsSection({ activityLog, period }) {
       </div>
 
       {recentTasks.length === 0 ? (
-        <p className="text-sage text-xs font-sans text-center py-2">{t('reports.noDataForPeriod')}</p>
+        <EmptyChartState message={t('reports.noDataForPeriod')} />
       ) : (
         <ul className="flex flex-col gap-1.5 font-sans">
           {recentTasks.map((r) => {
@@ -216,11 +245,7 @@ function CategoryBreakdownSection({ activityLog, categories, period }) {
   const maxTotal = Math.max(1, ...buckets.map((b) => b.total))
 
   if (buckets.length === 0) {
-    return (
-      <p className="text-sage text-xs font-sans text-center py-2">
-        {t('reports.noDataForPeriod')}
-      </p>
-    )
+    return <EmptyChartState message={t('reports.noDataForPeriod')} />
   }
 
   return (
@@ -248,9 +273,14 @@ function CategoryBreakdownSection({ activityLog, categories, period }) {
   )
 }
 
+// Used to collapse-by-default behind its own internal toggle. Now that
+// step-through navigation (design-mockups/04) already gates when this
+// section's content is visible at all — you only see it once you've
+// explicitly stepped/clicked to it in the sidebar — that outer gating IS
+// the "collapsed by default" behavior; a second collapse toggle inside it
+// would just be a redundant extra click.
 function LongTermSection({ ticks, activityLog }) {
   const { t } = useTranslation()
-  const [expanded, setExpanded] = useState(false)
 
   const monthDates = datesForMonth()
   const quarterDates = datesForQuarter()
@@ -261,37 +291,23 @@ function LongTermSection({ ticks, activityLog }) {
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        aria-expanded={expanded}
-        className="w-full flex items-center justify-between font-sans text-xs text-sage uppercase tracking-wide"
-      >
-        <span>{t('reports.longTermTitle')}</span>
-        <span>{expanded ? t('reports.collapse') : t('reports.expand')}</span>
-      </button>
+      <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
+        {t('reports.activityCaption')}
+      </p>
+      <ActivityHeatmap ticks={ticks} />
 
-      {expanded && (
-        <div className="mt-4">
-          <p className="text-sage text-[10px] font-sans uppercase tracking-wide mb-2 text-center">
-            {t('reports.activityCaption')}
-          </p>
-          <ActivityHeatmap ticks={ticks} />
-
-          <div className="grid grid-cols-2 gap-3 font-sans mt-4 pt-4 border-t border-cream/10">
-            <Stat label={t('reports.pomodorosThisMonth')} value={monthPomodoros} />
-            <Stat label={t('reports.pomodorosThisQuarter')} value={quarterPomodoros} />
-            <Stat
-              label={t('reports.avgInterruptionsMonth')}
-              value={monthAvgInterruptions == null ? '-' : monthAvgInterruptions.toFixed(1)}
-            />
-            <Stat
-              label={t('reports.avgInterruptionsQuarter')}
-              value={quarterAvgInterruptions == null ? '-' : quarterAvgInterruptions.toFixed(1)}
-            />
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-3 font-sans mt-4 pt-4 border-t border-cream/10">
+        <Stat label={t('reports.pomodorosThisMonth')} value={monthPomodoros} />
+        <Stat label={t('reports.pomodorosThisQuarter')} value={quarterPomodoros} />
+        <Stat
+          label={t('reports.avgInterruptionsMonth')}
+          value={monthAvgInterruptions == null ? '-' : monthAvgInterruptions.toFixed(1)}
+        />
+        <Stat
+          label={t('reports.avgInterruptionsQuarter')}
+          value={quarterAvgInterruptions == null ? '-' : quarterAvgInterruptions.toFixed(1)}
+        />
+      </div>
     </div>
   )
 }
@@ -302,6 +318,7 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
   const [period, setPeriod] = useState('week')
+  const [activeSection, setActiveSection] = useState(SECTIONS[0].id)
 
   // Polling yerine: veri her değiştiğinde anında haber al.
   useEffect(() => {
@@ -312,8 +329,36 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
     return unsubscribe
   }, [])
 
+  const sectionIndex = SECTIONS.findIndex((section) => section.id === activeSection)
+
+  function stepTo(delta) {
+    const next = SECTIONS[sectionIndex + delta]
+    if (next) setActiveSection(next.id)
+  }
+
+  // Only 'today' gets a live subtitle (design-mockups/04 shows real numbers
+  // there specifically) — the other four are static taglines already on
+  // each SECTIONS entry. Computed here (not reusing TodaySection's own copy
+  // of this math) since the sidebar needs it regardless of which section is
+  // actually active.
+  const todayDates = [todayString()]
+  const todayPomodoros = countTicksInDates(ticks, 'pomodoro', todayDates)
+  const todayInterruptions =
+    countTicksInDates(ticks, 'interruption-internal', todayDates) +
+    countTicksInDates(ticks, 'interruption-external', todayDates)
+
+  function sectionSubtitle(section) {
+    if (section.id === 'today') {
+      return t('reports.todaySummarySubtitle', { poms: todayPomodoros, interruptions: todayInterruptions })
+    }
+    if (section.id === 'longterm') {
+      return t('reports.longTermSubtitle', { weeks: HEATMAP_WEEKS })
+    }
+    return t(section.subtitleKey)
+  }
+
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('reports.title')}
@@ -356,40 +401,95 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
             </p>
           )}
 
-          <section className="mb-6">
-            <TodaySection
-              ticks={ticks}
-              activityLog={activityLog}
-              todayTasks={todayTasks}
-              period={period}
-              workMinutes={workMinutes}
-            />
-          </section>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Previous/Next lives at the bottom of the sidebar, not below
+                the section content — the content pane's height varies a lot
+                by section (a heatmap vs. a short stat grid), which used to
+                make the buttons jump up and down and turned "click Next
+                repeatedly" into a moving target. The sidebar's own height
+                is constant (same 5 items every time), so anchoring the
+                stepper there keeps it at a fixed position regardless of
+                which section is showing. */}
+            <nav className="flex flex-col gap-1 md:w-52 flex-shrink-0">
+              {SECTIONS.map((section) => {
+                const active = section.id === activeSection
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setActiveSection(section.id)}
+                    aria-current={active ? 'page' : undefined}
+                    className={
+                      'text-left px-3 py-2 rounded-lg border flex-shrink-0 transition-colors ' +
+                      (active ? 'bg-tomato/10 border-tomato/30' : 'border-transparent hover:border-cream/15')
+                    }
+                  >
+                    <p
+                      className={
+                        'font-display text-[11px] tracking-widest uppercase ' +
+                        (active ? 'text-cream' : 'text-sage')
+                      }
+                    >
+                      {t(section.labelKey)}
+                    </p>
+                    <p className="text-sage/60 text-[10px] font-sans">
+                      {sectionSubtitle(section)}
+                    </p>
+                  </button>
+                )
+              })}
 
-          <section className="mb-6 pt-4 border-t border-cream/10">
-            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-              {t('reports.estimationAccuracyTitle')}
-            </p>
-            <EstimationAccuracySection activityLog={activityLog} period={period} />
-          </section>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-cream/10 font-sans text-xs">
+                <button
+                  type="button"
+                  onClick={() => stepTo(-1)}
+                  disabled={sectionIndex === 0}
+                  className="text-sage hover:text-cream disabled:opacity-30 disabled:hover:text-sage"
+                >
+                  {t('reports.stepPrevious')}
+                </button>
+                <span className="text-sage/60 tabular-nums">
+                  {t('reports.stepIndicator', { current: sectionIndex + 1, total: SECTIONS.length })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => stepTo(1)}
+                  disabled={sectionIndex === SECTIONS.length - 1}
+                  className="text-sage hover:text-cream disabled:opacity-30 disabled:hover:text-sage"
+                >
+                  {t('reports.stepNext')}
+                </button>
+              </div>
+            </nav>
 
-          <section className="mb-6 pt-4 border-t border-cream/10">
-            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-              {t('reports.interruptionTrendsTitle')}
-            </p>
-            <InterruptionTrendsSection activityLog={activityLog} period={period} />
-          </section>
+            <div className="flex-1 min-w-0 border-t md:border-t-0 md:border-l border-cream/10 pt-4 md:pt-0 md:pl-5">
+              <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
+                {t(SECTIONS[sectionIndex].labelKey)}
+              </p>
 
-          <section className="mb-6 pt-4 border-t border-cream/10">
-            <p className="font-display text-cream font-bold text-[11px] tracking-widest uppercase mb-4 text-center">
-              {t('reports.categoryBreakdownTitle')}
-            </p>
-            <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
-          </section>
-
-          <section className="pt-4 border-t border-cream/10">
-            <LongTermSection ticks={ticks} activityLog={activityLog} />
-          </section>
+              {activeSection === 'today' && (
+                <TodaySection
+                  ticks={ticks}
+                  activityLog={activityLog}
+                  todayTasks={todayTasks}
+                  period={period}
+                  workMinutes={workMinutes}
+                />
+              )}
+              {activeSection === 'estimation' && (
+                <EstimationAccuracySection activityLog={activityLog} period={period} />
+              )}
+              {activeSection === 'interruptions' && (
+                <InterruptionTrendsSection activityLog={activityLog} period={period} />
+              )}
+              {activeSection === 'category' && (
+                <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
+              )}
+              {activeSection === 'longterm' && (
+                <LongTermSection ticks={ticks} activityLog={activityLog} />
+              )}
+            </div>
+          </div>
         </>
       )}
 
@@ -403,8 +503,6 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
     </div>
   )
 }
-
-const HEATMAP_WEEKS = 13
 
 function bucketClass(count) {
   if (count === 0) return 'bg-cream/5'

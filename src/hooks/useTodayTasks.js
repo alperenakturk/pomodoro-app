@@ -74,7 +74,7 @@ export function useTodayTasks() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
   }, [])
 
-  // Backs the "Check to bottom" setting (SettingsTab) — moves a task to the
+  // Backs the "Check to bottom" setting (SettingsModal) — moves a task to the
   // end of the array, which is the end of whichever of planned/urgent
   // TodoToday.jsx renders it under (filter preserves relative order), rather
   // than a global "bottom of everything." App.jsx calls this after

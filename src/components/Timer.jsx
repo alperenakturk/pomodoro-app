@@ -4,6 +4,7 @@ import UnplannedCapture from './UnplannedCapture'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 import { useTranslation } from '../hooks/useTranslation'
+import { themeClassName } from '../lib/theme'
 
 const RING_PULSE_MS = 500
 
@@ -283,11 +284,11 @@ function Timer({
       className={
         isFullscreen
           ? 'bg-pine w-full h-full flex items-center justify-center p-6'
-          : 'flex flex-col items-center gap-4 w-full'
+          : 'flex flex-col items-center gap-6 w-full'
       }
     >
       {!isFullscreen && showWelcome && (
-        <div className="relative bg-black/20 border border-cream/10 rounded-3xl px-6 py-5 shadow-lg w-full max-w-md">
+        <div className="relative bg-pine-dark border border-cream/10 rounded-3xl px-6 py-5 shadow-lg w-full max-w-xl">
           <button
             type="button"
             onClick={onDismissWelcome}
@@ -310,69 +311,79 @@ function Timer({
         </div>
       )}
 
-      <div
-        className={
-          isFullscreen
-            ? 'relative flex flex-col items-center gap-6 w-full max-w-md'
-            : 'relative bg-black/20 border border-cream/10 rounded-3xl px-6 sm:px-10 py-10 shadow-lg w-full max-w-md flex flex-col items-center gap-6'
-        }
-      >
-        <div className="absolute top-3 right-3 flex items-center gap-3">
+      {/* No card/border here on purpose — mockup 06's calmer direction has
+          the ring and controls sitting directly on the page background,
+          not boxed. `relative` is kept only as the positioning anchor for
+          the PiP/fullscreen/help icons in the corner. */}
+      <div className="relative flex flex-col items-center gap-8 w-full max-w-xl py-4">
+        {/* True 3-column layout at `sm`+ (spacer / pills / icons) so the
+            pills land centered relative to the full row width, with the
+            icon cluster balanced symmetrically in its own right-hand
+            column — the previous absolute-positioned icon row had nothing
+            matching it on the left, which read as lopsided. Below `sm`,
+            falls back to two stacked rows (icons above pills, via the
+            order-1/order-2 pair) since there isn't room for three columns
+            side by side on a phone. */}
+        <div className="w-full flex flex-col items-center gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-0">
+          <div className="hidden sm:block sm:col-start-1" aria-hidden="true" />
+
           {!isFullscreen && (
+            <div className="flex gap-2 order-2 sm:order-none sm:col-start-2 sm:justify-self-center">
+              {SESSION_ORDER.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleSwitch(type)}
+                  title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
+                  className={
+                    'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
+                    (sessionType === type
+                      ? 'bg-tomato/15 border-tomato/60 text-tomato'
+                      : 'border-cream/15 text-sage hover:border-cream/30')
+                  }
+                >
+                  {t(LABEL_KEYS[type])}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 justify-end w-full order-1 sm:order-none sm:w-auto sm:col-start-3 sm:justify-self-end">
+            {!isFullscreen && (
+              <button
+                type="button"
+                onClick={() => setShortcutsModalOpen(true)}
+                className="text-sage hover:text-cream text-sm leading-none font-display"
+                aria-label={t('timer.keyboardShortcutsTitle')}
+                title={t('timer.keyboardShortcutsTitle')}
+              >
+                ?
+              </button>
+            )}
+            {!isFullscreen && pipSupported && (
+              <button
+                type="button"
+                onClick={togglePip}
+                className="text-sage hover:text-cream text-xs leading-none"
+                aria-label={pipWindow ? t('timer.closeMiniTimerAria') : t('timer.openMiniTimerAria')}
+                title={pipWindow ? t('timer.closeMiniTimerTitle') : t('timer.openMiniTimerTitle')}
+              >
+                PiP
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setShortcutsModalOpen(true)}
-              className="text-sage hover:text-cream text-sm leading-none font-display"
-              aria-label={t('timer.keyboardShortcutsTitle')}
-              title={t('timer.keyboardShortcutsTitle')}
+              onClick={toggleFullscreen}
+              className="text-sage hover:text-cream text-sm leading-none"
+              aria-label={isFullscreen ? t('timer.exitFullscreenAria') : t('timer.enterFullscreenAria')}
+              title={isFullscreen ? t('timer.exitFullscreenTitle') : t('timer.enterFullscreenTitle')}
             >
-              ?
+              ⛶
             </button>
-          )}
-          {!isFullscreen && pipSupported && (
-            <button
-              type="button"
-              onClick={togglePip}
-              className="text-sage hover:text-cream text-xs leading-none"
-              aria-label={pipWindow ? t('timer.closeMiniTimerAria') : t('timer.openMiniTimerAria')}
-              title={pipWindow ? t('timer.closeMiniTimerTitle') : t('timer.openMiniTimerTitle')}
-            >
-              PiP
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="text-sage hover:text-cream text-sm leading-none"
-            aria-label={isFullscreen ? t('timer.exitFullscreenAria') : t('timer.enterFullscreenAria')}
-            title={isFullscreen ? t('timer.exitFullscreenTitle') : t('timer.enterFullscreenTitle')}
-          >
-            ⛶
-          </button>
+          </div>
         </div>
 
-        {!isFullscreen && (
-          <div className="flex gap-2">
-            {SESSION_ORDER.map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => handleSwitch(type)}
-                title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
-                className={
-                  'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
-                  (sessionType === type
-                    ? 'bg-tomato/15 border-tomato/60 text-tomato'
-                    : 'border-cream/15 text-sage hover:border-cream/30')
-                }
-              >
-                {t(LABEL_KEYS[type])}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="relative w-60 h-60 sm:w-72 sm:h-72">
+        <div className="relative w-64 h-64 sm:w-80 sm:h-80">
           <svg
             viewBox="0 0 100 100"
             className={`w-full h-full ${accentClass} ${pulsing ? 'animate-ring-pulse' : ''}`}
@@ -397,78 +408,89 @@ function Timer({
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
               {t(LABEL_KEYS[sessionType])}
             </p>
-            <p className="font-display text-6xl text-cream tracking-tight tabular-nums">
+            <p className="font-display text-7xl text-cream tracking-tight tabular-nums">
               {formatTime(secondsLeft)}
             </p>
-            <div className="flex gap-2">
-              {Array.from({ length: cycleLength }, (_, i) => (
-                <span
-                  key={i}
-                  className={
-                    'w-2 h-2 rounded-full ' +
-                    (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
-                  }
-                />
-              ))}
-            </div>
           </div>
         </div>
 
-        <div className="text-center">
-          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
-          {activeTask ? (
-            <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
-          ) : (
-            <div>
-              <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
-              {!isFullscreen && onGoToPlanning && (
-                <button
-                  type="button"
-                  onClick={onGoToPlanning}
-                  className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
-                >
-                  {t('timer.goToPlanningButton')}
-                </button>
-              )}
-            </div>
-          )}
+        <div className="text-center flex flex-col items-center gap-3">
+          <div>
+            <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
+            {activeTask ? (
+              <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
+            ) : (
+              <div>
+                <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
+                {!isFullscreen && onGoToPlanning && (
+                  <button
+                    type="button"
+                    onClick={onGoToPlanning}
+                    className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
+                  >
+                    {t('timer.goToPlanningButton')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            {Array.from({ length: cycleLength }, (_, i) => (
+              <span
+                key={i}
+                className={
+                  'w-2 h-2 rounded-full ' +
+                  (i < filledDots ? 'bg-tomato' : 'border border-sage/40')
+                }
+              />
+            ))}
+          </div>
         </div>
 
-        <div className="flex gap-3">
-          {!isRunning && (
-            <button
-              type="button"
-              onClick={start}
-              className="font-sans px-7 py-3 rounded-full bg-tomato text-cream font-semibold text-sm tracking-wide"
-            >
-              {t('timer.start')}
-            </button>
-          )}
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex gap-3">
+            {!isRunning && (
+              <button
+                type="button"
+                onClick={start}
+                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
+              >
+                {t('timer.start')}
+              </button>
+            )}
+            {!isFullscreen && isRunning && isWork && (
+              <button
+                type="button"
+                onClick={handleFinishEarly}
+                className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
+              >
+                {t('timer.finishPomodoro')}
+              </button>
+            )}
+            {isRunning && !isWork && (
+              <button
+                type="button"
+                onClick={skipBreak}
+                className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
+              >
+                {t('timer.skipBreak')}
+              </button>
+            )}
+          </div>
+
+          {/* Softened on purpose — voiding is the "give up on this one"
+              path, so it shouldn't carry the same visual weight as Start
+              (previously an equally-bold tomato-bordered pill sitting right
+              next to it). A quiet underlined link reads as secondary
+              without hiding the control. */}
           {isRunning && isWork && (
             <button
               type="button"
               onClick={openVoidPrompt}
-              className="font-sans px-7 py-3 rounded-full border border-tomato text-tomato font-semibold text-sm tracking-wide"
+              className="font-sans text-xs text-sage hover:text-tomato underline decoration-dotted underline-offset-4 transition-colors"
             >
               {t('timer.voidPomodoro')}
-            </button>
-          )}
-          {!isFullscreen && isRunning && isWork && (
-            <button
-              type="button"
-              onClick={handleFinishEarly}
-              className="font-sans px-7 py-3 rounded-full border border-sage text-sage font-semibold text-sm tracking-wide"
-            >
-              {t('timer.finishPomodoro')}
-            </button>
-          )}
-          {isRunning && !isWork && (
-            <button
-              type="button"
-              onClick={skipBreak}
-              className="font-sans px-7 py-3 rounded-full border border-cream/20 text-cream text-sm tracking-wide"
-            >
-              {t('timer.skipBreak')}
             </button>
           )}
         </div>
@@ -567,7 +589,7 @@ function Timer({
       {pipWindow &&
         createPortal(
           <div
-            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${theme === 'light' ? 'light' : ''}`}
+            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${themeClassName(theme)}`}
           >
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
               {t(LABEL_KEYS[sessionType])}

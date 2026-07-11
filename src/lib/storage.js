@@ -208,6 +208,11 @@ const DEFAULT_SETTINGS = {
   userId: 'local',
   language: null,
   onboardingDismissed: false,
+  // A local personalization field, deliberately separate from Supabase auth
+  // — it's just what the header's greeting calls you, so it works the same
+  // for guests and signed-in users alike. Empty string means "not set,
+  // don't show a greeting", same convention as language's null.
+  displayName: '',
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map

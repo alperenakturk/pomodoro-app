@@ -15,16 +15,94 @@
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
-/* Light theme: swaps the background/foreground roles of pine and cream so
-   every existing bg-pine/text-cream/etc. utility keeps working unchanged —
-   only the token values differ. Pine is warmed toward a peachy cream (rather
-   than neutral off-white) so the light theme still reads as "tomato" — the
-   tomato/amber accent tokens themselves are untouched. */
-.light {
-  --color-pine: #fdf0e6;
-  --color-pine-dark: #f5ddc9;
-  --color-cream: #24312a;
-  --color-sage: #5c6b5e;
+/* Explicit re-declaration of the @theme defaults above, as a class rather
+   than only the implicit :root values. Needed so the Settings theme-picker's
+   swatch previews can force the dark palette on a preview swatch nested
+   inside a currently-active light theme — custom properties inherit, so
+   without this the "Dark" swatch would silently pick up the ambient light
+   theme's overridden values instead of resetting to dark. */
+.dark {
+  --color-pine: #2b3a2e;
+  --color-pine-dark: #1f2a21;
+  --color-tomato: #c84b31;
+  --color-tomato-dark: #a83a24;
+  --color-amber: #e8a33d;
+  --color-cream: #fbf8f1;
+  --color-sage: #8a9a8c;
+  color-scheme: dark;
+}
+
+/* Light themes: each swaps the background/foreground roles of pine and cream
+   (same trick as the original single light theme below) so every existing
+   bg-pine/text-cream/etc. utility keeps working unchanged — only the token
+   values differ. Deliberately does NOT redefine tomato/amber per theme even
+   though the design mockups pair each background with its own accent
+   (terracotta-red/forest-green/olive-mustard) — tomato/amber aren't purely
+   decorative, they're overloaded with real meaning app-wide (over- vs
+   under-estimate in diffHelpers.js, the Danger Zone's destructive-action
+   styling in SettingsModal.jsx). An earlier version of this file did vary them
+   per theme and it recolored the "Delete"/"Reset to Factory Settings"
+   buttons green in the Sage theme — a destructive action that stops reading
+   as alarming is a real regression, not just an aesthetic quirk. Keeping
+   tomato/amber fixed across every theme (dark or light) preserves that
+   meaning universally; only the neutral surface/text tokens vary here.
+
+   `.light` is kept as an alias of `.light-terracotta` — settings saved before
+   the multi-theme picker existed only ever stored the single legacy value
+   `'light'` (see lib/theme.js's themeClassName), and terracotta was the
+   closest existing palette to that original theme.
+
+   Values below are pixel-sampled directly from design-mockups/01-03 (page
+   background, card-interior text, inactive-pill/secondary-text regions, and
+   — see pine-dark below — the mockups' own elevated-card region), not
+   hand-eyeballed, so they track the mockups' actual tones precisely.
+
+   pine-dark is card/panel surface color (bg-pine-dark, used by every
+   `rounded-3xl` panel — Inventory, TodoToday, RecordsLog, Reports,
+   CategoryManager, DataTransfer, Timer's welcome card). It used to only be
+   an unused, vestigial token (real elevation came from `bg-black/20`, a
+   flat 20%-black wash that darkens whatever's under it) — fine on the dark
+   theme's already-dark pine, but on a light theme it muddied panels toward
+   grey instead of the mockups' own near-white cards. pine-dark now drives
+   panel backgrounds directly via `bg-pine-dark` instead:
+   - dark theme: unchanged in effect — #1f2a21 is what 20%-black-over-pine
+     already rounded to, so this is a no-op switch, not a visual change.
+   - light themes: sampled from the mockups' actual card region, which
+     reads *lighter* than the page (the opposite direction from dark mode,
+     where cards are darker than the page) — e.g. terracotta's card samples
+     #f1ddd4 against a #e7cdc4 page. */
+.light,
+.light-terracotta {
+  --color-pine: #e7cdc4;
+  --color-pine-dark: #f1ddd4;
+  --color-cream: #3a241d;
+  --color-sage: #8a6a5d;
+  color-scheme: light;
+}
+
+.light-sage {
+  --color-pine: #dbe5d2;
+  --color-pine-dark: #e7efdf;
+  --color-cream: #2a3322;
+  --color-sage: #6f8461;
+  color-scheme: light;
+}
+
+.light-sand {
+  --color-pine: #e9dfc4;
+  --color-pine-dark: #f2ead4;
+  --color-cream: #332c1a;
+  --color-sage: #8a7943;
+  color-scheme: light;
+}
+
+/* Fourth light theme, pixel-sampled from design-mockups/09 the same way as
+   the three above (page background, card region, main/secondary text). */
+.light-dusty-blue {
+  --color-pine: #d8e0e4;
+  --color-pine-dark: #e6ebed;
+  --color-cream: #20272c;
+  --color-sage: #657883;
   color-scheme: light;
 }
 

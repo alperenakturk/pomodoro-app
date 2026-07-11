@@ -95,7 +95,7 @@ function DataTransfer({ categories }) {
   }
 
   return (
-    <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full mt-6">
+    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full mt-6">
       <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2">
         {t('dataImport.title')}
       </p>

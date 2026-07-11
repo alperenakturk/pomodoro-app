@@ -6,10 +6,10 @@ const TABS = [
   { id: 'reports', labelKey: 'tabs.reports' },
 ]
 
-function TabNav({ activeTab, onChange }) {
+function TabNav({ activeTab, onChange, className = '' }) {
   const { t } = useTranslation()
   return (
-    <nav className="flex gap-2 justify-center flex-wrap px-4 sm:px-6 py-3 border-b border-cream/10">
+    <nav className={`flex gap-2 justify-center flex-wrap ${className}`}>
       {TABS.map((tab) => (
         <button
           key={tab.id}
