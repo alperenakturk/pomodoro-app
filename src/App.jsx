@@ -192,6 +192,19 @@ function AppInner() {
   // Settings is a modal now (design-mockups/05's sidebar-categorized dialog),
   // not a fourth tab — it no longer occupies an activeTab value at all.
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Which SettingsModal category to land on when it opens — 'general' via
+  // the header gear icon (see its onClick below), or 'data' via the "+ Add
+  // category" shortcut inside CategoryTagPicker (Inventory/Today's Tasks/
+  // Records Log), so a user assigning categories to a task isn't left to
+  // find Categories management on their own. SettingsModal only reads this
+  // once, as its initial state — it's a fresh mount each time the modal
+  // opens (conditionally rendered below), so setting this right before
+  // setSettingsOpen(true) is enough.
+  const [settingsInitialCategory, setSettingsInitialCategory] = useState('general')
+  function openCategoryManager() {
+    setSettingsInitialCategory('data')
+    setSettingsOpen(true)
+  }
 
   const [theme, setTheme] = useState(() => loadSettings().theme)
 
@@ -402,10 +415,10 @@ function AppInner() {
             onClick={() => setActiveTab('timer')}
             aria-label={t('header.homeAria')}
             title={t('header.homeAria')}
-            className="flex items-center gap-3 flex-shrink-0"
+            className="group flex items-center gap-3 flex-shrink-0"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
-            <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
+            <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap transition-colors group-hover:text-cream">
               {t('common.appTitle')}
             </p>
           </button>
@@ -435,7 +448,10 @@ function AppInner() {
           </button>
           <button
             type="button"
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => {
+              setSettingsInitialCategory('general')
+              setSettingsOpen(true)
+            }}
             aria-label={t('header.settingsAria')}
             title={t('header.settingsAria')}
             className={'text-sage hover:text-cream flex-shrink-0 ' + (settingsOpen ? 'text-tomato' : '')}
@@ -503,6 +519,7 @@ function AppInner() {
             reestimateTask={todayApi.reestimateTask}
             finishTask={handleFinishTask}
             categories={categoriesApi.categories}
+            onManageCategories={openCategoryManager}
           />
 
           <div className="flex flex-col gap-4">
@@ -524,6 +541,7 @@ function AppInner() {
               combineItems={inventoryApi.combineItems}
               onSendToToday={handleSendToToday}
               categories={categoriesApi.categories}
+              onManageCategories={openCategoryManager}
             />
           </div>
         </div>
@@ -536,7 +554,7 @@ function AppInner() {
             categories={categoriesApi.categories}
             workMinutes={pomodoro.workMinutes}
           />
-          <RecordsLog categories={categoriesApi.categories} />
+          <RecordsLog categories={categoriesApi.categories} onManageCategories={openCategoryManager} />
         </div>
 
       </main>
@@ -544,6 +562,7 @@ function AppInner() {
       {settingsOpen && (
         <SettingsModal
           onClose={() => setSettingsOpen(false)}
+          initialCategory={settingsInitialCategory}
           cycleLength={pomodoro.cycleLength}
           setCycleLength={pomodoro.setCycleLength}
           resetCycleLength={pomodoro.resetCycleLength}

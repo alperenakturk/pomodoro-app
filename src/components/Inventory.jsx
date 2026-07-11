@@ -46,6 +46,7 @@ function InventoryRow({
   updateItem,
   selected,
   onToggleSelect,
+  onManageCategories,
 }) {
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(item.text)
@@ -102,6 +103,7 @@ function InventoryRow({
           <CategoryTagPicker
             categories={categories}
             value={categoryIds}
+            onAddCategory={onManageCategories}
             onChange={setCategoryIds}
             className="w-36"
           />
@@ -268,6 +270,7 @@ function Inventory({
   combineItems,
   onSendToToday,
   categories,
+  onManageCategories,
 }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
@@ -373,7 +376,13 @@ function Inventory({
           rows={2}
           className={`flex-1 text-xs resize-y ${inputClass}`}
         />
-        <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
+        <CategoryTagPicker
+          categories={categories}
+          value={categoryIds}
+          onChange={setCategoryIds}
+          onAddCategory={onManageCategories}
+          className="w-36"
+        />
       </div>
 
       <div className="flex gap-2 mb-4 items-center">
@@ -438,6 +447,7 @@ function Inventory({
             updateItem={updateItem}
             selected={selectedIds.has(item.id)}
             onToggleSelect={toggleSelect}
+            onManageCategories={onManageCategories}
           />
         ))}
       </ul>

@@ -14,7 +14,7 @@ function Dot({ color }) {
   )
 }
 
-function CategoryTagPicker({ id, categories, value, onChange, className = '' }) {
+function CategoryTagPicker({ id, categories, value, onChange, onAddCategory, className = '' }) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
   const { t } = useTranslation()
@@ -43,6 +43,14 @@ function CategoryTagPicker({ id, categories, value, onChange, className = '' }) 
     onChange(
       value.includes(categoryId) ? value.filter((v) => v !== categoryId) : [...value, categoryId]
     )
+  }
+
+  // Opens Settings > Data (see App.jsx's openCategoryManager) — a user
+  // assigning categories to a task shouldn't have to go find where
+  // categories are managed on their own.
+  function handleAddCategory() {
+    setOpen(false)
+    onAddCategory()
   }
 
   return (
@@ -106,6 +114,17 @@ function CategoryTagPicker({ id, categories, value, onChange, className = '' }) 
               </li>
             )
           })}
+          {onAddCategory && (
+            <li role="option" aria-selected={false} className="border-t border-cream/10">
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                className="w-full text-left px-2 py-1.5 text-xs whitespace-nowrap text-tomato hover:bg-cream/10"
+              >
+                + {t('categoryPicker.addCategory')}
+              </button>
+            </li>
+          )}
         </ul>
       )}
     </div>

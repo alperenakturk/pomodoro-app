@@ -201,6 +201,7 @@ export default {
   categoryPicker: {
     noneSelected: 'Kategori yok',
     noneYet: 'Henüz kategori yok',
+    addCategory: 'Kategori ekle',
   },
 
   categorySelect: {

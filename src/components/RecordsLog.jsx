@@ -49,7 +49,7 @@ function CategoryTags({ categoryIds, categories }) {
   )
 }
 
-function RecordRow({ record, categories, onDelete }) {
+function RecordRow({ record, categories, onDelete, onManageCategories }) {
   const [editing, setEditing] = useState(false)
   const [activity, setActivity] = useState(record.activity)
   const [categoryIds, setCategoryIds] = useState(record.categoryIds ?? [])
@@ -91,7 +91,13 @@ function RecordRow({ record, categories, onDelete }) {
             aria-label={t('recordsLog.activityAria')}
             className={`flex-1 ${inputClass}`}
           />
-          <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
+          <CategoryTagPicker
+            categories={categories}
+            value={categoryIds}
+            onChange={setCategoryIds}
+            onAddCategory={onManageCategories}
+            className="w-36"
+          />
         </div>
         <div className="flex items-center gap-2">
           <label htmlFor={`est-${record.id}`} className="text-sage text-[10px] uppercase tracking-wide">
@@ -219,7 +225,7 @@ function VoidLogRow({ entry, categories, onDelete }) {
   )
 }
 
-function RecordsLog({ categories = [] }) {
+function RecordsLog({ categories = [], onManageCategories }) {
   const { t } = useTranslation()
   const [log, setLog] = useState(() => loadActivityLog())
   const [voidLog, setVoidLog] = useState(() => loadVoidLog())
@@ -310,7 +316,13 @@ function RecordsLog({ categories = [] }) {
 
       <ul className="flex flex-col gap-2 font-sans text-sm">
         {recent.map((r) => (
-          <RecordRow key={r.id} record={r} categories={categories} onDelete={handleDelete} />
+          <RecordRow
+            key={r.id}
+            record={r}
+            categories={categories}
+            onDelete={handleDelete}
+            onManageCategories={onManageCategories}
+          />
         ))}
       </ul>
 

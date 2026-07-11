@@ -35,7 +35,17 @@ function CategoryTags({ categoryIds, categories }) {
   )
 }
 
-function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onUpdate, onReestimate }) {
+function TaskRow({
+  task,
+  categories,
+  isActive,
+  onSelect,
+  onFinish,
+  onRemove,
+  onUpdate,
+  onReestimate,
+  onManageCategories,
+}) {
   const diff = diffOf(task)
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState(task.text)
@@ -107,6 +117,7 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
             categories={categories}
             value={categoryIds}
             onChange={setCategoryIds}
+            onAddCategory={onManageCategories}
             className="w-36"
           />
           <button
@@ -378,6 +389,7 @@ function TodoToday({
   reestimateTask,
   finishTask,
   categories,
+  onManageCategories,
 }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
@@ -457,7 +469,13 @@ function TodoToday({
           rows={2}
           className={`flex-1 text-xs resize-y ${inputClass}`}
         />
-        <CategoryTagPicker categories={categories} value={categoryIds} onChange={setCategoryIds} className="w-36" />
+        <CategoryTagPicker
+          categories={categories}
+          value={categoryIds}
+          onChange={setCategoryIds}
+          onAddCategory={onManageCategories}
+          className="w-36"
+        />
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
@@ -494,6 +512,7 @@ function TodoToday({
             onRemove={removeTask}
             onUpdate={updateTask}
             onReestimate={reestimateTask}
+            onManageCategories={onManageCategories}
           />
         ))}
       </ul>
@@ -516,6 +535,7 @@ function TodoToday({
               onRemove={removeTask}
               onUpdate={updateTask}
               onReestimate={reestimateTask}
+              onManageCategories={onManageCategories}
             />
           ))}
         </ul>

@@ -186,6 +186,7 @@ const CATEGORIES = [
 // only: every field still reads/writes the exact same props/hooks as before.
 function SettingsModal({
   onClose,
+  initialCategory = 'general',
   cycleLength,
   setCycleLength,
   resetCycleLength,
@@ -233,7 +234,10 @@ function SettingsModal({
   const { user, deleteAccount } = useAuth()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [activeCategory, setActiveCategory] = useState('general')
+  // Defaults to 'general' via the gear icon, but the "+ Add category"
+  // shortcut inside CategoryTagPicker (Inventory/Today's Tasks/Records Log)
+  // opens straight to 'data' instead — see App.jsx's openCategoryManager.
+  const [activeCategory, setActiveCategory] = useState(initialCategory)
   const [backgroundBusy, setBackgroundBusy] = useState(false)
   const [backgroundError, setBackgroundError] = useState(null)
   const backgroundFileInputRef = useRef(null)

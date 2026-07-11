@@ -197,6 +197,7 @@ export default {
   categoryPicker: {
     noneSelected: 'No categories',
     noneYet: 'No categories yet',
+    addCategory: 'Add category',
   },
 
   categorySelect: {
