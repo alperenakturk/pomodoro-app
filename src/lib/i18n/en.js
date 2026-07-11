@@ -25,9 +25,11 @@ export default {
 
   header: {
     homeAria: 'Go to Timer',
-    greeting: 'Hello, {{name}}! Focus 🍅',
+    greeting: 'Hello, {{name}}! Focus',
     settingsAria: 'Settings',
     accountMenuAria: 'Account menu',
+    streakAria: 'Streak',
+    streakComingSoon: 'Streak feature coming soon',
   },
 
   timer: {
@@ -218,6 +220,18 @@ export default {
     emptyState: 'No categories yet — tasks will show as uncategorized.',
   },
 
+  // Seeded once for a brand new account/guest with zero categories ever
+  // created (see useCategories.js's DEFAULT_CATEGORY_SEEDS) — plain starter
+  // labels, not a fixed/protected set; the user can rename, recolor, or
+  // delete any of them like any other category.
+  defaultCategories: {
+    work: 'Work',
+    study: 'Study',
+    personal: 'Personal',
+    admin: 'Admin',
+    health: 'Health',
+  },
+
   categoryColors: {
     teal: 'Teal',
     plum: 'Plum',
@@ -354,6 +368,8 @@ export default {
     categorySound: 'Sound',
     categoryAccount: 'Account',
     categoryData: 'Data',
+    categoryAchievements: 'Achievements',
+    achievementsComingSoon: 'Coming in the full version',
     categoryAbout: 'About',
     signInPromptLabel: 'Sync your data across devices',
     aboutDescription:
@@ -393,6 +409,7 @@ export default {
     customThemeHint: 'General applies to every screen except the Timer, which follows whichever session is active.',
     backgroundLabel: 'Fullscreen background image',
     backgroundHint: 'Only shown in Fullscreen Focus Mode — not on the Timer, Planning, Reports, or Settings screens.',
+    backgroundSignInHint: 'Sign in to unlock this feature',
     backgroundUploadButton: 'Upload image',
     backgroundUploading: 'Uploading…',
     backgroundRemoveButton: 'Remove',
@@ -413,7 +430,9 @@ export default {
     autoStartBreaksHint: 'When a Pomodoro ends, start the break automatically instead of waiting for Start.',
     autoStartPomodorosLabel: 'Auto-start Pomodoros',
     autoStartPomodorosHint: 'When a break ends, start the next Pomodoro automatically instead of waiting for Start.',
-    volumeLabel: 'Volume',
+    effectsVolumeLabel: 'Sound effects volume',
+    ambientVolumeLabel: 'Ambient sound volume',
+    testingButton: 'Testing…',
     ambientSoundLabel: 'Ambient sound',
     ambientSoundHint: 'Plays quietly during an active Pomodoro, stopping on pause, void, or completion.',
     ambientNone: 'None',

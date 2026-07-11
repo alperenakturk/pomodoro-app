@@ -126,14 +126,33 @@ async function upsertSingleton(table, userId, value) {
 // storage.js already has every loadX() function in scope and calls this
 // with their results, avoiding a circular import.
 //
-// Returns { migrated, error }. On any error, nothing about localStorage is
-// touched by the caller (see storage.js's signInToRemote) — the whole
-// point of surfacing the error instead of throwing past this function.
+// Each collection is isolated in its own try/catch — one table rejecting a
+// row (e.g. a schema/CHECK-constraint mismatch on the Supabase side; see
+// schema.sql's "schema-drift fix" block for the real example that used to
+// hit this) must not discard every OTHER collection that already synced
+// successfully. This used to be one big try/catch around the whole
+// function: a single bad row in, say, `ticks` (a tick type added by a
+// later JS feature, e.g. `'pause'`, that the CHECK constraint didn't know
+// about yet) aborted the entire migration — silently leaving
+// `timetable`/`categories`/`void_log`/`settings`/`timer_state` never even
+// attempted, while `inventory`/`today_tasks`/`activity_log` (processed
+// earlier in the loop) had already upserted fine. The caller still saw a
+// blanket "couldn't sync" error, because the thrown exception discarded
+// that already-successful work along with everything after it.
+//
+// Returns { migrated, error }. `error` is only non-null when NOTHING synced
+// at all (every collection's fetch/upsert failed — a real total failure,
+// e.g. network down or a misconfigured project) — anything less than that
+// stays in remote mode, with the specific failure(s) only logged to the
+// console, not surfaced as a scary blanket error for what's actually a
+// partial, mostly-successful sync.
 export async function initializeRemoteData(userId, localSnapshots) {
-  try {
-    let migrated = false
+  let migrated = false
+  let anySuccess = false
+  let lastError = null
 
-    for (const [key, table] of Object.entries(ARRAY_TABLES)) {
+  for (const [key, table] of Object.entries(ARRAY_TABLES)) {
+    try {
       const remoteItems = await fetchArrayTable(table, userId)
       const localItems = localSnapshots[key] ?? []
       let finalItems = remoteItems
@@ -144,8 +163,14 @@ export async function initializeRemoteData(userId, localSnapshots) {
       }
       cache[key] = finalItems
       knownIds[key] = new Set(finalItems.map((item) => item.id))
+      anySuccess = true
+    } catch (error) {
+      console.error(`Failed to sync ${key} to Supabase:`, error)
+      lastError = error
     }
+  }
 
+  try {
     for (const [key, table] of Object.entries(SINGLETON_TABLES)) {
       const remoteValue = await fetchSingletonTableWithRetry(table, userId)
       if (remoteValue) {
@@ -164,12 +189,14 @@ export async function initializeRemoteData(userId, localSnapshots) {
         cache[key] = null
       }
     }
-
-    activeUserId = userId
-    return { migrated, error: null }
+    anySuccess = true
   } catch (error) {
-    return { migrated: false, error }
+    console.error('Failed to sync settings/timer state to Supabase:', error)
+    lastError = error
   }
+
+  if (anySuccess) activeUserId = userId
+  return { migrated, error: anySuccess ? null : lastError }
 }
 
 // Called on sign-out — storage.js switches its active provider back to

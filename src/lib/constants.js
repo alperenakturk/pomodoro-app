@@ -29,3 +29,17 @@ export const CATEGORY_COLORS = [
   { name: 'Ochre', key: 'ochre', value: '#b8803f' },
   { name: 'Indigo', key: 'indigo', value: '#5a5a9c' },
 ]
+
+// Seeded once (see useCategories.js) for a brand new account/guest with no
+// categories at all yet — a reasonable, editable/deletable starting point
+// rather than an empty list. `labelKey` looks up the localized name via
+// t(`defaultCategories.${labelKey}`); `colorIndex` picks from CATEGORY_COLORS
+// above, spread out rather than adjacent so the starter set reads as visually
+// distinct at a glance.
+export const DEFAULT_CATEGORY_SEEDS = [
+  { labelKey: 'work', colorIndex: 2 }, // Slate
+  { labelKey: 'study', colorIndex: 0 }, // Teal
+  { labelKey: 'personal', colorIndex: 5 }, // Rose
+  { labelKey: 'admin', colorIndex: 4 }, // Mustard
+  { labelKey: 'health', colorIndex: 3 }, // Moss
+]

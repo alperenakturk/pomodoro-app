@@ -156,15 +156,52 @@ describe('initializeRemoteData', () => {
     expect(get('pomodoro_settings', null)).toMatchObject({ theme: 'light', cycleLength: 6 })
   })
 
-  it('returns an error (and leaves nothing migrated) when a fetch fails, without throwing', async () => {
-    const { initializeRemoteData } = await loadRemoteProviderWith({
+  // A single collection's fetch failing (e.g. a stray schema/CHECK-constraint
+  // mismatch on just one table) must not discard the rest of an otherwise-
+  // successful sync — see initializeRemoteData's own comment for the real
+  // bug this regression-tests (a 'pause' tick and a non-default theme value
+  // used to poison the *entire* migration this way, surfacing a false
+  // "couldn't sync" error even though most collections had already synced).
+  it("logs but does not surface an error when only one collection's fetch fails, since everything else succeeded", async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { initializeRemoteData, get } = await loadRemoteProviderWith({
       inventory: { arraySelect: { data: null, error: { message: 'network error' } } },
+    })
+
+    const result = await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+
+    expect(result.error).toBeNull()
+    // migrated is true here because EMPTY_SNAPSHOTS' settings fixture still
+    // has a truthy local value with no existing remote row — unrelated to
+    // the inventory failure, just this fixture's own baseline behavior.
+    expect(result.migrated).toBe(true)
+    // The failing collection's cache never got warmed — callers fall back
+    // to whatever default they pass to get(), same as "nothing synced yet."
+    expect(get('pomodoro_inventory', 'fallback')).toBe('fallback')
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('pomodoro_inventory'), expect.anything())
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('returns an error only when every single collection fails (a real total failure)', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failure = { data: null, error: { message: 'network error' } }
+    const { initializeRemoteData } = await loadRemoteProviderWith({
+      inventory: { arraySelect: failure },
+      today_tasks: { arraySelect: failure },
+      activity_log: { arraySelect: failure },
+      ticks: { arraySelect: failure },
+      timetable: { arraySelect: failure },
+      categories: { arraySelect: failure },
+      void_log: { arraySelect: failure },
+      timer_state: { singleSelect: failure },
+      settings: { singleSelect: failure },
     })
 
     const result = await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
 
     expect(result.error).toBeTruthy()
     expect(result.migrated).toBe(false)
+    consoleErrorSpy.mockRestore()
   })
 })
 

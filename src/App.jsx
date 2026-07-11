@@ -383,40 +383,56 @@ function AppInner() {
 
   return (
     <div className={`min-h-screen bg-pine ${themeClassName(rootThemeId)}`}>
-      {/* Mobile: plain flex-wrap (logo + right cluster on row 1, nav pushed
-          to row 2 via order-3). Desktop: an explicit 3-column grid instead —
-          flex with only `ml-auto` on the right cluster and `mx-auto` on nav
-          looks similar but isn't true centering: with 3 items sharing the
-          row, auto-margins split the *leftover* space between all of them
-          (CSS distributes free space across every auto margin present, not
-          per-item), so nav lands off-center by however wide the logo is.
-          A grid's 1fr center column is centered relative to the whole header
-          regardless of the other two columns' widths. */}
-      <header className="border-b border-cream/10 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-x-6 sm:gap-y-0">
-        <button
-          type="button"
-          onClick={() => setActiveTab('timer')}
-          aria-label={t('header.homeAria')}
-          title={t('header.homeAria')}
-          className="flex items-center gap-3 flex-shrink-0"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
-          <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
-            {t('common.appTitle')}
+      {/* Mobile: plain flex-wrap (logo+time / right cluster on row 1, nav
+          pushed to row 2 via order-3). Desktop: an explicit 3-column grid,
+          `1fr auto 1fr` — nav sits in the middle `auto` column (sized to its
+          own content) while the two `1fr` side columns always split the
+          *remaining* space exactly evenly, whatever their own content's
+          width — that's what keeps nav truly centered regardless of how
+          long the header greeting or the left group get, unlike an
+          `auto 1fr auto` split (where nav's own column would shrink/grow
+          and drag its centered content off the header's true midpoint) or
+          plain flex with `ml-auto`/`mx-auto` (auto-margins split leftover
+          space across every one, not per-item). `justify-self-start/end` on
+          the two side groups stops them stretching to fill their track. */}
+      <header className="border-b border-cream/10 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-x-6 sm:gap-y-0">
+        <div className="flex items-center gap-4 flex-shrink-0 sm:justify-self-start">
+          <button
+            type="button"
+            onClick={() => setActiveTab('timer')}
+            aria-label={t('header.homeAria')}
+            title={t('header.homeAria')}
+            className="flex items-center gap-3 flex-shrink-0"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-tomato flex-shrink-0" />
+            <p className="text-sage text-xs font-sans tracking-widest uppercase whitespace-nowrap">
+              {t('common.appTitle')}
+            </p>
+          </button>
+          <p className="text-sage text-xs font-sans whitespace-nowrap">
+            {today} · {time}
           </p>
-        </button>
+        </div>
 
-        <TabNav activeTab={activeTab} onChange={setActiveTab} className="order-3 w-full sm:order-none sm:w-full" />
+        <TabNav activeTab={activeTab} onChange={setActiveTab} className="order-3 w-full sm:order-none sm:w-auto" />
 
-        <div className="flex items-center gap-3 ml-auto flex-shrink-0">
+        <div className="flex items-center gap-3 ml-auto flex-shrink-0 sm:justify-self-end">
           {displayName.trim() && (
             <p className="text-cream text-xs font-sans whitespace-nowrap hidden sm:block">
               {t('header.greeting', { name: displayName.trim() })}
             </p>
           )}
-          <p className="text-sage text-xs font-sans whitespace-nowrap">
-            {today} · {time}
-          </p>
+          {/* Streak placeholder — no real streak tracking yet, just an icon
+              that names the future feature when clicked. */}
+          <button
+            type="button"
+            onClick={() => window.alert(t('header.streakComingSoon'))}
+            aria-label={t('header.streakAria')}
+            title={t('header.streakAria')}
+            className="text-sm leading-none flex-shrink-0"
+          >
+            🍅
+          </button>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
@@ -549,6 +565,8 @@ function AppInner() {
           setChimeStyle={pomodoro.setChimeStyle}
           soundVolume={pomodoro.soundVolume}
           setSoundVolume={pomodoro.setSoundVolume}
+          ambientVolume={pomodoro.ambientVolume}
+          setAmbientVolume={pomodoro.setAmbientVolume}
           ambientSound={pomodoro.ambientSound}
           setAmbientSound={pomodoro.setAmbientSound}
           checkToBottom={checkToBottom}

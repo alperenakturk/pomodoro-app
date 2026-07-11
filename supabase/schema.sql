@@ -502,3 +502,62 @@ create policy "fullscreen_backgrounds_delete_own" on storage.objects
     bucket_id = 'fullscreen-backgrounds'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ============================================================================
+-- Schema-drift fix: settings/timer_state/ticks were falling behind the JS
+-- side (root-caused via chat while investigating a "Couldn't sync your
+-- data" banner that showed even when most data had actually synced fine —
+-- see CLAUDE.md's Cloud sync section and remoteProvider.js's
+-- initializeRemoteData() comment for the full write-up). Two concrete,
+-- verified mismatches between this file and storage.js/usePomodoro.js:
+--
+--   1. `ticks.type`'s CHECK constraint only allowed 'pomodoro' /
+--      'interruption-internal' / 'interruption-external' — but
+--      usePomodoro.js's pause() has written a 'pause'-typed tick ever since
+--      the Pause/Resume feature shipped. Any account with even one
+--      guest-recorded pause before their first sign-in had that tick
+--      rejected by Postgres, which poisoned the *entire* migration (see the
+--      comment above initializeRemoteData for why one bad row used to do
+--      that) even though every other collection had already synced fine.
+--   2. `settings.theme`'s CHECK constraint only allowed 'dark' / 'light' —
+--      but DEFAULT_SETTINGS.theme in storage.js is 'light-terracotta', and
+--      lib/theme.js defines five real palette ids plus the 'custom' meta-
+--      value. Essentially every real settings object (including a brand
+--      new user's *default* one) violated this constraint, so the settings
+--      row for practically every account failed to ever get created.
+--
+-- Also adds every `settings`/`timer_state` column that DEFAULT_SETTINGS/
+-- normalizeTimerState in storage.js has actually sent since — this file's
+-- original CREATE TABLE statements for these two tables were only ever
+-- updated piecemeal (e.g. the Fullscreen-background block above added just
+-- one column), never reconciled against the full current settings shape.
+-- ============================================================================
+
+alter table public.settings drop constraint if exists settings_theme_check;
+alter table public.settings
+  add constraint settings_theme_check
+  check (theme in ('dark', 'light-terracotta', 'light-sage', 'light-sand', 'light-dusty-blue', 'custom'));
+
+alter table public.ticks drop constraint if exists ticks_type_check;
+alter table public.ticks
+  add constraint ticks_type_check
+  check (type in ('pomodoro', 'interruption-internal', 'interruption-external', 'pause'));
+
+alter table public.settings
+  add column if not exists work_minutes integer not null default 25,
+  add column if not exists short_break_minutes integer not null default 5,
+  add column if not exists long_break_minutes integer not null default 15,
+  add column if not exists auto_start_breaks boolean not null default false,
+  add column if not exists auto_start_pomodoros boolean not null default false,
+  add column if not exists sound_volume integer not null default 100,
+  add column if not exists ambient_volume integer not null default 100,
+  add column if not exists ambient_sound text not null default 'none',
+  add column if not exists check_to_bottom boolean not null default false,
+  add column if not exists display_name text not null default '',
+  add column if not exists custom_theme_general text,
+  add column if not exists custom_theme_focus text,
+  add column if not exists custom_theme_short_break text,
+  add column if not exists custom_theme_long_break text;
+
+alter table public.timer_state
+  add column if not exists end_at timestamptz;

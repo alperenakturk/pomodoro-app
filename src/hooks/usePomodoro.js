@@ -13,7 +13,8 @@ import {
   playPing,
   requestNotificationPermission,
   notify,
-  setVolume as setAlertVolume,
+  setEffectsVolume as setAlertEffectsVolume,
+  setAmbientVolume as setAlertAmbientVolume,
   startAmbientSound,
   stopAmbientSound,
 } from '../lib/alert'
@@ -172,8 +173,10 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     patchSettings({ chimeStyle: style })
   }, [])
 
-  // 0-100, applied to every alert.js playback call (chime/ping/task-complete/
-  // ticking) via its own module-level volume — see alert.js's setVolume.
+  // 0-100, applied to the completion sounds only (chime/ping/task-complete) —
+  // see alert.js's setEffectsVolume. Kept as a separate setting/slider from
+  // ambientVolume below so a user can e.g. run ambient sound quietly in the
+  // background while completion chimes stay at full volume, or vice versa.
   const [soundVolume, setSoundVolumeState] = useState(() => loadSettings().soundVolume)
   const setSoundVolume = useCallback((n) => {
     const value = Math.min(100, Math.max(0, Math.round(n)))
@@ -181,8 +184,21 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     patchSettings({ soundVolume: value })
   }, [])
   useEffect(() => {
-    setAlertVolume(soundVolume)
+    setAlertEffectsVolume(soundVolume)
   }, [soundVolume])
+
+  // 0-100, applied only to the ambient background bed (ticking/rain/cafe/
+  // whiteNoise) — see alert.js's setAmbientVolume. Independent of
+  // soundVolume above.
+  const [ambientVolume, setAmbientVolumeState] = useState(() => loadSettings().ambientVolume)
+  const setAmbientVolume = useCallback((n) => {
+    const value = Math.min(100, Math.max(0, Math.round(n)))
+    setAmbientVolumeState(value)
+    patchSettings({ ambientVolume: value })
+  }, [])
+  useEffect(() => {
+    setAlertAmbientVolume(ambientVolume)
+  }, [ambientVolume])
 
   // Ambient background sound during an active work session only — see the
   // effect below that starts/stops it based on isRunning/sessionType. One of
@@ -453,6 +469,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     setChimeStyle,
     soundVolume,
     setSoundVolume,
+    ambientVolume,
+    setAmbientVolume,
     ambientSound,
     setAmbientSound,
     start,

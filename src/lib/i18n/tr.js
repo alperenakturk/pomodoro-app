@@ -29,9 +29,11 @@ export default {
 
   header: {
     homeAria: "Zamanlayıcı'ya git",
-    greeting: 'Merhaba, {{name}}! Odaklan 🍅',
+    greeting: 'Merhaba, {{name}}! Odaklan',
     settingsAria: 'Ayarlar',
     accountMenuAria: 'Hesap menüsü',
+    streakAria: 'Seri',
+    streakComingSoon: 'Streak özelliği yakında gelecek',
   },
 
   timer: {
@@ -222,6 +224,14 @@ export default {
     emptyState: 'Henüz kategori yok — görevler kategorisiz görünecek.',
   },
 
+  defaultCategories: {
+    work: 'İş',
+    study: 'Ders',
+    personal: 'Kişisel',
+    admin: 'Yönetimsel',
+    health: 'Sağlık',
+  },
+
   categoryColors: {
     teal: 'Turkuaz',
     plum: 'Erik Moru',
@@ -358,6 +368,8 @@ export default {
     categorySound: 'Ses',
     categoryAccount: 'Hesap',
     categoryData: 'Veri',
+    categoryAchievements: 'Başarılar',
+    achievementsComingSoon: 'Tam sürümle beraber eklenecektir',
     categoryAbout: 'Hakkında',
     signInPromptLabel: 'Verilerinizi cihazlar arasında senkronize edin',
     aboutDescription:
@@ -397,6 +409,7 @@ export default {
     customThemeHint: "Genel, Timer dışındaki tüm ekranlara uygulanır; Timer ise o an aktif olan oturumu takip eder.",
     backgroundLabel: 'Tam ekran arka plan görseli',
     backgroundHint: 'Yalnızca Tam Ekran Odak Modunda görünür — Zamanlayıcı, Planlama, Raporlar veya Ayarlar ekranlarında gösterilmez.',
+    backgroundSignInHint: 'Bu özelliği kullanmak için giriş yapmalısınız',
     backgroundUploadButton: 'Görsel yükle',
     backgroundUploading: 'Yükleniyor…',
     backgroundRemoveButton: 'Kaldır',
@@ -417,7 +430,9 @@ export default {
     autoStartBreaksHint: 'Bir Pomodoro bittiğinde, Başlat\'ı beklemeden molayı otomatik olarak başlat.',
     autoStartPomodorosLabel: "Pomodoro'ları otomatik başlat",
     autoStartPomodorosHint: "Bir mola bittiğinde, Başlat'ı beklemeden bir sonraki Pomodoro'yu otomatik olarak başlat.",
-    volumeLabel: 'Ses düzeyi',
+    effectsVolumeLabel: 'Ses efektleri düzeyi',
+    ambientVolumeLabel: 'Ortam sesi düzeyi',
+    testingButton: 'Deneniyor…',
     ambientSoundLabel: 'Ortam sesi',
     ambientSoundHint: 'Aktif bir Pomodoro sırasında hafifçe çalar; duraklatma, iptal veya tamamlanmada durur.',
     ambientNone: 'Yok',
@@ -429,7 +444,7 @@ export default {
     checkToBottomHint: "Bir görev tamamlandı olarak işaretlendiğinde bugünün listesinin en altına taşınsın.",
     displayNameLabel: 'Adınız',
     displayNameHint: "Header'daki kişiselleştirilmiş selamda gösterilir.",
-    displayNamePlaceholder: 'ör. Ayşe',
+    displayNamePlaceholder: 'ör. Sanem',
     languageLabel: 'Dil',
     languageEnglish: 'English',
     languageTurkish: 'Türkçe',

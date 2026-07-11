@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { usePomodoro } from './usePomodoro'
 import { loadTicks } from '../lib/storage'
-import { setVolume, startAmbientSound, stopAmbientSound } from '../lib/alert'
+import { setEffectsVolume, setAmbientVolume, startAmbientSound, stopAmbientSound } from '../lib/alert'
 
 vi.mock('../lib/alert', () => ({
   unlockAudio: vi.fn(),
@@ -10,7 +10,8 @@ vi.mock('../lib/alert', () => ({
   playPing: vi.fn(),
   requestNotificationPermission: vi.fn(),
   notify: vi.fn(),
-  setVolume: vi.fn(),
+  setEffectsVolume: vi.fn(),
+  setAmbientVolume: vi.fn(),
   startAmbientSound: vi.fn(),
   stopAmbientSound: vi.fn(),
 }))
@@ -396,19 +397,19 @@ describe('usePomodoro', () => {
   })
 
   describe('sound volume', () => {
-    it('setSoundVolume clamps to 0-100, persists, and applies to alert.js', () => {
+    it('setSoundVolume clamps to 0-100, persists, and applies to alert.js as the effects volume', () => {
       const { result } = renderHook(() => usePomodoro())
 
       act(() => result.current.setSoundVolume(-10))
       expect(result.current.soundVolume).toBe(0)
-      expect(setVolume).toHaveBeenLastCalledWith(0)
+      expect(setEffectsVolume).toHaveBeenLastCalledWith(0)
 
       act(() => result.current.setSoundVolume(150))
       expect(result.current.soundVolume).toBe(100)
 
       act(() => result.current.setSoundVolume(40))
       expect(result.current.soundVolume).toBe(40)
-      expect(setVolume).toHaveBeenLastCalledWith(40)
+      expect(setEffectsVolume).toHaveBeenLastCalledWith(40)
 
       const { result: resumed } = renderHook(() => usePomodoro())
       expect(resumed.current.soundVolume).toBe(40)
@@ -416,7 +417,21 @@ describe('usePomodoro', () => {
 
     it('applies the persisted volume to alert.js on mount', () => {
       renderHook(() => usePomodoro())
-      expect(setVolume).toHaveBeenCalledWith(100) // default
+      expect(setEffectsVolume).toHaveBeenCalledWith(100) // default
+    })
+
+    it('setAmbientVolume clamps to 0-100, persists, and applies to alert.js independently of setSoundVolume', () => {
+      const { result } = renderHook(() => usePomodoro())
+
+      act(() => result.current.setAmbientVolume(-10))
+      expect(result.current.ambientVolume).toBe(0)
+      expect(setAmbientVolume).toHaveBeenLastCalledWith(0)
+
+      act(() => result.current.setAmbientVolume(150))
+      expect(result.current.ambientVolume).toBe(100)
+
+      act(() => result.current.setSoundVolume(40))
+      expect(result.current.ambientVolume).toBe(100) // unaffected by the effects slider
     })
   })
 

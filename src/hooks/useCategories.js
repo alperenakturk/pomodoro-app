@@ -1,9 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadCategories, saveCategories } from '../lib/storage'
-import { CATEGORY_COLORS } from '../lib/constants'
+import { loadCategories, saveCategories, loadSettings, patchSettings } from '../lib/storage'
+import { CATEGORY_COLORS, DEFAULT_CATEGORY_SEEDS } from '../lib/constants'
+import { resolveLanguage, translate } from '../lib/i18n'
+
+// A brand new account/guest starts with a small, editable/deletable starter
+// set instead of an empty list — `defaultCategoriesSeeded` (storage.js)
+// guards this to run exactly once ever, so a user who later deletes every
+// category on purpose doesn't see them silently reappear. Not a React
+// component, so it reaches for the plain translate()/resolveLanguage()
+// functions directly (same bridge pattern usePomodoro.js uses for its
+// notification strings) rather than the LanguageContext.
+function seedDefaultCategories() {
+  const language = resolveLanguage(loadSettings().language)
+  return DEFAULT_CATEGORY_SEEDS.map(({ labelKey, colorIndex }) => ({
+    id: crypto.randomUUID(),
+    name: translate(language, `defaultCategories.${labelKey}`),
+    color: CATEGORY_COLORS[colorIndex].value,
+  }))
+}
 
 export function useCategories() {
-  const [categories, setCategories] = useState(() => loadCategories())
+  const [categories, setCategories] = useState(() => {
+    const loaded = loadCategories()
+    if (loaded.length > 0 || loadSettings().defaultCategoriesSeeded) return loaded
+    patchSettings({ defaultCategoriesSeeded: true })
+    return seedDefaultCategories()
+  })
 
   useEffect(() => {
     saveCategories(categories)

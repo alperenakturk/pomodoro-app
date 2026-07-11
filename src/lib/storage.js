@@ -201,6 +201,7 @@ const DEFAULT_SETTINGS = {
   autoStartBreaks: false,
   autoStartPomodoros: false,
   soundVolume: 100,
+  ambientVolume: 100,
   ambientSound: 'none',
   checkToBottom: false,
   theme: 'light-terracotta',
@@ -229,6 +230,12 @@ const DEFAULT_SETTINGS = {
   // actually in Fullscreen Focus Mode). null for guests and for signed-in
   // users who haven't uploaded one. Always shown as-is, no dimming overlay.
   fullscreenBackgroundPath: null,
+  // Flips to true the first time useCategories.js seeds its starter
+  // category set (see DEFAULT_CATEGORY_SEEDS there) — false means "never
+  // seeded yet," same one-time-only pattern as onboardingDismissed above.
+  // Without this flag, a user who deletes every category on purpose would
+  // see the starter set silently reappear on their next reload.
+  defaultCategoriesSeeded: false,
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map

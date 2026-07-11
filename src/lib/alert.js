@@ -10,24 +10,32 @@ export function unlockAudio() {
   if (audioCtx.state === 'suspended') audioCtx.resume()
 }
 
-// Module-level, 0-1 — every playTone call below scales its peak gain by this,
-// so the Settings volume slider (0-100, see usePomodoro's setSoundVolume)
-// affects every sound (chime/ping/task-complete/ticking) without threading a
-// volume argument through each individual playX() call site.
-let volume = 1
+// Two independent, module-level 0-1 volumes — split so the completion
+// sounds (chime/ping/task-complete) and the ambient background bed
+// (ticking/rain/cafe/whiteNoise) can be turned down/up separately (Settings
+// > Sound has two sliders, see usePomodoro's setSoundVolume/setAmbientVolume).
+// Every one-shot playTone call reads `effectsVolume` fresh by default; the
+// ticking/cafe-clink tones (which are ambient, not effects) pass
+// `ambientVolume` explicitly instead — see their call sites below.
+let effectsVolume = 1
+let ambientVolume = 1
 
-export function setVolume(percent) {
-  volume = Math.min(1, Math.max(0, percent / 100))
-  // Continuous ambient beds (rain/cafe/whiteNoise) are already playing when
+export function setEffectsVolume(percent) {
+  effectsVolume = Math.min(1, Math.max(0, percent / 100))
+}
+
+export function setAmbientVolume(percent) {
+  ambientVolume = Math.min(1, Math.max(0, percent / 100))
+  // The continuous noise bed (rain/cafe/whiteNoise) is already playing when
   // the user drags the slider, unlike the one-shot tones below (which just
-  // read `volume` fresh the next time they're triggered) — so this is the
+  // read the volume fresh the next time they're triggered) — so this is the
   // one place that needs to reach into an already-running audio graph.
   if (ambientGainNode) {
-    ambientGainNode.gain.value = Math.max(0.0001, ambientBaseGain * volume)
+    ambientGainNode.gain.value = Math.max(0.0001, ambientBaseGain * ambientVolume)
   }
 }
 
-function playTone(freq, offset, duration, peak = 0.3) {
+function playTone(freq, offset, duration, peak = 0.3, volume = effectsVolume) {
   const now = audioCtx.currentTime
   const osc = audioCtx.createOscillator()
   const gain = audioCtx.createGain()
@@ -123,7 +131,7 @@ let ambientClinkIntervalId = null
 
 function playTickTone() {
   if (!audioCtx) return
-  playTone(1800, 0, 0.03, 0.05)
+  playTone(1800, 0, 0.03, 0.05, ambientVolume)
 }
 
 function createNoiseBuffer(seconds = 2) {
@@ -138,7 +146,7 @@ function createNoiseBuffer(seconds = 2) {
 
 function playCafeClink() {
   if (!audioCtx) return
-  playTone(1600 + Math.random() * 900, 0, 0.05, 0.04)
+  playTone(1600 + Math.random() * 900, 0, 0.05, 0.04, ambientVolume)
 }
 
 // `filterConfig` is null for unfiltered white noise, or { type, frequency,
@@ -150,7 +158,7 @@ function startNoiseBed(baseGain, filterConfig) {
 
   const gain = audioCtx.createGain()
   ambientBaseGain = baseGain
-  gain.gain.value = Math.max(0.0001, baseGain * volume)
+  gain.gain.value = Math.max(0.0001, baseGain * ambientVolume)
 
   let lastNode = source
   if (filterConfig) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { unlockAudio, playChime, CHIME_STYLES, AMBIENT_SOUNDS } from '../lib/alert'
+import { unlockAudio, playChime, CHIME_STYLES, AMBIENT_SOUNDS, startAmbientSound, stopAmbientSound } from '../lib/alert'
 import {
   DEFAULT_CYCLE_LENGTH,
   DEFAULT_WORK_MINUTES,
@@ -143,6 +143,20 @@ function DataIcon({ className }) {
   )
 }
 
+// Placeholder category (see CATEGORIES below) — no real achievement system
+// yet, just a "coming in the full version" message. A simple star/badge
+// glyph, same stroke-only style as the other sidebar icons.
+function AchievementsIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path
+        d="M12 4.5 14 9l5 .6-3.7 3.4.9 5-4.2-2.4-4.2 2.4.9-5L5 9.6 10 9Z"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function AboutIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -159,6 +173,7 @@ const CATEGORIES = [
   { id: 'sound', labelKey: 'settings.categorySound', Icon: SoundIcon },
   { id: 'account', labelKey: 'settings.categoryAccount', Icon: AccountIcon },
   { id: 'data', labelKey: 'settings.categoryData', Icon: DataIcon },
+  { id: 'achievements', labelKey: 'settings.categoryAchievements', Icon: AchievementsIcon },
   { id: 'about', labelKey: 'settings.categoryAbout', Icon: AboutIcon },
 ]
 
@@ -188,6 +203,8 @@ function SettingsModal({
   setChimeStyle,
   soundVolume,
   setSoundVolume,
+  ambientVolume,
+  setAmbientVolume,
   ambientSound,
   setAmbientSound,
   checkToBottom,
@@ -220,6 +237,8 @@ function SettingsModal({
   const [backgroundBusy, setBackgroundBusy] = useState(false)
   const [backgroundError, setBackgroundError] = useState(null)
   const backgroundFileInputRef = useRef(null)
+  const [ambientTesting, setAmbientTesting] = useState(false)
+  const ambientTestTimeoutRef = useRef(null)
   const closeButtonRef = useRef(null)
   const previouslyFocused = useRef(document.activeElement)
 
@@ -275,6 +294,35 @@ function SettingsModal({
     }
     setFullscreenBackgroundPath(null)
   }
+
+  // Ambient sound "Test" button — plays the currently-selected ambient
+  // sound for a few seconds so the user can preview it before committing,
+  // then stops automatically. Guards against overlapping clicks with
+  // `ambientTesting`/the timeout ref rather than letting a second click
+  // restart the preview clock.
+  const AMBIENT_TEST_DURATION_MS = 3000
+  function handleTestAmbientSound() {
+    if (ambientTesting || ambientSound === 'none') return
+    unlockAudio()
+    startAmbientSound(ambientSound)
+    setAmbientTesting(true)
+    ambientTestTimeoutRef.current = setTimeout(() => {
+      stopAmbientSound()
+      setAmbientTesting(false)
+      ambientTestTimeoutRef.current = null
+    }, AMBIENT_TEST_DURATION_MS)
+  }
+
+  // Stops a still-running preview if the modal closes mid-test — otherwise
+  // the ambient bed would keep playing after Settings is dismissed.
+  useEffect(() => {
+    return () => {
+      if (ambientTestTimeoutRef.current) {
+        clearTimeout(ambientTestTimeoutRef.current)
+        stopAmbientSound()
+      }
+    }
+  }, [])
 
   const chimeLabels = {
     classic: t('chime.classic'),
@@ -490,66 +538,78 @@ function SettingsModal({
                 )}
               </div>
 
-              {/* Signed-in only — Fullscreen Focus Mode backgrounds are
-                  stored in Supabase Storage (see backgroundStorage.js),
-                  which guests have no account to store anything in. Hidden
-                  entirely rather than shown-disabled, same treatment as
-                  Change Password / Delete Account below. */}
-              {user && (
-                <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span>{t('settings.backgroundLabel')}</span>
-                      <span className="text-sage/40 text-[10px]">{t('settings.backgroundHint')}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <input
-                        ref={backgroundFileInputRef}
-                        type="file"
-                        accept={ALLOWED_BACKGROUND_TYPES.join(',')}
-                        onChange={handleBackgroundFileChange}
-                        className="hidden"
-                      />
+              {/* Always shown, even for guests — Fullscreen Focus Mode
+                  backgrounds are stored in Supabase Storage (see
+                  backgroundStorage.js), which guests have no account to
+                  store anything in, so the controls are visually disabled
+                  (dimmed, not a native `disabled` attribute — they still
+                  need to be clickable) and open AuthModal instead of the
+                  file picker/remove action until signed in. */}
+              <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <span>{t('settings.backgroundLabel')}</span>
+                    <span className="text-sage/40 text-[10px]">{t('settings.backgroundHint')}</span>
+                    {!user && (
                       <button
                         type="button"
-                        onClick={() => backgroundFileInputRef.current?.click()}
-                        disabled={backgroundBusy}
-                        className="text-cream border border-cream/15 rounded-full px-3 py-1 disabled:opacity-50"
+                        onClick={() => setAuthModalOpen(true)}
+                        className="text-tomato text-[10px] text-left underline decoration-dotted mt-0.5"
                       >
-                        {backgroundBusy ? t('settings.backgroundUploading') : t('settings.backgroundUploadButton')}
+                        {t('settings.backgroundSignInHint')}
                       </button>
-                      {fullscreenBackgroundPath && (
-                        <button
-                          type="button"
-                          onClick={handleRemoveBackground}
-                          disabled={backgroundBusy}
-                          className="text-tomato border border-tomato/40 rounded-full px-3 py-1 disabled:opacity-50"
-                        >
-                          {t('settings.backgroundRemoveButton')}
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
-
-                  {backgroundError && (
-                    <p className="text-tomato text-[10px]">
-                      {t(
-                        backgroundError === 'size'
-                          ? 'settings.backgroundErrorSize'
-                          : backgroundError === 'type'
-                            ? 'settings.backgroundErrorType'
-                            : 'settings.backgroundErrorUpload',
-                        { max: MAX_BACKGROUND_BYTES / (1024 * 1024) }
-                      )}
-                    </p>
-                  )}
-
-                  {/* Not built yet — see chat/CLAUDE.md: a curated preset
-                      gallery (no upload needed) is planned for a future
-                      iteration, this upload flow is the first one. */}
-                  <p className="text-sage/40 text-[10px] italic">{t('settings.backgroundPresetGalleryHint')}</p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <input
+                      ref={backgroundFileInputRef}
+                      type="file"
+                      accept={ALLOWED_BACKGROUND_TYPES.join(',')}
+                      onChange={handleBackgroundFileChange}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => (user ? backgroundFileInputRef.current?.click() : setAuthModalOpen(true))}
+                      disabled={backgroundBusy}
+                      className={
+                        'border rounded-full px-3 py-1 disabled:opacity-50 ' +
+                        (user ? 'text-cream border-cream/15' : 'text-sage/50 border-cream/10')
+                      }
+                    >
+                      {backgroundBusy ? t('settings.backgroundUploading') : t('settings.backgroundUploadButton')}
+                    </button>
+                    {user && fullscreenBackgroundPath && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveBackground}
+                        disabled={backgroundBusy}
+                        className="text-tomato border border-tomato/40 rounded-full px-3 py-1 disabled:opacity-50"
+                      >
+                        {t('settings.backgroundRemoveButton')}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              )}
+
+                {user && backgroundError && (
+                  <p className="text-tomato text-[10px]">
+                    {t(
+                      backgroundError === 'size'
+                        ? 'settings.backgroundErrorSize'
+                        : backgroundError === 'type'
+                          ? 'settings.backgroundErrorType'
+                          : 'settings.backgroundErrorUpload',
+                      { max: MAX_BACKGROUND_BYTES / (1024 * 1024) }
+                    )}
+                  </p>
+                )}
+
+                {/* Not built yet — see chat/CLAUDE.md: a curated preset
+                    gallery (no upload needed) is planned for a future
+                    iteration, this upload flow is the first one. */}
+                <p className="text-sage/40 text-[10px] italic">{t('settings.backgroundPresetGalleryHint')}</p>
+              </div>
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
@@ -735,7 +795,7 @@ function SettingsModal({
               </div>
 
               <div className={rowClass}>
-                <label htmlFor="sound-volume">{t('settings.volumeLabel')}</label>
+                <label htmlFor="sound-volume">{t('settings.effectsVolumeLabel')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     id="sound-volume"
@@ -755,13 +815,39 @@ function SettingsModal({
                   <label htmlFor="ambient-sound">{t('settings.ambientSoundLabel')}</label>
                   <span className="text-sage/40 text-[10px]">{t('settings.ambientSoundHint')}</span>
                 </div>
-                <Select
-                  id="ambient-sound"
-                  value={ambientSound}
-                  options={AMBIENT_SOUNDS}
-                  labels={ambientSoundLabels}
-                  onChange={setAmbientSound}
-                />
+                <div className="flex items-center gap-2">
+                  <Select
+                    id="ambient-sound"
+                    value={ambientSound}
+                    options={AMBIENT_SOUNDS}
+                    labels={ambientSoundLabels}
+                    onChange={setAmbientSound}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestAmbientSound}
+                    disabled={ambientSound === 'none' || ambientTesting}
+                    className="underline decoration-dotted text-cream disabled:opacity-40 disabled:no-underline"
+                  >
+                    {ambientTesting ? t('settings.testingButton') : t('settings.testButton')}
+                  </button>
+                </div>
+              </div>
+
+              <div className={rowClass}>
+                <label htmlFor="ambient-volume">{t('settings.ambientVolumeLabel')}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="ambient-volume"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={ambientVolume}
+                    onChange={(e) => setAmbientVolume(Number(e.target.value))}
+                    className="w-28 accent-tomato"
+                  />
+                  <span className="w-8 text-right tabular-nums">{ambientVolume}%</span>
+                </div>
               </div>
             </div>
           )}
@@ -862,6 +948,12 @@ function SettingsModal({
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeCategory === 'achievements' && (
+            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-10 text-center">
+              <p className="text-sage text-sm font-sans">{t('settings.achievementsComingSoon')}</p>
             </div>
           )}
 
