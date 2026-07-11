@@ -19,7 +19,11 @@ export default {
     timer: 'Timer',
     planning: 'Planning',
     reports: 'Reports',
-    settings: 'Settings',
+  },
+
+  header: {
+    settingsAria: 'Settings',
+    accountMenuAria: 'Account menu',
   },
 
   timer: {
@@ -39,8 +43,16 @@ export default {
     externalInterruption: 'External interruption ({{count}})',
     undoInternalAria: 'undo internal interruption',
     undoExternalAria: 'undo external interruption',
-    keyboardHint: 'Space start · Esc void · E finish · F fullscreen',
     keyboardShortcutsTitle: 'Keyboard shortcuts',
+    keyboardModalTitle: 'Keyboard Shortcuts',
+    keyboardColCommand: 'Command',
+    keyboardColAction: 'Action',
+    shortcutStart: 'Start the timer',
+    shortcutVoid: 'Void the current Pomodoro',
+    shortcutFinish: 'Finish Pomodoro early',
+    shortcutFullscreen: 'Toggle fullscreen focus mode',
+    shortcutHelp: 'Show this shortcuts list',
+    shortcutsCloseAria: 'close keyboard shortcuts',
     unplannedPrompt: "Unplanned & urgent? Jot it and keep going.",
     finishEarlyConfirm:
       'Pomodoro Technique says a Pomodoro should ring before you stop. If your task is done, consider using the remaining time for overlearning (review/refine). Finish anyway?',
@@ -135,6 +147,12 @@ export default {
     reestimatePrompt: 'Re-estimate "{{text}}":',
     newEstimateAria: 'New estimate',
     moreThanWarningInline: 'More than {{max}} — break it up (Rule 4)',
+    bulkActionsAria: 'task list actions',
+    clearFinishedLabel: 'Clear finished tasks',
+    clearFinishedConfirm: "This will permanently remove all finished tasks from today's list. Continue?",
+    clearAllLabel: 'Clear all tasks',
+    clearAllConfirm:
+      "This will permanently remove ALL tasks from today's list, including unfinished ones. This cannot be undone. Continue?",
   },
 
   availablePomodoros: {
@@ -344,6 +362,11 @@ export default {
     deleteButton: 'Delete',
     resetFactoryButton: 'Reset to Factory Settings',
     resetFactoryHint: 'Deletes everything, including these settings, and returns the app to its default state.',
+    deleteAccountButton: 'Delete Account',
+    deleteAccountConfirm:
+      'This will PERMANENTLY DELETE your account and all data associated with it from our servers. This cannot be undone. Are you absolutely sure?',
+    deleteAccountHint: 'Permanently deletes your account and all its data. You will be signed out and returned to guest mode.',
+    deleteAccountError: "Couldn't delete your account. Please try again in a moment.",
     resetRecordsLabel: 'Records / Activity Log',
     resetRecordsConfirm: 'This will permanently delete all your Records. This cannot be undone. Continue?',
     resetTicksLabel: 'Interruption data (ticks)',

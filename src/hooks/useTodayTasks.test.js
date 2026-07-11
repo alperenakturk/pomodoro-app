@@ -166,6 +166,64 @@ describe('useTodayTasks', () => {
     })
   })
 
+  // Bulk actions (TodoToday.jsx's "..." menu).
+  describe('clearFinishedTasks', () => {
+    it('removes only tasks marked done, keeping the rest in order', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      act(() => result.current.addTask('B', 1))
+      act(() => result.current.addTask('C', 1))
+      const idB = result.current.tasks[1].id
+      act(() => result.current.finishTask(idB))
+
+      act(() => result.current.clearFinishedTasks())
+
+      expect(result.current.tasks.map((t) => t.text)).toEqual(['A', 'C'])
+    })
+
+    it('clears activeTaskId if it pointed at a task that got cleared', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      const id = result.current.tasks[0].id
+      act(() => result.current.finishTask(id))
+      // finishTask already clears activeTaskId, so set it back manually to
+      // exercise clearFinishedTasks' own defensive guard in isolation.
+      act(() => result.current.setActiveTaskId(id))
+
+      act(() => result.current.clearFinishedTasks())
+
+      expect(result.current.activeTaskId).toBeNull()
+    })
+
+    it('leaves an unrelated active task alone', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      act(() => result.current.addTask('B', 1))
+      const idA = result.current.tasks[0].id
+      const idB = result.current.tasks[1].id
+      act(() => result.current.finishTask(idB))
+      act(() => result.current.setActiveTaskId(idA))
+
+      act(() => result.current.clearFinishedTasks())
+
+      expect(result.current.activeTaskId).toBe(idA)
+    })
+  })
+
+  describe('clearAllTasks', () => {
+    it('removes every task and clears the active selection', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => result.current.addTask('A', 1))
+      act(() => result.current.addTask('B', 1))
+      act(() => result.current.setActiveTaskId(result.current.tasks[0].id))
+
+      act(() => result.current.clearAllTasks())
+
+      expect(result.current.tasks).toEqual([])
+      expect(result.current.activeTaskId).toBeNull()
+    })
+  })
+
   it('tracks and undoes interruptions independently of finishing', () => {
     const { result } = renderHook(() => useTodayTasks())
     act(() => result.current.addTask('Task A', 2))

@@ -49,6 +49,21 @@ export function useTodayTasks() {
     setActiveTaskId((cur) => (cur === id ? null : cur))
   }, [])
 
+  // Bulk actions (TodoToday.jsx's "..." menu, each behind its own confirm()).
+  // A finished task's activeTaskId is already cleared by finishTask itself,
+  // but the check below is kept anyway as a defensive guard rather than an
+  // assumed invariant.
+  const clearFinishedTasks = useCallback(() => {
+    const remainingIds = new Set(tasks.filter((t) => !t.done).map((t) => t.id))
+    setTasks((prev) => prev.filter((t) => !t.done))
+    setActiveTaskId((cur) => (cur && remainingIds.has(cur) ? cur : null))
+  }, [tasks])
+
+  const clearAllTasks = useCallback(() => {
+    setTasks([])
+    setActiveTaskId(null)
+  }, [])
+
   const incrementRealized = useCallback((id) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, realized: t.realized + 1 } : t))
@@ -150,6 +165,8 @@ export function useTodayTasks() {
     setActiveTaskId,
     addTask,
     removeTask,
+    clearFinishedTasks,
+    clearAllTasks,
     updateTask,
     moveTaskToEnd,
     reestimateTask,

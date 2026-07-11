@@ -22,7 +22,7 @@ import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
 import TabNav from './components/TabNav'
 import SettingsTab from './components/SettingsTab'
-import AccountStatus from './components/AccountStatus'
+import ProfileMenu from './components/ProfileMenu'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -114,6 +114,19 @@ function App() {
       )}
       <AppInner key={appKey} />
     </>
+  )
+}
+
+function GearIcon({ className }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75">
+      <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1l-.3-2.5H9.9l-.3 2.5a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L5.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.3 2.5h4.2l.3-2.5a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
@@ -272,11 +285,22 @@ function AppInner() {
             {t('common.appTitle')}
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <p className="text-sage text-xs font-sans whitespace-nowrap">
             {today} · {time}
           </p>
-          <AccountStatus />
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            aria-label={t('header.settingsAria')}
+            title={t('header.settingsAria')}
+            className={
+              'text-sage hover:text-cream flex-shrink-0 ' + (activeTab === 'settings' ? 'text-tomato' : '')
+            }
+          >
+            <GearIcon className="w-4 h-4" />
+          </button>
+          <ProfileMenu />
         </div>
       </header>
 
@@ -325,6 +349,8 @@ function AppInner() {
             setActiveTaskId={todayApi.setActiveTaskId}
             addTask={todayApi.addTask}
             removeTask={todayApi.removeTask}
+            clearFinishedTasks={todayApi.clearFinishedTasks}
+            clearAllTasks={todayApi.clearAllTasks}
             updateTask={todayApi.updateTask}
             reestimateTask={todayApi.reestimateTask}
             finishTask={handleFinishTask}

@@ -4,7 +4,6 @@ const TABS = [
   { id: 'timer', labelKey: 'tabs.timer' },
   { id: 'planning', labelKey: 'tabs.planning' },
   { id: 'reports', labelKey: 'tabs.reports' },
-  { id: 'settings', labelKey: 'tabs.settings' },
 ]
 
 function TabNav({ activeTab, onChange }) {

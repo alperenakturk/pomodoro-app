@@ -23,7 +23,11 @@ export default {
     timer: 'Zamanlayıcı',
     planning: 'Planlama',
     reports: 'Raporlar',
-    settings: 'Ayarlar',
+  },
+
+  header: {
+    settingsAria: 'Ayarlar',
+    accountMenuAria: 'Hesap menüsü',
   },
 
   timer: {
@@ -43,8 +47,16 @@ export default {
     externalInterruption: 'Dış kesinti ({{count}})',
     undoInternalAria: 'iç kesintiyi geri al',
     undoExternalAria: 'dış kesintiyi geri al',
-    keyboardHint: 'Space başlat · Esc iptal · E bitir · F tam ekran',
     keyboardShortcutsTitle: 'Klavye kısayolları',
+    keyboardModalTitle: 'Klavye Kısayolları',
+    keyboardColCommand: 'Komut',
+    keyboardColAction: 'İşlev',
+    shortcutStart: 'Zamanlayıcıyı başlat',
+    shortcutVoid: 'Mevcut Pomodoro\'yu iptal et',
+    shortcutFinish: "Pomodoro'yu erken bitir",
+    shortcutFullscreen: 'Tam ekran odak modunu aç/kapat',
+    shortcutHelp: 'Bu kısayol listesini göster',
+    shortcutsCloseAria: 'klavye kısayollarını kapat',
     unplannedPrompt: 'Aniden mi çıktı? Yaz ve devam et.',
     finishEarlyConfirm:
       "Pomodoro Tekniği'ne göre bir Pomodoro durdurulmadan önce zili çalmalı. Görev bittiyse kalan süreyi overlearning (gözden geçirme/pekiştirme) için kullanmayı düşün. Yine de bitirilsin mi?",
@@ -139,6 +151,12 @@ export default {
     reestimatePrompt: '"{{text}}" için yeniden tahmin:',
     newEstimateAria: 'Yeni tahmin',
     moreThanWarningInline: "{{max}}'den fazla — parçalara ayır (Kural 4)",
+    bulkActionsAria: 'görev listesi işlemleri',
+    clearFinishedLabel: 'Tamamlanan görevleri temizle',
+    clearFinishedConfirm: 'Bu, bugünün listesindeki tüm tamamlanmış görevleri kalıcı olarak silecek. Devam edilsin mi?',
+    clearAllLabel: 'Tüm görevleri temizle',
+    clearAllConfirm:
+      'Bu, bugünün listesindeki TÜM görevleri (tamamlanmamışlar dahil) kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
   },
 
   availablePomodoros: {
@@ -348,6 +366,11 @@ export default {
     deleteButton: 'Sil',
     resetFactoryButton: 'Fabrika Ayarlarına Sıfırla',
     resetFactoryHint: 'Bu ayarlar dahil her şeyi siler ve uygulamayı varsayılan durumuna döndürür.',
+    deleteAccountButton: 'Hesabı Sil',
+    deleteAccountConfirm:
+      'Bu işlem hesabını ve ona ait tüm verileri sunucularımızdan KALICI OLARAK SİLECEK. Bu geri alınamaz. Emin misin?',
+    deleteAccountHint: 'Hesabını ve tüm verilerini kalıcı olarak siler. Çıkış yapılıp misafir moduna dönülecek.',
+    deleteAccountError: 'Hesabın silinemedi. Lütfen biraz sonra tekrar dene.',
     resetRecordsLabel: 'Kayıtlar / Etkinlik Günlüğü',
     resetRecordsConfirm: 'Bu, tüm Kayıtlarını kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
     resetTicksLabel: 'Kesinti verisi (tick\'ler)',

@@ -68,9 +68,25 @@ export function AuthProvider({ children }) {
     return supabase.auth.signOut()
   }, [])
 
+  // Calls the `delete_user()` Postgres function (supabase/schema.sql) rather
+  // than supabase.auth.admin.deleteUser() — the admin API needs the service-
+  // role key, which must never reach the browser. That SQL function is
+  // SECURITY DEFINER but only ever deletes the caller's own row
+  // (auth.uid()), and every table's user_id FK cascades on delete, so this
+  // one call is enough to remove the account and all of its Supabase data.
+  // Explicitly signs out afterward — deleting the row doesn't itself
+  // invalidate the current session's client-side state.
+  const deleteAccount = useCallback(async () => {
+    if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+    const { error } = await supabase.rpc('delete_user')
+    if (error) return { error }
+    await supabase.auth.signOut()
+    return { error: null }
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut }),
-    [user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut]
+    () => ({ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, deleteAccount }),
+    [user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, deleteAccount]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

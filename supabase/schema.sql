@@ -391,3 +391,35 @@ create policy "settings_delete_own" on public.settings
 
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
+
+-- ============================================================================
+-- Self-service account deletion (Settings > Danger Zone > Delete Account,
+-- signed-in users only).
+--
+-- The browser client only ever holds the anon/authenticated key, never the
+-- service-role key `supabase.auth.admin.deleteUser()` requires — that call
+-- can only be made from a trusted server context, which this app (a static
+-- SPA with no backend) doesn't have. A SECURITY DEFINER function is the
+-- standard Supabase-recommended workaround: it runs with the privileges of
+-- whichever role pastes this file into the SQL Editor (typically `postgres`,
+-- which can reach the auth schema), but it only ever deletes the CALLING
+-- user's own row — `auth.uid()` comes from the caller's own JWT, so a
+-- signed-in user cannot pass in (or otherwise reach) someone else's id.
+--
+-- Deleting the auth.users row cascades (every user_id FK above is `on delete
+-- cascade`) through all 9 tables automatically — no need to delete from each
+-- one first.
+-- ============================================================================
+
+create or replace function public.delete_user()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.delete_user() to authenticated;

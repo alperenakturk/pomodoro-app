@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTimetable } from '../hooks/useTimetable'
 import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
@@ -292,12 +292,97 @@ function TaskRow({ task, categories, isActive, onSelect, onFinish, onRemove, onU
   )
 }
 
+// The "..." bulk-actions menu next to Today's Tasks' header. Same click-
+// outside/Escape dropdown pattern as Select.jsx/ProfileMenu.jsx. Each action
+// is disabled (not hidden) when it wouldn't do anything, and both still go
+// through the app's usual confirm() gate before touching data.
+function TaskListMenu({ hasFinished, hasAny, onClearFinished, onClearAll }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false)
+    }
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  function handleClearFinished() {
+    setOpen(false)
+    if (window.confirm(t('today.clearFinishedConfirm'))) onClearFinished()
+  }
+
+  function handleClearAll() {
+    setOpen(false)
+    if (window.confirm(t('today.clearAllConfirm'))) onClearAll()
+  }
+
+  return (
+    <div ref={containerRef} className="relative flex-shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t('today.bulkActionsAria')}
+        title={t('today.bulkActionsAria')}
+        className="text-sage hover:text-cream text-sm leading-none px-1"
+      >
+        •••
+      </button>
+
+      {open && (
+        <ul
+          role="menu"
+          aria-label={t('today.bulkActionsAria')}
+          className="absolute right-0 top-full mt-1 z-20 bg-pine border border-cream/15 rounded-lg shadow-lg overflow-hidden min-w-[12rem]"
+        >
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleClearFinished}
+              disabled={!hasFinished}
+              className="w-full text-left px-3 py-2 text-xs font-sans text-cream hover:bg-cream/10 whitespace-nowrap disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {t('today.clearFinishedLabel')}
+            </button>
+          </li>
+          <li role="none">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleClearAll}
+              disabled={!hasAny}
+              className="w-full text-left px-3 py-2 text-xs font-sans text-tomato hover:bg-tomato/10 whitespace-nowrap disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              {t('today.clearAllLabel')}
+            </button>
+          </li>
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function TodoToday({
   tasks,
   activeTaskId,
   setActiveTaskId,
   addTask,
   removeTask,
+  clearFinishedTasks,
+  clearAllTasks,
   updateTask,
   reestimateTask,
   finishTask,
@@ -334,9 +419,17 @@ function TodoToday({
 
   return (
     <div className="bg-black/20 border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
-      <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
-        {t('today.title')}
-      </p>
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
+          {t('today.title')}
+        </p>
+        <TaskListMenu
+          hasFinished={tasks.some((task) => task.done)}
+          hasAny={tasks.length > 0}
+          onClearFinished={clearFinishedTasks}
+          onClearAll={clearAllTasks}
+        />
+      </div>
 
       <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={timetableHours} />
       <Timetable

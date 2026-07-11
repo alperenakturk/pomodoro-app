@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
+import KeyboardShortcutsModal from './KeyboardShortcutsModal'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 import { useTranslation } from '../hooks/useTranslation'
 
@@ -195,6 +196,8 @@ function Timer({
     setVoidPromptOpen(false)
   }
 
+  const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
+
   // Rule 2 says a Pomodoro always rings and there's no "finish early" —
   // overrunning time is meant for overlearning, not for stopping the clock.
   // We deliberately deviate from that: the confirm dialog *teaches* the rule
@@ -238,6 +241,10 @@ function Timer({
         // gesture — fullscreenchange syncs isFullscreen, nothing to do here,
         // and it must NOT also open the void prompt underneath.
         if (isFullscreen) return
+        if (shortcutsModalOpen) {
+          setShortcutsModalOpen(false)
+          return
+        }
         if (voidPromptOpen) {
           cancelVoid()
           return
@@ -257,6 +264,12 @@ function Timer({
       }
       if ((e.key === 'e' || e.key === 'E') && isRunning && isWork) {
         handleFinishEarly()
+        return
+      }
+      // '?' opens the keyboard-shortcuts reference (also reachable via the
+      // small icon button next to Fullscreen/PiP).
+      if (e.key === '?') {
+        setShortcutsModalOpen(true)
       }
     }
 
@@ -305,6 +318,17 @@ function Timer({
         }
       >
         <div className="absolute top-3 right-3 flex items-center gap-3">
+          {!isFullscreen && (
+            <button
+              type="button"
+              onClick={() => setShortcutsModalOpen(true)}
+              className="text-sage hover:text-cream text-sm leading-none font-display"
+              aria-label={t('timer.keyboardShortcutsTitle')}
+              title={t('timer.keyboardShortcutsTitle')}
+            >
+              ?
+            </button>
+          )}
           {!isFullscreen && pipSupported && (
             <button
               type="button"
@@ -488,12 +512,6 @@ function Timer({
           </form>
         )}
 
-        {!isFullscreen && (
-          <p className="text-sage/60 text-[10px] font-sans tracking-wide" title={t('timer.keyboardShortcutsTitle')}>
-            {t('timer.keyboardHint')}
-          </p>
-        )}
-
         {isWork && isRunning && (
           <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
             <p className="text-sage text-xs font-sans">{t('timer.hadInterruption')}</p>
@@ -560,6 +578,10 @@ function Timer({
           </div>,
           pipWindow.document.body
         )}
+
+      {shortcutsModalOpen && (
+        <KeyboardShortcutsModal onClose={() => setShortcutsModalOpen(false)} />
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ import {
   LONG_BREAK_RECOMMENDED_MAX,
 } from '../hooks/usePomodoro'
 import { useTranslation } from '../hooks/useTranslation'
+import { useAuth } from '../hooks/useAuth'
 import { SUPPORTED_LANGUAGES } from '../lib/i18n'
 import {
   clearInventory,
@@ -59,6 +60,22 @@ function handleFactoryReset(t) {
   }
 }
 
+// Signed-in only (see the `user &&` guard where this is rendered). Strong
+// confirmation matching Factory Reset's severity — this doesn't just clear
+// local data, it permanently deletes the Supabase account and every row
+// belonging to it (see supabase/schema.sql's delete_user() function).
+// deleteAccount() itself also signs out on success, so the reload below
+// lands back in guest mode, same as any other Danger Zone action.
+async function handleDeleteAccount(t, deleteAccount) {
+  if (!window.confirm(t('settings.deleteAccountConfirm'))) return
+  const { error } = await deleteAccount()
+  if (error) {
+    window.alert(t('settings.deleteAccountError'))
+    return
+  }
+  window.location.reload()
+}
+
 function SettingsTab({
   cycleLength,
   setCycleLength,
@@ -89,6 +106,7 @@ function SettingsTab({
   removeCategory,
 }) {
   const { t, language, setLanguage } = useTranslation()
+  const { user, deleteAccount } = useAuth()
   const chimeLabels = {
     classic: t('chime.classic'),
     soft: t('chime.soft'),
@@ -377,6 +395,21 @@ function SettingsTab({
             {t('settings.resetFactoryHint')}
           </p>
         </div>
+
+        {user && (
+          <div className="pt-4 mt-4 border-t border-tomato/15">
+            <button
+              type="button"
+              onClick={() => handleDeleteAccount(t, deleteAccount)}
+              className="w-full font-sans text-sm px-4 py-2 rounded-xl border border-tomato text-tomato font-semibold"
+            >
+              {t('settings.deleteAccountButton')}
+            </button>
+            <p className="text-sage/60 text-[10px] font-sans mt-2 text-center">
+              {t('settings.deleteAccountHint')}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
