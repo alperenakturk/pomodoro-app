@@ -14,6 +14,7 @@ import {
   signInToRemote,
   signOutFromRemote,
   clearLocalGuestData,
+  hasLocalGuestData,
 } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import { themeClassName } from './lib/theme'
@@ -48,6 +49,7 @@ function nowTime() {
 // `useState(() => loadX())` initializer re-runs against the now-warm cache.
 function App() {
   const { user, loading: authLoading } = useAuth()
+  const { t } = useTranslation()
   const [dataMode, setDataMode] = useState('guest') // 'guest' | 'syncing' | 'remote'
   // Deliberately its own piece of state rather than derived from `user`/
   // `dataMode` at render time (e.g. `user ? user.id : 'guest'`). Deriving it
@@ -87,8 +89,16 @@ function App() {
     let cancelled = false
     setSyncError(null)
     setSyncNotice(null)
+
+    // Resolved *before* the syncing screen shows — this is a decision only
+    // the user can make, so it needs to happen while the app still looks
+    // normal, not mid-"Syncing…" transition. An empty/untouched guest
+    // session (hasLocalGuestData() false) has nothing to ask about and
+    // proceeds silently, exactly as before this feature existed.
+    const skipLocalMerge = hasLocalGuestData() && !window.confirm(t('sync.mergePromptConfirm'))
+
     setDataMode('syncing')
-    signInToRemote(userId).then((result) => {
+    signInToRemote(userId, { skipLocalMerge }).then((result) => {
       if (cancelled) return
       if (result.error) {
         console.error('Failed to sync with Supabase:', result.error)
@@ -107,7 +117,7 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [user, authLoading])
+  }, [user, authLoading, t])
 
   if (dataMode === 'syncing') return <SyncingScreen />
 
@@ -188,6 +198,36 @@ function AppInner() {
   function selectTheme(next) {
     setTheme(next)
     patchSettings({ theme: next })
+  }
+
+  // Only meaningful when theme === 'custom': General covers every screen
+  // except the Timer, which instead picks Focus/Short Break/Long Break by
+  // whichever session type is currently active (see the resolved
+  // rootThemeId/timerThemeId below, and Timer.jsx's own note on how it
+  // applies timerTheme to just its own subtree).
+  const [customThemeGeneral, setCustomThemeGeneralState] = useState(() => loadSettings().customThemeGeneral)
+  const [customThemeFocus, setCustomThemeFocusState] = useState(() => loadSettings().customThemeFocus)
+  const [customThemeShortBreak, setCustomThemeShortBreakState] = useState(
+    () => loadSettings().customThemeShortBreak
+  )
+  const [customThemeLongBreak, setCustomThemeLongBreakState] = useState(
+    () => loadSettings().customThemeLongBreak
+  )
+  function setCustomThemeGeneral(next) {
+    setCustomThemeGeneralState(next)
+    patchSettings({ customThemeGeneral: next })
+  }
+  function setCustomThemeFocus(next) {
+    setCustomThemeFocusState(next)
+    patchSettings({ customThemeFocus: next })
+  }
+  function setCustomThemeShortBreak(next) {
+    setCustomThemeShortBreakState(next)
+    patchSettings({ customThemeShortBreak: next })
+  }
+  function setCustomThemeLongBreak(next) {
+    setCustomThemeLongBreakState(next)
+    patchSettings({ customThemeLongBreak: next })
   }
 
   // "Check to bottom" (Settings): when on, a completed task moves to the end
@@ -300,8 +340,22 @@ function AppInner() {
     minute: '2-digit',
   })
 
+  // 'custom' isn't a real CSS-backed palette itself — it resolves to one of
+  // the five real theme ids depending on *where* it's applied: General for
+  // the app shell (header, Planning, Reports, Settings — everything this
+  // root div wraps other than Timer), or whichever of Focus/Short Break/
+  // Long Break matches the session that's currently running for the Timer
+  // specifically (see the `timerThemeId` passed down below).
+  const rootThemeId = theme === 'custom' ? customThemeGeneral : theme
+  const timerThemeId =
+    theme === 'custom'
+      ? { work: customThemeFocus, shortBreak: customThemeShortBreak, longBreak: customThemeLongBreak }[
+          pomodoro.sessionType
+        ]
+      : theme
+
   return (
-    <div className={`min-h-screen bg-pine ${themeClassName(theme)}`}>
+    <div className={`min-h-screen bg-pine ${themeClassName(rootThemeId)}`}>
       {/* Mobile: plain flex-wrap (logo + right cluster on row 1, nav pushed
           to row 2 via order-3). Desktop: an explicit 3-column grid instead —
           flex with only `ml-auto` on the right cluster and `mx-auto` on nav
@@ -357,11 +411,23 @@ function AppInner() {
           every switch. "Not visible while working" only requires display:none,
           not unmounting. */}
       <main className="max-w-7xl mx-auto p-6">
-        <div className={activeTab === 'timer' ? 'flex justify-center' : 'hidden'}>
+        {/* Themed + given a floor height here (not just inside Timer.jsx)
+            so that in Custom mode, when the active session's theme differs
+            from General, the colored area covers the whole tab instead of
+            just Timer's own tightly-fit content box — otherwise a short
+            Timer on a tall viewport would show a seam of the *General*
+            theme's background peeking through around it. */}
+        <div
+          className={
+            activeTab === 'timer'
+              ? `flex justify-center bg-pine min-h-[80vh] ${themeClassName(timerThemeId)}`
+              : 'hidden'
+          }
+        >
           <Timer
             activeTask={activeTask}
             addTask={todayApi.addTask}
-            theme={theme}
+            theme={timerThemeId}
             onGoToPlanning={() => setActiveTab('planning')}
             showWelcome={showWelcome}
             onDismissWelcome={dismissOnboarding}
@@ -462,6 +528,14 @@ function AppInner() {
           setDisplayName={setDisplayName}
           theme={theme}
           onSelectTheme={selectTheme}
+          customThemeGeneral={customThemeGeneral}
+          setCustomThemeGeneral={setCustomThemeGeneral}
+          customThemeFocus={customThemeFocus}
+          setCustomThemeFocus={setCustomThemeFocus}
+          customThemeShortBreak={customThemeShortBreak}
+          setCustomThemeShortBreak={setCustomThemeShortBreak}
+          customThemeLongBreak={customThemeLongBreak}
+          setCustomThemeLongBreak={setCustomThemeLongBreak}
         />
       )}
     </div>

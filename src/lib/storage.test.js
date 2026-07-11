@@ -33,6 +33,7 @@ import {
   addTick,
   importBackup,
   importActivityLogCSV,
+  hasLocalGuestData,
 } from './storage'
 
 beforeEach(() => {
@@ -570,5 +571,36 @@ describe('cross-tab sync', () => {
 
     expect(callback).toHaveBeenCalledTimes(1)
     unsubscribe()
+  })
+})
+
+describe('hasLocalGuestData', () => {
+  it('is false for a completely untouched guest session', () => {
+    expect(hasLocalGuestData()).toBe(false)
+  })
+
+  it('is true when the Inventory has an item', () => {
+    saveInventory([{ id: 'i1', text: 'Task', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false }])
+    expect(hasLocalGuestData()).toBe(true)
+  })
+
+  it('is true when Today has a task', () => {
+    saveTodayTasks([
+      {
+        id: 't1', text: 'Task', estimate: null, realized: 0, internal: 0, external: 0,
+        done: false, urgent: false, unplanned: false, categoryIds: [],
+      },
+    ])
+    expect(hasLocalGuestData()).toBe(true)
+  })
+
+  it('is true when the timer has been started at least once', () => {
+    saveTimerState({ sessionType: 'work', secondsLeft: 1000, isRunning: true })
+    expect(hasLocalGuestData()).toBe(true)
+  })
+
+  it('is false for settings-only changes (a singleton where an existing remote row always wins anyway)', () => {
+    patchSettings({ theme: 'light-sage', cycleLength: 6 })
+    expect(hasLocalGuestData()).toBe(false)
   })
 })

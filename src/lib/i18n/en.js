@@ -238,7 +238,7 @@ export default {
     totalFocusTime: 'Total focus time',
     pomodorosToday: 'Pomodoros today',
     tasksToday: 'Tasks today',
-    tasksTodayValue: '{{active}} active · {{done}} done',
+    tasksTodayActiveCaption: '{{active}} active',
     interruptionsToday: 'Interruptions today',
     todaySummaryTitle: "Today's Summary",
     todaySummarySubtitle: '{{poms}} poms · {{interruptions}} interruptions',
@@ -374,6 +374,12 @@ export default {
     themeLightSage: 'Light Sage',
     themeLightSand: 'Light Sand',
     themeLightDustyBlue: 'Light Dusty Blue',
+    themeCustom: 'Custom',
+    customThemeGeneralLabel: 'General',
+    customThemeFocusLabel: 'Focus / Work session',
+    customThemeShortBreakLabel: 'Short Break',
+    customThemeLongBreakLabel: 'Long Break',
+    customThemeHint: 'General applies to every screen except the Timer, which follows whichever session is active.',
     workDurationLabel: 'Pomodoro (work) duration',
     workDurationDeviationNote:
       'The Pomodoro Technique specifically uses 25 minutes as the standard work interval — this is a deliberate deviation from the original technique.',
@@ -489,5 +495,7 @@ export default {
     migratedNotice: 'Your data has been synced to your account ✓',
     dismissAria: 'dismiss notice',
     errorNotice: "Couldn't sync your data — working locally for now. Your data is safe.",
+    mergePromptConfirm:
+      'Add your local changes to your account? Your existing account data will not be deleted.',
   },
 }

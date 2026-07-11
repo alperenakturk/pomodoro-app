@@ -242,7 +242,7 @@ export default {
     totalFocusTime: 'Toplam odaklanma süresi',
     pomodorosToday: 'Bugünkü pomodorolar',
     tasksToday: 'Bugünkü görevler',
-    tasksTodayValue: '{{active}} aktif · {{done}} bitti',
+    tasksTodayActiveCaption: '{{active}} aktif',
     interruptionsToday: 'Bugünkü kesintiler',
     todaySummaryTitle: 'Bugünün Özeti',
     todaySummarySubtitle: '{{poms}} pomodoro · {{interruptions}} kesinti',
@@ -378,6 +378,12 @@ export default {
     themeLightSage: 'Açık Adaçayı',
     themeLightSand: 'Açık Kum',
     themeLightDustyBlue: 'Açık Toz Mavisi',
+    themeCustom: 'Özel',
+    customThemeGeneralLabel: 'Genel',
+    customThemeFocusLabel: 'Odaklan / Çalışma oturumu',
+    customThemeShortBreakLabel: 'Kısa Mola',
+    customThemeLongBreakLabel: 'Uzun Mola',
+    customThemeHint: "Genel, Timer dışındaki tüm ekranlara uygulanır; Timer ise o an aktif olan oturumu takip eder.",
     workDurationLabel: 'Pomodoro (çalışma) süresi',
     workDurationDeviationNote:
       'Pomodoro Tekniği, standart çalışma aralığı olarak özellikle 25 dakika kullanır — bu, orijinal tekniğe kasıtlı bir sapmadır.',
@@ -493,5 +499,7 @@ export default {
     migratedNotice: 'Verilerin hesabına senkronize edildi ✓',
     dismissAria: 'bildirimi kapat',
     errorNotice: 'Verilerin senkronize edilemedi — şimdilik yerel olarak çalışılıyor. Verilerin güvende.',
+    mergePromptConfirm:
+      'Yerel değişikliklerinizi hesabınıza eklemek ister misiniz? Hesabınızdaki mevcut veriler silinmeyecek.',
   },
 }

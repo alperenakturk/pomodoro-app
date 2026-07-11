@@ -67,6 +67,12 @@ beforeEach(() => {
   localStorage.clear()
   remoteCache = {}
   mockAuthValue = { user: null, loading: false }
+  // This test seeds real guest data before signing in, which now trips the
+  // merge-confirmation prompt (hasLocalGuestData() in storage.js) —
+  // answering "yes" reproduces the pre-existing unconditional-merge
+  // behavior this test was written against, rather than leaving
+  // window.confirm to jsdom's unimplemented (falsy, console-noisy) default.
+  window.confirm = vi.fn(() => true)
 })
 
 describe('App sign-out data-source switch', () => {

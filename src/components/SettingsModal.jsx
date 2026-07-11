@@ -189,6 +189,14 @@ function SettingsModal({
   setDisplayName,
   theme,
   onSelectTheme,
+  customThemeGeneral,
+  setCustomThemeGeneral,
+  customThemeFocus,
+  setCustomThemeFocus,
+  customThemeShortBreak,
+  setCustomThemeShortBreak,
+  customThemeLongBreak,
+  setCustomThemeLongBreak,
   categories,
   addCategory,
   updateCategory,
@@ -234,6 +242,10 @@ function SettingsModal({
     en: t('settings.languageEnglish'),
     tr: t('settings.languageTurkish'),
   }
+  // Reused by the Custom theme's four sub-pickers below — each one chooses
+  // among the same five real palettes the main picker offers.
+  const themeIds = THEMES.map((option) => option.id)
+  const themeLabels = Object.fromEntries(THEMES.map((option) => [option.id, t(option.labelKey)]))
 
   const activeLabelKey = CATEGORIES.find((c) => c.id === activeCategory)?.labelKey
 
@@ -289,12 +301,18 @@ function SettingsModal({
             ×
           </button>
 
-          <h2 className="font-display text-cream font-bold text-sm tracking-widest uppercase mb-4 pr-8">
+          {/* Normal-case, larger, sans — same reasoning as Reports.jsx's
+              content-pane heading: the sidebar button just left of this
+              already names the category in small uppercase mono, so
+              repeating it in the identical heavy-caps style here read as
+              redundant. This is the actual content's heading, not another
+              nav label. */}
+          <h2 className="font-sans text-cream font-semibold text-base mb-4 pr-8">
             {t(activeLabelKey)}
           </h2>
 
           {activeCategory === 'general' && (
-            <div>
+            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
                   <label htmlFor="display-name">{t('settings.displayNameLabel')}</label>
@@ -356,7 +374,70 @@ function SettingsModal({
                       </button>
                     )
                   })}
+
+                  {/* Not one of the five real palettes — a meta-option that
+                      picks a *different* real palette for General vs. each
+                      Timer session type (sub-pickers just below). No swatch
+                      preview makes sense for it (there's no single color to
+                      show), so it's a plain labeled button. */}
+                  <button
+                    type="button"
+                    onClick={() => onSelectTheme('custom')}
+                    aria-pressed={theme === 'custom'}
+                    className={
+                      'flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ' +
+                      (theme === 'custom' ? 'border-tomato text-cream' : 'border-cream/15 text-sage hover:text-cream')
+                    }
+                  >
+                    {t('settings.themeCustom')}
+                  </button>
                 </div>
+
+                {theme === 'custom' && (
+                  <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-cream/10">
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="custom-theme-general">{t('settings.customThemeGeneralLabel')}</label>
+                      <Select
+                        id="custom-theme-general"
+                        value={customThemeGeneral}
+                        options={themeIds}
+                        labels={themeLabels}
+                        onChange={setCustomThemeGeneral}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="custom-theme-focus">{t('settings.customThemeFocusLabel')}</label>
+                      <Select
+                        id="custom-theme-focus"
+                        value={customThemeFocus}
+                        options={themeIds}
+                        labels={themeLabels}
+                        onChange={setCustomThemeFocus}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="custom-theme-short-break">{t('settings.customThemeShortBreakLabel')}</label>
+                      <Select
+                        id="custom-theme-short-break"
+                        value={customThemeShortBreak}
+                        options={themeIds}
+                        labels={themeLabels}
+                        onChange={setCustomThemeShortBreak}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="custom-theme-long-break">{t('settings.customThemeLongBreakLabel')}</label>
+                      <Select
+                        id="custom-theme-long-break"
+                        value={customThemeLongBreak}
+                        options={themeIds}
+                        labels={themeLabels}
+                        onChange={setCustomThemeLongBreak}
+                      />
+                    </div>
+                    <p className="text-sage/40 text-[10px] mt-1">{t('settings.customThemeHint')}</p>
+                  </div>
+                )}
               </div>
 
               <div className={rowClass}>
@@ -376,7 +457,7 @@ function SettingsModal({
           )}
 
           {activeCategory === 'timer' && (
-            <div>
+            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
               <div className="border-b border-cream/10 py-3">
                 <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
                   <div className="flex flex-col gap-0.5">
@@ -518,7 +599,7 @@ function SettingsModal({
           )}
 
           {activeCategory === 'sound' && (
-            <div>
+            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
               <div className={rowClass}>
                 <label htmlFor="chime-style">{t('settings.soundLabel')}</label>
                 <div className="flex items-center gap-2">
@@ -575,38 +656,40 @@ function SettingsModal({
           )}
 
           {activeCategory === 'account' && (
-            <div>
-              <p className="text-cream text-xs font-sans py-3 border-b border-cream/10">
-                {user ? t('settings.signedInAs', { email: user.email }) : t('settings.notSignedIn')}
-              </p>
-              {!user && (
-                <div className={rowClass}>
-                  <span>{t('settings.signInPromptLabel')}</span>
-                  <button
-                    type="button"
-                    onClick={() => setAuthModalOpen(true)}
-                    className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
-                  >
-                    {t('auth.signInButton')}
-                  </button>
-                </div>
-              )}
+            <div className="flex flex-col gap-4">
+              <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
+                <p className="text-cream text-xs font-sans py-3 border-b border-cream/10">
+                  {user ? t('settings.signedInAs', { email: user.email }) : t('settings.notSignedIn')}
+                </p>
+                {!user && (
+                  <div className={rowClass}>
+                    <span>{t('settings.signInPromptLabel')}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAuthModalOpen(true)}
+                      className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
+                    >
+                      {t('auth.signInButton')}
+                    </button>
+                  </div>
+                )}
 
-              {user && hasPasswordProvider(user) && (
-                <div className={rowClass}>
-                  <span>{t('settings.changePasswordLabel')}</span>
-                  <button
-                    type="button"
-                    onClick={() => setChangePasswordOpen(true)}
-                    className="text-cream border border-cream/15 rounded-full px-3 py-1"
-                  >
-                    {t('settings.changePasswordButton')}
-                  </button>
-                </div>
-              )}
+                {user && hasPasswordProvider(user) && (
+                  <div className={rowClass}>
+                    <span>{t('settings.changePasswordLabel')}</span>
+                    <button
+                      type="button"
+                      onClick={() => setChangePasswordOpen(true)}
+                      className="text-cream border border-cream/15 rounded-full px-3 py-1"
+                    >
+                      {t('settings.changePasswordButton')}
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {user && (
-                <div className="pt-5 mt-4 border-t border-tomato/15">
+                <div className="bg-pine-dark border border-tomato/30 rounded-2xl px-4 py-4">
                   <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-2">
                     {t('settings.dangerZoneTitle')}
                   </p>
@@ -672,7 +755,7 @@ function SettingsModal({
           )}
 
           {activeCategory === 'about' && (
-            <div className="text-sage text-xs font-sans leading-relaxed flex flex-col gap-3">
+            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4 text-sage text-xs font-sans leading-relaxed flex flex-col gap-3">
               <p className="text-cream font-semibold">{t('common.appTitle')}</p>
               <p>{t('settings.aboutDescription')}</p>
 

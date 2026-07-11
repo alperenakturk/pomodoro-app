@@ -203,7 +203,7 @@ const DEFAULT_SETTINGS = {
   soundVolume: 100,
   ambientSound: 'none',
   checkToBottom: false,
-  theme: 'dark',
+  theme: 'light-terracotta',
   chimeStyle: 'classic',
   userId: 'local',
   language: null,
@@ -213,6 +213,16 @@ const DEFAULT_SETTINGS = {
   // for guests and signed-in users alike. Empty string means "not set,
   // don't show a greeting", same convention as language's null.
   displayName: '',
+  // Only read when theme === 'custom' — lets General (everything but the
+  // Timer screen) and each of the Timer's three session types independently
+  // pick one of the five real palettes (see lib/theme.js's THEMES). Default
+  // to the same palette as DEFAULT_SETTINGS.theme itself, so switching to
+  // Custom without touching any of the four pickers is a visual no-op
+  // rather than an unexpected jump to dark.
+  customThemeGeneral: 'light-terracotta',
+  customThemeFocus: 'light-terracotta',
+  customThemeShortBreak: 'light-terracotta',
+  customThemeLongBreak: 'light-terracotta',
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map
@@ -480,18 +490,48 @@ export function importActivityLogCSV(rows, categories, mode) {
 // succeeds is the caller's job too (App.jsx), not this function's — this
 // file only decides which provider is active, not when it's safe to delete
 // the old data.
-export async function signInToRemote(userId) {
-  const localSnapshots = {
-    pomodoro_inventory: loadInventory(),
-    pomodoro_today_tasks: loadTodayTasks(),
-    pomodoro_activity_log: loadActivityLog(),
-    pomodoro_ticks: loadTicks(),
-    pomodoro_timetable: loadTimetable(),
-    pomodoro_categories: loadCategories(),
-    pomodoro_void_log: loadVoidLog(),
-    pomodoro_timer_state: loadTimerState(),
-    pomodoro_settings: loadSettings(),
-  }
+// Whether this guest session has anything actually worth asking the user
+// about before merging into a Supabase account — App.jsx uses this to
+// decide whether sign-in needs a confirmation prompt at all. Deliberately
+// scoped to the data collections that genuinely get *combined* on merge
+// (mergeCollectionById, same as JSON import); pomodoro_settings/timer_state
+// are singletons where an existing remote row always wins outright
+// regardless (see initializeRemoteData), so a guest-only theme tweak isn't
+// the kind of "local change" this prompt is about.
+export function hasLocalGuestData() {
+  return (
+    loadInventory().length > 0 ||
+    loadTodayTasks().length > 0 ||
+    loadActivityLog().length > 0 ||
+    loadTicks().length > 0 ||
+    loadTimetable().length > 0 ||
+    loadCategories().length > 0 ||
+    loadVoidLog().length > 0 ||
+    loadTimerState() !== null
+  )
+}
+
+// `skipLocalMerge: true` is how App.jsx honors a user declining the merge
+// prompt (see hasLocalGuestData) — passing empty snapshots means
+// initializeRemoteData just fetches the account's existing remote data with
+// nothing to combine it with. `result.migrated` then stays false, so the
+// caller's usual clearLocalGuestData() step never runs either — the
+// declined local data is left exactly as it was, neither merged nor
+// deleted.
+export async function signInToRemote(userId, { skipLocalMerge = false } = {}) {
+  const localSnapshots = skipLocalMerge
+    ? {}
+    : {
+        pomodoro_inventory: loadInventory(),
+        pomodoro_today_tasks: loadTodayTasks(),
+        pomodoro_activity_log: loadActivityLog(),
+        pomodoro_ticks: loadTicks(),
+        pomodoro_timetable: loadTimetable(),
+        pomodoro_categories: loadCategories(),
+        pomodoro_void_log: loadVoidLog(),
+        pomodoro_timer_state: loadTimerState(),
+        pomodoro_settings: loadSettings(),
+      }
   const result = await remoteProvider.initializeRemoteData(userId, localSnapshots)
   if (!result.error) activeProvider = remoteProvider
   return result

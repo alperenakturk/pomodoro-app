@@ -62,14 +62,21 @@ function TrendArrow({ direction, goodDirection }) {
   return <span className={colorClass}>{glyph}</span>
 }
 
-function Stat({ label, value, trend }) {
+// `value` is meant to be a single short token (a bare number, or a compact
+// duration like "5:25") — the text-2xl size only reads calmly at that
+// length. `caption` is for anything longer that doesn't fit that mold (e.g.
+// "tasks today" needs an active/done breakdown) — it renders as a smaller
+// third line instead of being crammed into the big-number slot, which used
+// to make one stat box wrap to two lines while its siblings stayed on one.
+function Stat({ label, value, trend, caption }) {
   return (
     <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 text-center">
-      <p className="font-display text-2xl text-cream flex items-center justify-center gap-1.5">
+      <p className="font-display text-2xl text-cream tabular-nums flex items-center justify-center gap-1.5">
         {value}
         {trend}
       </p>
       <p className="text-sage text-xs mt-1">{label}</p>
+      {caption && <p className="text-sage/60 text-[10px] mt-0.5">{caption}</p>}
     </div>
   )
 }
@@ -128,7 +135,8 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
       />
       <Stat
         label={t('reports.tasksToday')}
-        value={t('reports.tasksTodayValue', { active: activeToday, done: completedToday })}
+        value={completedToday}
+        caption={t('reports.tasksTodayActiveCaption', { active: activeToday })}
       />
       <Stat
         label={t('reports.interruptionsToday')}
@@ -463,9 +471,15 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
             </nav>
 
             <div className="flex-1 min-w-0 border-t md:border-t-0 md:border-l border-cream/10 pt-4 md:pt-0 md:pl-5">
-              <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-4">
+              {/* Normal-case, larger, sans — deliberately NOT the small
+                  uppercase-mono treatment the sidebar button just left of
+                  it uses. Both used to render the same section name in the
+                  identical heavy caps style back to back, which read as
+                  redundant shouting; this reads as "nav label -> the actual
+                  reading content's heading" instead. */}
+              <h2 className="font-sans text-cream font-semibold text-base mb-4">
                 {t(SECTIONS[sectionIndex].labelKey)}
-              </p>
+              </h2>
 
               {activeSection === 'today' && (
                 <TodaySection

@@ -16,6 +16,35 @@ const LABEL_KEYS = {
 
 const SESSION_ORDER = ['work', 'shortBreak', 'longBreak']
 
+// Short Break and Long Break used to both render in --color-amber — the
+// same color for two different states, and (per index.css's note on these
+// tokens) amber's contrast against every light theme is poor. Each session
+// type now has its own dedicated, distinct, per-theme-tuned color. Written
+// out as literal class-name strings (not built with a template like
+// `text-${name}`) so Tailwind's build-time scanner — which looks for
+// verbatim class-like substrings in source, not runtime-computed ones —
+// actually generates these utilities.
+const SESSION_COLORS = {
+  work: {
+    accent: 'text-focus',
+    ring: 'stroke-focus',
+    dot: 'fill-focus',
+    pillActive: 'bg-focus/15 border-focus/60 text-focus',
+  },
+  shortBreak: {
+    accent: 'text-short-break',
+    ring: 'stroke-short-break',
+    dot: 'fill-short-break',
+    pillActive: 'bg-short-break/15 border-short-break/60 text-short-break',
+  },
+  longBreak: {
+    accent: 'text-long-break',
+    ring: 'stroke-long-break',
+    dot: 'fill-long-break',
+    pillActive: 'bg-long-break/15 border-long-break/60 text-long-break',
+  },
+}
+
 const RADIUS = 46
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
@@ -131,6 +160,21 @@ function Timer({
     return () => pipWindow.removeEventListener('pagehide', handlePipClosed)
   }, [pipWindow])
 
+  // The PiP window's title bar is native browser/OS chrome — Document PiP
+  // gives no API to remove or restyle it (only a favicon, page title, and
+  // close button, the same minimal frame every such window gets, by
+  // design, so the user always has an obvious way to identify and close
+  // it). Since it can't be removed, the next best thing is making it
+  // useful: mirroring the main tab's own title convention means the
+  // countdown is still readable even if the mini window is occluded or the
+  // user only glances at its title bar instead of the content.
+  useEffect(() => {
+    if (!pipWindow) return
+    pipWindow.document.title = isRunning
+      ? `${formatTime(secondsLeft)} · ${t(LABEL_KEYS[sessionType])}`
+      : defaultTitle
+  }, [pipWindow, isRunning, secondsLeft, sessionType, defaultTitle, t])
+
   async function togglePip() {
     if (pipWindow) {
       pipWindow.close()
@@ -139,7 +183,12 @@ function Timer({
     if (pipRequestInFlightRef.current) return
     pipRequestInFlightRef.current = true
     try {
-      const pip = await window.documentPictureInPicture.requestWindow({ width: 220, height: 160 })
+      // width/height are a starting size, not a cap — the browser still
+      // lets the user resize afterward. The old 220×160 left barely any
+      // room around the countdown digits at their existing font size,
+      // forcing a manual resize on every open; this is comfortable enough
+      // to not need one immediately.
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 400, height: 300 })
       copyStylesToWindow(pip)
       fillPipDocument(pip)
       setPipWindow(pip)
@@ -151,9 +200,10 @@ function Timer({
   }
 
   const isWork = sessionType === 'work'
-  const accentClass = isWork ? 'text-tomato' : 'text-amber'
-  const ringClass = isWork ? 'stroke-tomato' : 'stroke-amber'
-  const dotClass = isWork ? 'fill-tomato' : 'fill-amber'
+  const sessionColors = SESSION_COLORS[sessionType]
+  const accentClass = sessionColors.accent
+  const ringClass = sessionColors.ring
+  const dotClass = sessionColors.dot
 
   // Mirrors usePomodoro's own per-session-type duration so the ring's
   // progress arc stays correct regardless of the user's configured work/
@@ -338,7 +388,7 @@ function Timer({
                   className={
                     'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
                     (sessionType === type
-                      ? 'bg-tomato/15 border-tomato/60 text-tomato'
+                      ? SESSION_COLORS[type].pillActive
                       : 'border-cream/15 text-sage hover:border-cream/30')
                   }
                 >

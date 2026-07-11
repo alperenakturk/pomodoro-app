@@ -11,6 +11,24 @@
   --color-sage: #8a9a8c;       /* ikincil/soluk metin */
   --color-ink: #1f2a21;        /* ana metin rengi */
 
+  /* Timer session-type indicators only (ring/label/pill) — deliberately
+     separate from --color-tomato/--color-amber above, which stay fixed
+     everywhere because they carry unrelated meaning elsewhere (diffHelpers'
+     over/under-estimate coloring, Danger Zone). Short Break and Long Break
+     used to both render as --color-amber — same color for two different
+     states, and amber's contrast against every *light* theme's background
+     is poor (measured ~1.5:1, well under WCAG's 3:1 UI-component minimum).
+     These two get their own values per theme instead: unchanged from the
+     old amber on dark (already ~5.6:1, no reason to touch it), and a
+     deliberately darker/more saturated pair on light themes where a
+     literal amber wouldn't read at all. --color-focus is the same value as
+     --color-tomato in every theme — introduced only so all three session
+     colors are driven by the same kind of token (see Timer.jsx), not
+     because Focus's color itself changes. */
+  --color-focus: #c84b31;
+  --color-short-break: #e8a33d;
+  --color-long-break: #3fc9be;
+
   --font-display: "JetBrains Mono", ui-monospace, monospace;
   --font-sans: "Inter", system-ui, sans-serif;
 }
@@ -29,6 +47,9 @@
   --color-amber: #e8a33d;
   --color-cream: #fbf8f1;
   --color-sage: #8a9a8c;
+  --color-focus: #c84b31;
+  --color-short-break: #e8a33d;
+  --color-long-break: #3fc9be;
   color-scheme: dark;
 }
 
@@ -71,12 +92,23 @@
      reads *lighter* than the page (the opposite direction from dark mode,
      where cards are darker than the page) — e.g. terracotta's card samples
      #f1ddd4 against a #e7cdc4 page. */
+/* --color-short-break/--color-long-break are the same value across all four
+   light themes on purpose (see the @theme block's note on why they're
+   separate tokens from --color-amber) — a literal amber measures ~1.5:1
+   against any of these backgrounds (WCAG wants 3:1 for UI components), so
+   each needed a darker/more saturated replacement regardless of which
+   light theme is active; picking one shared pair that clears ~4.3:1+ on
+   all four was simpler than four bespoke pairs for no real gain. --color-
+   focus again just mirrors --color-tomato, unchanged. */
 .light,
 .light-terracotta {
   --color-pine: #e7cdc4;
   --color-pine-dark: #f1ddd4;
   --color-cream: #3a241d;
   --color-sage: #8a6a5d;
+  --color-focus: #c84b31;
+  --color-short-break: #7a5518;
+  --color-long-break: #3a5f8a;
   color-scheme: light;
 }
 
@@ -85,6 +117,9 @@
   --color-pine-dark: #e7efdf;
   --color-cream: #2a3322;
   --color-sage: #6f8461;
+  --color-focus: #c84b31;
+  --color-short-break: #7a5518;
+  --color-long-break: #3a5f8a;
   color-scheme: light;
 }
 
@@ -93,6 +128,9 @@
   --color-pine-dark: #f2ead4;
   --color-cream: #332c1a;
   --color-sage: #8a7943;
+  --color-focus: #c84b31;
+  --color-short-break: #7a5518;
+  --color-long-break: #3a5f8a;
   color-scheme: light;
 }
 
@@ -103,6 +141,9 @@
   --color-pine-dark: #e6ebed;
   --color-cream: #20272c;
   --color-sage: #657883;
+  --color-focus: #c84b31;
+  --color-short-break: #7a5518;
+  --color-long-break: #3a5f8a;
   color-scheme: light;
 }
 
