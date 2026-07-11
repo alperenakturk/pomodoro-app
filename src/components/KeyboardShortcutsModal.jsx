@@ -5,9 +5,13 @@ import { useTranslation } from '../hooks/useTranslation'
 // column goes through t(). '?' (this modal's own opener) is included too,
 // so the list is a complete reference of every Timer-tab shortcut.
 const SHORTCUTS = [
-  { command: 'Space', actionKey: 'timer.shortcutPause' },
+  { command: 'Space', actionKey: 'timer.shortcutStartPause' },
   { command: 'Esc', actionKey: 'timer.shortcutVoid' },
   { command: 'F', actionKey: 'timer.shortcutFullscreen' },
+  { command: 'S', actionKey: 'timer.shortcutSkipBreak' },
+  { command: 'T', actionKey: 'timer.shortcutGoTimer' },
+  { command: 'P', actionKey: 'timer.shortcutGoPlanning' },
+  { command: 'R', actionKey: 'timer.shortcutGoReports' },
   { command: '?', actionKey: 'timer.shortcutHelp' },
 ]
 

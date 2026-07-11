@@ -441,6 +441,7 @@ function AppInner() {
             addTask={todayApi.addTask}
             theme={timerThemeId}
             onGoToPlanning={() => setActiveTab('planning')}
+            onNavigateTab={setActiveTab}
             showWelcome={showWelcome}
             onDismissWelcome={dismissOnboarding}
             {...pomodoro}

@@ -62,6 +62,7 @@ function Timer({
   addTask,
   theme,
   onGoToPlanning,
+  onNavigateTab,
   showWelcome,
   onDismissWelcome,
   sessionType,
@@ -257,10 +258,12 @@ function Timer({
   // usePomodoro.js's pause() for why Pause exists as a deliberate deviation).
   const isPaused = !isRunning && secondsLeft > 0 && secondsLeft < sessionDuration
 
-  // Running an untracked Pomodoro (no active task selected) defeats the
-  // whole point of estimate-vs-actual tracking, so a work session simply
-  // can't be started without one — breaks have no such requirement.
-  const startDisabled = isWork && !activeTask
+  // Running an untracked Pomodoro (no active task selected) means its
+  // Pomodoros won't be attributable to anything in estimate-vs-actual
+  // tracking — worth flagging, but not worth blocking on: the user may
+  // genuinely want a task-free Pomodoro, and forcing a trip to Planning
+  // first was friction without a corresponding rule in methodology.md.
+  const noActiveTaskForWork = isWork && !activeTask
 
   function handleSwitch(type) {
     if (type === sessionType) return
@@ -283,7 +286,7 @@ function Timer({
       if (e.code === 'Space') {
         e.preventDefault()
         if (isRunning) pause()
-        else if (!startDisabled) start()
+        else start()
         return
       }
       if (e.key === 'Escape') {
@@ -310,10 +313,38 @@ function Timer({
         toggleFullscreen()
         return
       }
+      // 'S' skips the current break early — mirrors the Skip break button,
+      // which only ever renders for a running break session.
+      if ((e.key === 's' || e.key === 'S') && isRunning && !isWork) {
+        skipBreak()
+        return
+      }
       // '?' opens the keyboard-shortcuts reference (also reachable via the
       // small icon button next to Fullscreen/PiP).
       if (e.key === '?') {
         setShortcutsModalOpen(true)
+        return
+      }
+      // T/P/R jump between tabs. Deliberately not the bare 1/2/3 keys removed
+      // above for session switching (Focus/Short Break/Long Break) — that
+      // was a different action in a different scope, and reusing the same
+      // keys here would be confusing. Suppressed in Fullscreen Focus Mode:
+      // that mode's entire point is hiding navigation chrome, and jumping
+      // tabs wouldn't even look right, since fullscreen is requested on this
+      // component's own container, not the other tabs' panels.
+      if (!isFullscreen && onNavigateTab) {
+        if (e.key === 't' || e.key === 'T') {
+          onNavigateTab('timer')
+          return
+        }
+        if (e.key === 'p' || e.key === 'P') {
+          onNavigateTab('planning')
+          return
+        }
+        if (e.key === 'r' || e.key === 'R') {
+          onNavigateTab('reports')
+          return
+        }
       }
     }
 
@@ -497,9 +528,7 @@ function Timer({
               <button
                 type="button"
                 onClick={start}
-                disabled={startDisabled}
-                title={startDisabled ? t('timer.startDisabledTitle') : undefined}
-                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide disabled:opacity-40 disabled:cursor-not-allowed"
+                className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
               >
                 {isPaused ? t('timer.resume') : t('timer.start')}
               </button>
@@ -523,6 +552,17 @@ function Timer({
               </button>
             )}
           </div>
+
+          {/* Informational, not blocking — Start stays clickable with no
+              active task (see noActiveTaskForWork above); this just makes
+              the tradeoff visible so the choice is a conscious one. Only
+              shown pre-start, since once running the moment for that
+              choice has passed. */}
+          {!isRunning && noActiveTaskForWork && (
+            <p className="text-sage text-xs font-sans text-center max-w-xs">
+              {t('timer.noTaskStartHint')}
+            </p>
+          )}
 
           {/* Subtle, non-alarming — mirrors the interruption counters'
               treatment. Shown whenever this session has been paused at
