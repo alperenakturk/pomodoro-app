@@ -14,8 +14,8 @@ import {
   requestNotificationPermission,
   notify,
   setVolume as setAlertVolume,
-  startTicking,
-  stopTicking,
+  startAmbientSound,
+  stopAmbientSound,
 } from '../lib/alert'
 import { translate } from '../lib/i18n'
 
@@ -154,24 +154,24 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     setAlertVolume(soundVolume)
   }, [soundVolume])
 
-  // Ambient ticking during an active work session only — see the effect near
-  // the bottom of this hook that starts/stops it based on isRunning/sessionType.
-  const [tickingSoundEnabled, setTickingSoundEnabledState] = useState(
-    () => loadSettings().tickingSoundEnabled
-  )
-  const setTickingSoundEnabled = useCallback((value) => {
-    setTickingSoundEnabledState(value)
-    patchSettings({ tickingSoundEnabled: value })
+  // Ambient background sound during an active work session only — see the
+  // effect below that starts/stops it based on isRunning/sessionType. One of
+  // alert.js's AMBIENT_SOUNDS ('none' default, 'ticking', 'rain', 'cafe',
+  // 'whiteNoise').
+  const [ambientSound, setAmbientSoundState] = useState(() => loadSettings().ambientSound)
+  const setAmbientSound = useCallback((value) => {
+    setAmbientSoundState(value)
+    patchSettings({ ambientSound: value })
   }, [])
 
   useEffect(() => {
-    if (tickingSoundEnabled && isRunning && sessionType === 'work') {
-      startTicking()
+    if (ambientSound !== 'none' && isRunning && sessionType === 'work') {
+      startAmbientSound(ambientSound)
     } else {
-      stopTicking()
+      stopAmbientSound()
     }
-    return () => stopTicking()
-  }, [tickingSoundEnabled, isRunning, sessionType])
+    return () => stopAmbientSound()
+  }, [ambientSound, isRunning, sessionType])
 
   useEffect(() => {
     saveTimerState({ sessionType, secondsLeft, isRunning })
@@ -372,8 +372,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     setChimeStyle,
     soundVolume,
     setSoundVolume,
-    tickingSoundEnabled,
-    setTickingSoundEnabled,
+    ambientSound,
+    setAmbientSound,
     start,
     voidPomodoro,
     finishEarly,

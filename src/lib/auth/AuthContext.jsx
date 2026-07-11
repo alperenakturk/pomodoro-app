@@ -84,9 +84,28 @@ export function AuthProvider({ children }) {
     return { error: null }
   }, [])
 
+  // Settings' "Change Password" (email/password accounts only — see
+  // hasPasswordProvider in ChangePasswordModal.jsx). Supabase's own
+  // updateUser() already requires an active session, so there's no separate
+  // "confirm current password" step to build — the user is already proven
+  // to be who they say by virtue of being signed in.
+  const updatePassword = useCallback(async (newPassword) => {
+    if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+    return supabase.auth.updateUser({ password: newPassword })
+  }, [])
+
   const value = useMemo(
-    () => ({ user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, deleteAccount }),
-    [user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, deleteAccount]
+    () => ({
+      user,
+      loading,
+      signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
+      signOut,
+      deleteAccount,
+      updatePassword,
+    }),
+    [user, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, deleteAccount, updatePassword]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

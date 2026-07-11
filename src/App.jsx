@@ -361,7 +361,11 @@ function AppInner() {
         <div
           className={activeTab === 'reports' ? 'max-w-3xl mx-auto flex flex-col gap-6' : 'hidden'}
         >
-          <Reports todayTasks={todayApi.tasks} categories={categoriesApi.categories} />
+          <Reports
+            todayTasks={todayApi.tasks}
+            categories={categoriesApi.categories}
+            workMinutes={pomodoro.workMinutes}
+          />
           <RecordsLog categories={categoriesApi.categories} />
         </div>
 
@@ -388,8 +392,8 @@ function AppInner() {
             setChimeStyle={pomodoro.setChimeStyle}
             soundVolume={pomodoro.soundVolume}
             setSoundVolume={pomodoro.setSoundVolume}
-            tickingSoundEnabled={pomodoro.tickingSoundEnabled}
-            setTickingSoundEnabled={pomodoro.setTickingSoundEnabled}
+            ambientSound={pomodoro.ambientSound}
+            setAmbientSound={pomodoro.setAmbientSound}
             checkToBottom={checkToBottom}
             setCheckToBottom={setCheckToBottom}
             theme={theme}

@@ -146,6 +146,35 @@ describe('load-time normalization', () => {
   })
 })
 
+describe('settings: ambientSound migration', () => {
+  it('maps a legacy tickingSoundEnabled: true to ambientSound: "ticking"', () => {
+    localStorage.setItem('pomodoro_settings', JSON.stringify({ tickingSoundEnabled: true }))
+    expect(loadSettings().ambientSound).toBe('ticking')
+  })
+
+  it('maps a legacy tickingSoundEnabled: false to ambientSound: "none"', () => {
+    localStorage.setItem('pomodoro_settings', JSON.stringify({ tickingSoundEnabled: false }))
+    expect(loadSettings().ambientSound).toBe('none')
+  })
+
+  it('defaults to "none" when neither field was ever saved', () => {
+    expect(loadSettings().ambientSound).toBe('none')
+  })
+
+  it('an explicit ambientSound always wins over a legacy tickingSoundEnabled', () => {
+    localStorage.setItem(
+      'pomodoro_settings',
+      JSON.stringify({ tickingSoundEnabled: true, ambientSound: 'rain' })
+    )
+    expect(loadSettings().ambientSound).toBe('rain')
+  })
+
+  it('patchSettings persists ambientSound like any other setting', () => {
+    patchSettings({ ambientSound: 'cafe' })
+    expect(loadSettings().ambientSound).toBe('cafe')
+  })
+})
+
 describe('Categories', () => {
   it('round-trips a saved category and can clear all categories', () => {
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])

@@ -21,6 +21,8 @@ import {
   takeLast,
   hasNoHistoryYet,
   pomodorosByCategory,
+  totalFocusMinutes,
+  formatFocusDuration,
 } from '../lib/reportsMath'
 import DayReview from './DayReview'
 
@@ -59,7 +61,7 @@ function Stat({ label, value, trend }) {
   )
 }
 
-function TodaySection({ ticks, activityLog, todayTasks }) {
+function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
   const { t } = useTranslation()
   const today = [todayString()]
   const yesterday = datesForYesterday()
@@ -77,8 +79,19 @@ function TodaySection({ ticks, activityLog, todayTasks }) {
   const completedToday = recordsInDates(activityLog, today).length
   const activeToday = todayTasks.filter((t) => !t.done).length
 
+  // Unlike its three siblings above (always a fixed today-vs-yesterday
+  // comparison), this stat follows the top-of-page period filter — the same
+  // Today/Week/Month/Year scope EstimationAccuracySection etc. use — so it
+  // reads "total focus time this week/month/year" when a wider period is
+  // selected, not just today's.
+  const focusMinutes = totalFocusMinutes(ticks, datesForPeriod(period), workMinutes)
+
   return (
-    <div className="grid grid-cols-3 gap-3 font-sans">
+    <div className="grid grid-cols-2 gap-3 font-sans">
+      <Stat
+        label={t('reports.totalFocusTime')}
+        value={formatFocusDuration(focusMinutes)}
+      />
       <Stat
         label={t('reports.pomodorosToday')}
         value={todayPomodoros}
@@ -283,7 +296,7 @@ function LongTermSection({ ticks, activityLog }) {
   )
 }
 
-function Reports({ todayTasks = [], categories = [] }) {
+function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
   const { t } = useTranslation()
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
@@ -344,7 +357,13 @@ function Reports({ todayTasks = [], categories = [] }) {
           )}
 
           <section className="mb-6">
-            <TodaySection ticks={ticks} activityLog={activityLog} todayTasks={todayTasks} />
+            <TodaySection
+              ticks={ticks}
+              activityLog={activityLog}
+              todayTasks={todayTasks}
+              period={period}
+              workMinutes={workMinutes}
+            />
           </section>
 
           <section className="mb-6 pt-4 border-t border-cream/10">

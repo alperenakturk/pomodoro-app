@@ -1,4 +1,5 @@
-import { unlockAudio, playChime, CHIME_STYLES } from '../lib/alert'
+import { useState } from 'react'
+import { unlockAudio, playChime, CHIME_STYLES, AMBIENT_SOUNDS } from '../lib/alert'
 import {
   DEFAULT_CYCLE_LENGTH,
   DEFAULT_WORK_MINUTES,
@@ -27,6 +28,7 @@ import {
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
+import ChangePasswordModal from './ChangePasswordModal'
 
 const rowClass =
   'flex items-center justify-between gap-3 text-sage text-xs font-sans py-3 border-b border-cream/10 last:border-b-0'
@@ -76,6 +78,15 @@ async function handleDeleteAccount(t, deleteAccount) {
   window.location.reload()
 }
 
+// A Google-only account has no password to change — Supabase's `identities`
+// array lists every provider actually linked to this user (an account can
+// have both if the user later links email/password too), so this checks for
+// a real 'email' identity rather than assuming based on how they first
+// signed up.
+function hasPasswordProvider(user) {
+  return Boolean(user?.identities?.some((identity) => identity.provider === 'email'))
+}
+
 function SettingsTab({
   cycleLength,
   setCycleLength,
@@ -94,8 +105,8 @@ function SettingsTab({
   setChimeStyle,
   soundVolume,
   setSoundVolume,
-  tickingSoundEnabled,
-  setTickingSoundEnabled,
+  ambientSound,
+  setAmbientSound,
   checkToBottom,
   setCheckToBottom,
   theme,
@@ -107,10 +118,18 @@ function SettingsTab({
 }) {
   const { t, language, setLanguage } = useTranslation()
   const { user, deleteAccount } = useAuth()
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const chimeLabels = {
     classic: t('chime.classic'),
     soft: t('chime.soft'),
     alert: t('chime.alert'),
+  }
+  const ambientSoundLabels = {
+    none: t('settings.ambientNone'),
+    ticking: t('settings.ambientTicking'),
+    rain: t('settings.ambientRain'),
+    cafe: t('settings.ambientCafe'),
+    whiteNoise: t('settings.ambientWhiteNoise'),
   }
   const languageLabels = {
     en: t('settings.languageEnglish'),
@@ -123,6 +142,19 @@ function SettingsTab({
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2">
           {t('settings.title')}
         </p>
+
+        {user && hasPasswordProvider(user) && (
+          <div className={rowClass}>
+            <span>{t('settings.changePasswordLabel')}</span>
+            <button
+              type="button"
+              onClick={() => setChangePasswordOpen(true)}
+              className="text-cream border border-cream/15 rounded-full px-3 py-1"
+            >
+              {t('settings.changePasswordButton')}
+            </button>
+          </div>
+        )}
 
         <div className="border-b border-cream/10 py-3">
           <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
@@ -219,15 +251,15 @@ function SettingsTab({
 
         <div className={rowClass}>
           <div className="flex flex-col gap-0.5">
-            <label htmlFor="ticking-sound">{t('settings.tickingSoundLabel')}</label>
-            <span className="text-sage/40 text-[10px]">{t('settings.tickingSoundHint')}</span>
+            <label htmlFor="ambient-sound">{t('settings.ambientSoundLabel')}</label>
+            <span className="text-sage/40 text-[10px]">{t('settings.ambientSoundHint')}</span>
           </div>
-          <input
-            id="ticking-sound"
-            type="checkbox"
-            checked={tickingSoundEnabled}
-            onChange={(e) => setTickingSoundEnabled(e.target.checked)}
-            className="flex-shrink-0"
+          <Select
+            id="ambient-sound"
+            value={ambientSound}
+            options={AMBIENT_SOUNDS}
+            labels={ambientSoundLabels}
+            onChange={setAmbientSound}
           />
         </div>
 
@@ -411,6 +443,8 @@ function SettingsTab({
           </div>
         )}
       </div>
+
+      {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
     </div>
   )
 }

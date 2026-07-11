@@ -59,6 +59,26 @@ export function countTicksInDates(ticks, type, dates) {
   return ticks.filter((t) => t.type === type && dateSet.has(t.date)).length
 }
 
+// Ticks record only that a Pomodoro completed (type/date/timestamp), not how
+// long it actually ran — usePomodoro's workMinutes is freely adjustable, and
+// a tick from before a change doesn't carry the duration that was in effect
+// when it happened. This multiplies the period's completed-Pomodoro count by
+// today's *current* workMinutes, the same "N pomodoros = N work sessions at
+// today's length" assumption AvailablePomodoros' capacity estimate already
+// makes — an approximation, not a literal historical total, but the only one
+// possible without adding new per-tick tracking.
+export function totalFocusMinutes(ticks, dates, workMinutes) {
+  return countTicksInDates(ticks, 'pomodoro', dates) * workMinutes
+}
+
+// H:MM (methodology-neutral "hours:minutes", not a locale-specific format —
+// this app has no other duration display to match).
+export function formatFocusDuration(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${hours}:${String(minutes).padStart(2, '0')}`
+}
+
 export function recordsInDates(records, dates) {
   const dateSet = new Set(dates)
   return records.filter((r) => dateSet.has(r.date))

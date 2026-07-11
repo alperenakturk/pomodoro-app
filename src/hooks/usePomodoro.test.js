@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { usePomodoro } from './usePomodoro'
 import { loadTicks } from '../lib/storage'
-import { setVolume, startTicking, stopTicking } from '../lib/alert'
+import { setVolume, startAmbientSound, stopAmbientSound } from '../lib/alert'
 
 vi.mock('../lib/alert', () => ({
   unlockAudio: vi.fn(),
@@ -11,8 +11,8 @@ vi.mock('../lib/alert', () => ({
   requestNotificationPermission: vi.fn(),
   notify: vi.fn(),
   setVolume: vi.fn(),
-  startTicking: vi.fn(),
-  stopTicking: vi.fn(),
+  startAmbientSound: vi.fn(),
+  stopAmbientSound: vi.fn(),
 }))
 
 function tick(seconds) {
@@ -401,50 +401,58 @@ describe('usePomodoro', () => {
     })
   })
 
-  describe('ambient ticking sound', () => {
-    it('does not tick by default, even while working', () => {
+  describe('ambient background sound', () => {
+    it('does not play anything by default, even while working', () => {
       const { result } = renderHook(() => usePomodoro())
       act(() => result.current.start())
-      expect(startTicking).not.toHaveBeenCalled()
+      expect(startAmbientSound).not.toHaveBeenCalled()
     })
 
-    it('starts ticking when enabled and a work session is running', () => {
+    it('starts the selected ambient sound when a work session is running', () => {
       const { result } = renderHook(() => usePomodoro())
-      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.setAmbientSound('rain'))
       act(() => result.current.start())
 
-      expect(startTicking).toHaveBeenCalled()
+      expect(startAmbientSound).toHaveBeenCalledWith('rain')
     })
 
-    it('stops ticking when paused', () => {
+    it('stops the ambient sound when paused', () => {
       const { result } = renderHook(() => usePomodoro())
-      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.setAmbientSound('ticking'))
       act(() => result.current.start())
       vi.clearAllMocks()
 
       act(() => result.current.voidPomodoro())
-      expect(stopTicking).toHaveBeenCalled()
+      expect(stopAmbientSound).toHaveBeenCalled()
     })
 
-    it('stops ticking once a work session completes into a break', () => {
+    it('stops the ambient sound once a work session completes into a break', () => {
       const { result } = renderHook(() => usePomodoro())
-      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.setAmbientSound('cafe'))
       act(() => result.current.start())
       vi.clearAllMocks()
 
       tick(25 * 60)
       expect(result.current.sessionType).toBe('shortBreak')
-      expect(stopTicking).toHaveBeenCalled()
+      expect(stopAmbientSound).toHaveBeenCalled()
     })
 
-    it('never ticks during a break even if enabled', () => {
+    it('never plays an ambient sound during a break even if one is selected', () => {
       const { result } = renderHook(() => usePomodoro())
-      act(() => result.current.setTickingSoundEnabled(true))
+      act(() => result.current.setAmbientSound('whiteNoise'))
       act(() => result.current.switchSession('shortBreak'))
       vi.clearAllMocks()
 
       act(() => result.current.start())
-      expect(startTicking).not.toHaveBeenCalled()
+      expect(startAmbientSound).not.toHaveBeenCalled()
+    })
+
+    it('setAmbientSound persists across a remount', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.setAmbientSound('rain'))
+
+      const { result: resumed } = renderHook(() => usePomodoro())
+      expect(resumed.current.ambientSound).toBe('rain')
     })
   })
 

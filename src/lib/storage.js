@@ -201,7 +201,7 @@ const DEFAULT_SETTINGS = {
   autoStartBreaks: false,
   autoStartPomodoros: false,
   soundVolume: 100,
-  tickingSoundEnabled: false,
+  ambientSound: 'none',
   checkToBottom: false,
   theme: 'dark',
   chimeStyle: 'classic',
@@ -209,7 +209,20 @@ const DEFAULT_SETTINGS = {
   language: null,
   onboardingDismissed: false,
 }
-export const loadSettings = () => ({ ...DEFAULT_SETTINGS, ...loadJSON(SETTINGS_KEY, {}) })
+// The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
+// 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map
+// onto it (true -> 'ticking', false -> 'none') so existing settings don't
+// silently reset. Only applies when ambientSound itself was never saved;
+// once a real ambientSound value exists it always wins.
+function normalizeAmbientSound(raw) {
+  if (raw.ambientSound != null) return raw.ambientSound
+  if (raw.tickingSoundEnabled != null) return raw.tickingSoundEnabled ? 'ticking' : 'none'
+  return DEFAULT_SETTINGS.ambientSound
+}
+export const loadSettings = () => {
+  const raw = loadJSON(SETTINGS_KEY, {})
+  return { ...DEFAULT_SETTINGS, ...raw, ambientSound: normalizeAmbientSound(raw) }
+}
 export const saveSettings = (settings) => saveJSON(SETTINGS_KEY, settings)
 // Merges a partial update into existing settings — saveSettings overwrites
 // the whole object, so independent features (cycle length, theme, chime)

@@ -16,6 +16,8 @@ import {
   hasNoHistoryYet,
   todayString,
   pomodorosByCategory,
+  totalFocusMinutes,
+  formatFocusDuration,
 } from './reportsMath'
 
 describe('effectiveDiff', () => {
@@ -99,6 +101,34 @@ describe('countTicksInDates / recordsInDates', () => {
   it('recordsInDates keeps only records whose date is in the list', () => {
     const records = [{ date: '2026-01-01' }, { date: '2026-01-05' }]
     expect(recordsInDates(records, ['2026-01-01'])).toEqual([{ date: '2026-01-01' }])
+  })
+})
+
+describe('totalFocusMinutes', () => {
+  it('multiplies the completed-Pomodoro count in the given dates by workMinutes', () => {
+    const ticks = [
+      { type: 'pomodoro', date: '2026-01-01' },
+      { type: 'pomodoro', date: '2026-01-01' },
+      { type: 'pomodoro', date: '2026-01-05' }, // out of range
+      { type: 'interruption-internal', date: '2026-01-01' }, // wrong type
+    ]
+    expect(totalFocusMinutes(ticks, ['2026-01-01'], 25)).toBe(50)
+  })
+
+  it('returns 0 when there are no completed Pomodoros in range', () => {
+    expect(totalFocusMinutes([], ['2026-01-01'], 25)).toBe(0)
+  })
+})
+
+describe('formatFocusDuration', () => {
+  it('formats whole hours and minutes as H:MM', () => {
+    expect(formatFocusDuration(50)).toBe('0:50')
+    expect(formatFocusDuration(60)).toBe('1:00')
+    expect(formatFocusDuration(125)).toBe('2:05')
+  })
+
+  it('formats 0 minutes as 0:00', () => {
+    expect(formatFocusDuration(0)).toBe('0:00')
   })
 })
 
