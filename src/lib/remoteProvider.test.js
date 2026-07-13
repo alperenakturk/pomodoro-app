@@ -229,6 +229,40 @@ describe('get/set/remove after initializeRemoteData', () => {
     expect(deleteCall.args).toEqual(['id', ['i2']])
   })
 
+  // Regression test for a real bug: remove() used to fire the Supabase
+  // delete and return immediately without awaiting it, so a caller that
+  // reloads the page right after calling remove() (every Danger Zone
+  // button, including Factory Reset) could have window.location.reload()
+  // tear down the JS runtime — aborting the in-flight request — before it
+  // ever reached Supabase. remove() must now stay pending until the delete
+  // call actually resolves.
+  it("remove() doesn't resolve until its Supabase delete call actually completes", async () => {
+    const responses = { inventory: { arraySelect: { data: [], error: null } } }
+    const { initializeRemoteData, remove, get } = await loadRemoteProviderWith(responses)
+    await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+
+    let resolveDelete
+    responses.inventory.arraySelect = new Promise((resolve) => {
+      resolveDelete = () => resolve({ data: [], error: null })
+    })
+
+    let removed = false
+    const removePromise = remove('pomodoro_inventory').then(() => {
+      removed = true
+    })
+
+    // Flush a few microtask ticks — if remove() were still fire-and-forget,
+    // it would have already resolved by now regardless of the pending delete.
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(removed).toBe(false)
+
+    resolveDelete()
+    await removePromise
+    expect(removed).toBe(true)
+    expect(get('pomodoro_inventory', 'fallback')).toEqual([])
+  })
+
   it('resetToLocalMode clears the cache so a later initializeRemoteData starts clean', async () => {
     const { initializeRemoteData, resetToLocalMode, get } = await loadRemoteProviderWith({
       inventory: { arraySelect: { data: [{ id: 'i1', text: 'A', user_id: 'user-1' }], error: null } },

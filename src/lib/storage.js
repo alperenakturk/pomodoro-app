@@ -1,5 +1,7 @@
 import { mergeCollectionById, csvRowsToActivityRecords, mergeActivityRecordsByNaturalKey } from './importData'
 import * as remoteProvider from './remoteProvider'
+import { CATEGORY_COLORS, DEFAULT_CATEGORY_SEEDS } from './constants'
+import { resolveLanguage, translate } from './i18n'
 
 // Storage provider: every load/save/clear below goes through this object
 // rather than touching localStorage directly. This is what the "swapping in
@@ -323,6 +325,13 @@ function normalizeCategory(category) {
     id: category.id,
     name: category.name,
     color: category.color ?? null,
+    // Local-only bookkeeping (never sent to Supabase — see signInToRemote's
+    // migration snapshot below): true for a still-pristine, auto-seeded
+    // default category (useCategories.js's seedDefaultCategories), false
+    // once the user creates their own or edits a default one (updateCategory
+    // clears it, since an edited category is real user data, not a
+    // reproducible default anymore).
+    isDefault: category.isDefault ?? false,
     ...normalizeMeta(category),
   }
 }
@@ -387,44 +396,53 @@ export const saveTimerState = (state) => saveJSON(TIMER_STATE_KEY, state)
 // own key(s). Settings is deliberately never touched by any of these — only
 // resetAllData() below resets it, per the "settings survive a data reset"
 // requirement.
-export function clearInventory() {
-  activeProvider.remove(INVENTORY_KEY)
+//
+// All async, awaiting activeProvider.remove() — for a signed-in user that's
+// remoteProvider's remove(), a real network call. Callers (SettingsModal.jsx)
+// await these before reloading the page: reloading immediately after firing
+// an unawaited delete was racing (and usually winning against) the actual
+// Supabase request, silently aborting it, so Danger Zone actions appeared to
+// do nothing for a signed-in account. See remoteProvider.js's remove() for
+// the full write-up.
+export async function clearInventory() {
+  await activeProvider.remove(INVENTORY_KEY)
 }
 // Timetable blocks are today-scoped planning data with the same lifecycle as
 // Today's Tasks, so clearing "Today's Tasks" clears both.
-export function clearTodayTasks() {
-  activeProvider.remove(TODAY_KEY)
-  activeProvider.remove(TIMETABLE_KEY)
+export async function clearTodayTasks() {
+  await Promise.all([activeProvider.remove(TODAY_KEY), activeProvider.remove(TIMETABLE_KEY)])
 }
-export function clearActivityLog() {
-  activeProvider.remove(ACTIVITY_LOG_KEY)
+export async function clearActivityLog() {
+  await activeProvider.remove(ACTIVITY_LOG_KEY)
 }
-export function clearTicks() {
-  activeProvider.remove(TICKS_KEY)
+export async function clearTicks() {
+  await activeProvider.remove(TICKS_KEY)
 }
-export function clearTimerState() {
-  activeProvider.remove(TIMER_STATE_KEY)
+export async function clearTimerState() {
+  await activeProvider.remove(TIMER_STATE_KEY)
 }
-export function clearCategories() {
-  activeProvider.remove(CATEGORIES_KEY)
+export async function clearCategories() {
+  await activeProvider.remove(CATEGORIES_KEY)
 }
-export function clearVoidLog() {
-  activeProvider.remove(VOID_LOG_KEY)
+export async function clearVoidLog() {
+  await activeProvider.remove(VOID_LOG_KEY)
 }
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
 // first-launch state.
-export function resetAllData() {
-  activeProvider.remove(INVENTORY_KEY)
-  activeProvider.remove(TODAY_KEY)
-  activeProvider.remove(TIMETABLE_KEY)
-  activeProvider.remove(ACTIVITY_LOG_KEY)
-  activeProvider.remove(TICKS_KEY)
-  activeProvider.remove(TIMER_STATE_KEY)
-  activeProvider.remove(CATEGORIES_KEY)
-  activeProvider.remove(VOID_LOG_KEY)
-  activeProvider.remove(SETTINGS_KEY)
+export async function resetAllData() {
+  await Promise.all([
+    activeProvider.remove(INVENTORY_KEY),
+    activeProvider.remove(TODAY_KEY),
+    activeProvider.remove(TIMETABLE_KEY),
+    activeProvider.remove(ACTIVITY_LOG_KEY),
+    activeProvider.remove(TICKS_KEY),
+    activeProvider.remove(TIMER_STATE_KEY),
+    activeProvider.remove(CATEGORIES_KEY),
+    activeProvider.remove(VOID_LOG_KEY),
+    activeProvider.remove(SETTINGS_KEY),
+  ])
 }
 
 // Full backup of every storage key, for the export feature.
@@ -517,6 +535,10 @@ export function importActivityLogCSV(rows, categories, mode) {
 // are singletons where an existing remote row always wins outright
 // regardless (see initializeRemoteData), so a guest-only theme tweak isn't
 // the kind of "local change" this prompt is about.
+// Pristine (never edited/renamed) default-seeded categories don't count —
+// see signInToRemote()'s snapshot below for why they're excluded from
+// syncing entirely; a guest who only ever has the auto-seeded starter set
+// has no real local data to ask about merging.
 export function hasLocalGuestData() {
   return (
     loadInventory().length > 0 ||
@@ -524,7 +546,7 @@ export function hasLocalGuestData() {
     loadActivityLog().length > 0 ||
     loadTicks().length > 0 ||
     loadTimetable().length > 0 ||
-    loadCategories().length > 0 ||
+    loadCategories().some((c) => !c.isDefault) ||
     loadVoidLog().length > 0 ||
     loadTimerState() !== null
   )
@@ -546,14 +568,53 @@ export async function signInToRemote(userId, { skipLocalMerge = false } = {}) {
         pomodoro_activity_log: loadActivityLog(),
         pomodoro_ticks: loadTicks(),
         pomodoro_timetable: loadTimetable(),
-        pomodoro_categories: loadCategories(),
+        // Pristine default-seeded categories (see useCategories.js's
+        // isDefault flag) are deliberately excluded — every guest install
+        // seeds its own copy with a fresh random id (there's no account to
+        // scope them to yet), so sending them through the normal id-based
+        // merge created a full duplicate set on every fresh guest-then-
+        // sign-in, rather than recognizing them as "the same" defaults.
+        // Once edited/renamed, a category stops being "default" (see
+        // updateCategory) and syncs normally like any other. The account
+        // gets its own default set seeded once, directly — see
+        // seedDefaultCategoriesRemotely() below.
+        pomodoro_categories: loadCategories().filter((c) => !c.isDefault),
         pomodoro_void_log: loadVoidLog(),
         pomodoro_timer_state: loadTimerState(),
         pomodoro_settings: loadSettings(),
       }
   const result = await remoteProvider.initializeRemoteData(userId, localSnapshots)
-  if (!result.error) activeProvider = remoteProvider
+  if (!result.error) {
+    activeProvider = remoteProvider
+    await seedDefaultCategoriesRemotely()
+  }
   return result
+}
+
+// Runs once per account, right after a successful sign-in/migration —
+// mirrors useCategories.js's own local seeding (same DEFAULT_CATEGORY_SEEDS
+// list, same translate() call) but writes straight to whichever collection
+// activeProvider now points at (remoteProvider, by this point in
+// signInToRemote). Guarded by the *account's own* defaultCategoriesSeeded
+// flag (now synced remotely as part of the settings singleton) so it only
+// ever runs once per account, the same one-time-only pattern useCategories.js
+// uses locally for guests — signing in again later, from any device, never
+// re-seeds. If the account already has categories of its own (merged in
+// from this or an earlier device), there's nothing to seed; just stop asking.
+async function seedDefaultCategoriesRemotely() {
+  const settings = loadSettings()
+  if (settings.defaultCategoriesSeeded) return
+  if (loadCategories().length === 0) {
+    const language = resolveLanguage(settings.language)
+    saveCategories(
+      DEFAULT_CATEGORY_SEEDS.map(({ labelKey, colorIndex }) => ({
+        id: crypto.randomUUID(),
+        name: translate(language, `defaultCategories.${labelKey}`),
+        color: CATEGORY_COLORS[colorIndex].value,
+      }))
+    )
+  }
+  patchSettings({ defaultCategoriesSeeded: true })
 }
 
 // Called on sign-out — switches back to localStorage exactly as it was

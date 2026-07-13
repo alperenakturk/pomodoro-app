@@ -16,6 +16,15 @@ function seedDefaultCategories() {
     id: crypto.randomUUID(),
     name: translate(language, `defaultCategories.${labelKey}`),
     color: CATEGORY_COLORS[colorIndex].value,
+    // Marks this as a reproducible starter category, not real user data —
+    // storage.js's signInToRemote() excludes anything still flagged this way
+    // from what it syncs to a new account (each guest install would
+    // otherwise seed its own copy with a different random id, duplicating
+    // the starter set on every fresh sign-in instead of the account just
+    // getting its own seeded once — see signInToRemote's comment). Cleared
+    // by updateCategory below the moment the user actually edits one, since
+    // a renamed/recolored category is real data and should sync normally.
+    isDefault: true,
   }))
 }
 
@@ -40,8 +49,11 @@ export function useCategories() {
     ])
   }, [])
 
+  // Any explicit edit clears isDefault — a renamed/recolored category is the
+  // user's own data now, not a reproducible starter default (see
+  // seedDefaultCategories above), so it should sync like any other category.
   const updateCategory = useCallback((id, patch) => {
-    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch, isDefault: false } : c)))
   }, [])
 
   // Deliberately no cascade delete — tasks/records referencing this id just

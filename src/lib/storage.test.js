@@ -180,7 +180,15 @@ describe('Categories', () => {
   it('round-trips a saved category and can clear all categories', () => {
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
     expect(loadCategories()).toEqual([
-      { id: 'c1', name: 'Coding', color: '#4a8c82', userId: 'local', createdAt: null, updatedAt: null },
+      {
+        id: 'c1',
+        name: 'Coding',
+        color: '#4a8c82',
+        isDefault: false,
+        userId: 'local',
+        createdAt: null,
+        updatedAt: null,
+      },
     ])
 
     clearCategories()
@@ -190,7 +198,15 @@ describe('Categories', () => {
   it('defaults a missing color to null instead of crashing', () => {
     localStorage.setItem('pomodoro_categories', JSON.stringify([{ id: 'c1', name: 'Coding' }]))
     expect(loadCategories()).toEqual([
-      { id: 'c1', name: 'Coding', color: null, userId: 'local', createdAt: null, updatedAt: null },
+      {
+        id: 'c1',
+        name: 'Coding',
+        color: null,
+        isDefault: false,
+        userId: 'local',
+        createdAt: null,
+        updatedAt: null,
+      },
     ])
   })
 

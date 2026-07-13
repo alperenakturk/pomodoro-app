@@ -30,6 +30,17 @@ import TabNav from './components/TabNav'
 import SettingsModal from './components/SettingsModal'
 import ProfileMenu from './components/ProfileMenu'
 
+// sessionStorage (not a ref, which resets on every fresh JS load) — marks
+// that this browser tab has already completed a sign-in sync for a given
+// user id. See the App() effect below for why this exists: reloading the
+// page (e.g. Factory Reset's own window.location.reload(), or just hitting
+// refresh) remounts App from scratch, so prevUserIdRef always starts
+// undefined on that first effect run — with nothing else to go on, that run
+// is indistinguishable from a genuine brand-new sign-in, and used to
+// re-offer the "sync local data?" prompt and re-run the full migration dance
+// every single time, purely as a side effect of the JS runtime restarting.
+const SYNCED_SESSION_KEY = 'pomodoro_synced_session_user_id'
+
 function todayString() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -83,6 +94,7 @@ function App() {
       // would misreport a previous session's outcome as the new one's.
       setSyncNotice(null)
       setSyncError(null)
+      sessionStorage.removeItem(SYNCED_SESSION_KEY)
       return
     }
 
@@ -90,12 +102,19 @@ function App() {
     setSyncError(null)
     setSyncNotice(null)
 
-    // Resolved *before* the syncing screen shows — this is a decision only
-    // the user can make, so it needs to happen while the app still looks
-    // normal, not mid-"Syncing…" transition. An empty/untouched guest
-    // session (hasLocalGuestData() false) has nothing to ask about and
-    // proceeds silently, exactly as before this feature existed.
-    const skipLocalMerge = hasLocalGuestData() && !window.confirm(t('sync.mergePromptConfirm'))
+    // This tab already completed a sign-in sync for this exact user id at
+    // some point before now (see SYNCED_SESSION_KEY above) — this effect run
+    // is a reload restoring that same session, not a fresh sign-in action,
+    // so there's no local guest data to genuinely ask about and no merge to
+    // perform: just quietly reconnect. Resolved *before* the syncing screen
+    // shows, same as the confirm() case below — a decision that needs to
+    // happen while the app still looks normal, not mid-"Syncing…" transition.
+    // An empty/untouched guest session (hasLocalGuestData() false) also has
+    // nothing to ask about and proceeds silently, exactly as before this
+    // feature existed.
+    const alreadySyncedThisTab = sessionStorage.getItem(SYNCED_SESSION_KEY) === userId
+    const skipLocalMerge =
+      alreadySyncedThisTab || (hasLocalGuestData() && !window.confirm(t('sync.mergePromptConfirm')))
 
     setDataMode('syncing')
     signInToRemote(userId, { skipLocalMerge }).then((result) => {
@@ -111,6 +130,7 @@ function App() {
         clearLocalGuestData()
         setSyncNotice(true)
       }
+      sessionStorage.setItem(SYNCED_SESSION_KEY, userId)
       setDataMode('remote')
       setAppKey(userId)
     })
@@ -145,10 +165,20 @@ function GearIcon({ className }) {
   )
 }
 
+// Rendered while activeProvider is still localStorageProvider (the switch to
+// remoteProvider only happens after signInToRemote() resolves — see the
+// effect above), so loadSettings() here reads the guest theme the user was
+// just looking at. Same "custom resolves to its General pick" logic as
+// AppInner's rootThemeId below, and the same bg-pine + themeClassName(...)
+// pattern Timer.jsx's PiP portal uses for its own theme-aware full-bleed
+// surface — AppInner isn't mounted yet at this point, so this can't just
+// read its theme state and has to resolve its own from storage directly.
 function SyncingScreen() {
   const { t } = useTranslation()
+  const settings = loadSettings()
+  const rootThemeId = settings.theme === 'custom' ? settings.customThemeGeneral : settings.theme
   return (
-    <div className="min-h-screen bg-pine flex items-center justify-center">
+    <div className={`min-h-screen bg-pine flex items-center justify-center ${themeClassName(rootThemeId)}`}>
       <p className="text-sage text-sm font-sans">{t('sync.syncingMessage')}</p>
     </div>
   )

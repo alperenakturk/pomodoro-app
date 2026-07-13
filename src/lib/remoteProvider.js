@@ -233,18 +233,23 @@ export function set(collection, value) {
   }
 }
 
-export function remove(collection) {
+// Async and awaited by its callers (storage.js's clearX()/resetAllData()) —
+// unlike set() above, which is deliberately fire-and-forget for normal
+// interactive saves, remove() is used right before a Danger Zone action
+// reloads the page. A fire-and-forget delete here would race that reload:
+// window.location.reload() tears down the JS runtime (and any in-flight
+// fetch) as soon as it's called, which was aborting the DELETE request
+// before Supabase ever received it — Factory Reset (and every other Danger
+// Zone button) would appear to do nothing for a signed-in user, even after
+// confirming. Awaiting here, and awaiting *that* in storage.js before the
+// caller reloads, guarantees the request actually completes first.
+export async function remove(collection) {
   const isArray = Boolean(ARRAY_TABLES[collection])
   cache[collection] = isArray ? [] : null
   if (isArray) knownIds[collection] = new Set()
   if (!activeUserId) return
 
   const table = ARRAY_TABLES[collection] ?? SINGLETON_TABLES[collection]
-  supabase
-    .from(table)
-    .delete()
-    .eq('user_id', activeUserId)
-    .then(({ error }) => {
-      if (error) console.error(`Failed to clear ${collection} on Supabase:`, error)
-    })
+  const { error } = await supabase.from(table).delete().eq('user_id', activeUserId)
+  if (error) console.error(`Failed to clear ${collection} on Supabase:`, error)
 }

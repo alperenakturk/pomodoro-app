@@ -57,16 +57,22 @@ const RESET_CATEGORIES = [
   { labelKey: 'settings.resetVoidLogLabel', confirmKey: 'settings.resetVoidLogConfirm', action: clearVoidLog },
 ]
 
-function handleCategoryDelete(category, t) {
+// Both await their storage.js action before reloading — for a signed-in
+// user that action is a real network delete (remoteProvider's remove()),
+// and reloading immediately after firing it unawaited was racing (and
+// usually winning against) the request actually reaching Supabase, so the
+// button appeared to do nothing. See remoteProvider.js's remove() for the
+// full write-up.
+async function handleCategoryDelete(category, t) {
   if (window.confirm(t(category.confirmKey))) {
-    category.action()
+    await category.action()
     window.location.reload()
   }
 }
 
-function handleFactoryReset(t) {
+async function handleFactoryReset(t) {
   if (window.confirm(t('settings.factoryResetConfirm'))) {
-    resetAllData()
+    await resetAllData()
     window.location.reload()
   }
 }
