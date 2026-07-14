@@ -131,6 +131,20 @@ export const COACH_MARKS = [
     bodyKey: 'coachMarks.settingsDataIntro.body',
     guideSection: 'reports',
   },
+  // MotivationOverlay isn't a tab like the other sections above — it's an
+  // overlay opened from Timer — but reuses the exact same pickCoachMark/
+  // seenCoachMarks machinery: 'motivation' is its own section, checked
+  // inside MotivationOverlay itself (see Timer.jsx forwarding
+  // seenCoachMarks/onDismissCoachMark/onLearnMoreCoachMark one level
+  // further). No extra trigger condition — shows once, the first time the
+  // overlay is ever opened.
+  {
+    id: 'motivation-intro',
+    section: 'motivation',
+    titleKey: 'coachMarks.motivationIntro.title',
+    bodyKey: 'coachMarks.motivationIntro.body',
+    guideSection: 'what-is-it',
+  },
 ]
 
 // Picks which (if any) coach mark should currently be visible for a section:

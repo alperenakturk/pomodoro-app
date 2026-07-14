@@ -182,6 +182,7 @@ describe('initializeRemoteData', () => {
       timetable: { arraySelect: failure },
       categories: { arraySelect: failure },
       void_log: { arraySelect: failure },
+      card_draws: { arraySelect: failure },
       timer_state: { singleSelect: failure },
       settings: { singleSelect: failure },
     })

@@ -98,6 +98,72 @@ export function playTaskCompleteChime() {
   playTone(880, 0.56, 0.55, 0.15)
 }
 
+// --- MotivationOverlay sound effects ---------------------------------------
+// Same synthesized-tone approach as everything above (no audio files) for
+// the card-draw feature's shuffle/pick/reveal beats.
+
+// A handful of quick, softly-pitched ticks spread across the ~1.1s shuffle
+// animation — a light "riffle" feel, not a rhythm. Timed/pitched with a
+// little randomness each call so repeated shuffles don't sound identical.
+export function playCardShuffle() {
+  if (!audioCtx) return
+  const tickCount = 5
+  for (let i = 0; i < tickCount; i++) {
+    const offset = (i / tickCount) * 0.9 + Math.random() * 0.08
+    const freq = 300 + Math.random() * 140
+    playTone(freq, offset, 0.05, 0.09)
+  }
+}
+
+// A quick upward pitch-sweep — the "whoosh" of a card flipping through the
+// air the instant it's picked. Built directly (not via playTone, which only
+// holds one fixed frequency) since the sweep is the whole point.
+export function playCardPick() {
+  if (!audioCtx) return
+  const now = audioCtx.currentTime
+  const osc = audioCtx.createOscillator()
+  const gain = audioCtx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(180, now)
+  osc.frequency.exponentialRampToValueAtTime(520, now + 0.22)
+  const peak = Math.max(0.0001, 0.14 * effectsVolume)
+  gain.gain.setValueAtTime(0.0001, now)
+  gain.gain.exponentialRampToValueAtTime(peak, now + 0.05)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28)
+  osc.connect(gain)
+  gain.connect(audioCtx.destination)
+  osc.start(now)
+  osc.stop(now + 0.3)
+}
+
+// A short suspenseful double-tick for the moment the flipped card first
+// shows its "?" — quiet and understated, since the real payoff is
+// playCategoryReveal() a beat later.
+export function playCardMystery() {
+  if (!audioCtx) return
+  playTone(220, 0, 0.12, 0.1)
+  playTone(220, 0.14, 0.12, 0.08)
+}
+
+// The category-reveal beat, right as the "?" swaps for the real category
+// icon: a small pleasant two-note chime normally, or (isRare) a fuller
+// ascending shimmer with a couple of high sparkle overtones layered on top
+// — deliberately bigger, since this is the rare-card payoff moment.
+export function playCategoryReveal({ isRare = false } = {}) {
+  if (!audioCtx) return
+  if (isRare) {
+    playTone(660, 0, 0.22, 0.16)
+    playTone(880, 0.1, 0.24, 0.16)
+    playTone(1108, 0.22, 0.3, 0.16)
+    playTone(1320, 0.36, 0.5, 0.18)
+    playTone(1760, 0.4, 0.4, 0.08)
+    playTone(2093, 0.48, 0.35, 0.06)
+    return
+  }
+  playTone(784, 0, 0.16, 0.14)
+  playTone(988, 0.12, 0.24, 0.15)
+}
+
 // Ambient background sound during an active work session only (see
 // usePomodoro's ambientSound effect, which calls startAmbientSound/
 // stopAmbientSound based on isRunning/sessionType). One picker rather than a

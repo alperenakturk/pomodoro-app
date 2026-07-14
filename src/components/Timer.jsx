@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
+import MotivationOverlay from './MotivationOverlay'
 import CoachMark from './CoachMark'
+import AuthModal from './AuthModal'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 import { useTranslation } from '../hooks/useTranslation'
+import { useAuth } from '../hooks/useAuth'
 import { useFullscreenBackgroundUrl } from '../hooks/useFullscreenBackgroundUrl'
 import { themeClassName } from '../lib/theme'
 import { pickCoachMark } from '../lib/constants'
@@ -112,6 +115,8 @@ function Timer({
   internalCount,
   externalCount,
   pauseCount,
+  motivationCardUsed,
+  markMotivationCardUsed,
   completionPulseKey,
   cycleLength,
   workMinutes,
@@ -297,6 +302,32 @@ function Timer({
 
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false)
 
+  // MotivationOverlay is its own independent fixed full-viewport layer (see
+  // that component) — not part of the isFullscreen/CollapsibleChrome
+  // auto-hide system at all, since it fully covers the screen while open.
+  // Still tracked here so the keydown handler's Escape branch can no-op
+  // while it's open (its own internal Escape listener handles closing it) —
+  // without this, Escape would also fall through to Timer's own Escape
+  // logic (e.g. opening the void prompt) at the same time.
+  const [motivationOverlayOpen, setMotivationOverlayOpen] = useState(false)
+  // The motivation card-draw feature is signed-in only (it writes to the
+  // pomodoro_card_draws collection, and — per the product decision here —
+  // is meant as an account perk, not a guest-mode feature). A guest
+  // clicking the button doesn't get dropped straight into the sign-up
+  // form, though — that read as an abrupt non-sequitur with no context.
+  // Instead MotivationOverlay itself renders a small "guest preview" (the
+  // same mystical scene/character, explaining what signing up unlocks)
+  // with its own Sign Up button, which is what actually opens AuthModal —
+  // same "own AuthModal instance" pattern GuestSignupNudge/SettingsModal/
+  // ProfileMenu each already use (see AuthModal.jsx).
+  const { user } = useAuth()
+  const [motivationSignUpPreviewOpen, setMotivationSignUpPreviewOpen] = useState(false)
+  const [motivationAuthModalOpen, setMotivationAuthModalOpen] = useState(false)
+  function handleMotivationButtonClick() {
+    if (user) setMotivationOverlayOpen(true)
+    else setMotivationSignUpPreviewOpen(true)
+  }
+
   // Fullscreen Focus Mode's auto-hiding chrome (YouTube-style): after
   // FULLSCREEN_IDLE_HIDE_MS of no mouse movement and no keyboard shortcut,
   // every control fades out (see CollapsibleChrome above) and the ring
@@ -401,6 +432,10 @@ function Timer({
         return
       }
       if (e.key === 'Escape') {
+        // MotivationOverlay handles its own Escape internally (it's an
+        // independent full-viewport layer) — no-op here so Timer's own
+        // Escape logic (e.g. opening the void prompt) doesn't also fire.
+        if (motivationOverlayOpen) return
         // While fullscreen, Escape is the browser's own "exit fullscreen"
         // gesture — fullscreenchange syncs isFullscreen, nothing to do here,
         // and it must NOT also open the void prompt underneath.
@@ -515,6 +550,26 @@ function Timer({
             PiP
           </button>
         )}
+        {/* Unconditional, unlike '?'/PiP above — must stay reachable at all
+            times (idle, running, break, and Fullscreen Focus Mode), same as
+            the fullscreen toggle itself. In fullscreen this naturally
+            inherits the icon row's own CollapsibleChrome reveal-on-movement
+            behavior rather than needing a bespoke visibility rule. */}
+        <button
+          type="button"
+          onClick={handleMotivationButtonClick}
+          className="relative text-sage hover:text-cream leading-none"
+          aria-label={motivationCardUsed ? `${t('motivation.buttonAria')}. ${t('motivation.usedBadgeAria')}` : t('motivation.buttonAria')}
+          title={t('motivation.buttonTitle')}
+        >
+          <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden="true">
+            <rect x="2" y="3" width="8" height="11" rx="1.3" transform="rotate(-8 6 8.5)" />
+            <rect x="6" y="3" width="8" height="11" rx="1.3" transform="rotate(8 10 8.5)" />
+          </svg>
+          {motivationCardUsed && (
+            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sage/70" aria-hidden="true" />
+          )}
+        </button>
         <button
           type="button"
           onClick={toggleFullscreen}
@@ -716,6 +771,19 @@ function Timer({
     </>
   )
 
+  // Previously hidden entirely in Fullscreen Focus Mode. Now shown there too
+  // (wrapped in CollapsibleChrome, same reveal-on-movement/hide-on-inactivity
+  // treatment as the rest of fullscreen's chrome) — auto-hiding already
+  // keeps the screen clean by default, so a little more UI while the mouse
+  // is actually moving is an acceptable tradeoff for keeping this capture
+  // point available to auto-start users who rarely see the idle state.
+  const unplannedRegion = (
+    <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
+      <p className="text-sage text-xs font-sans">{t('timer.unplannedPrompt')}</p>
+      <UnplannedCapture addTask={addTask} className="w-full" />
+    </div>
+  )
+
   // Which (if any) of Timer's coach marks should show right now — see
   // constants.js's pickCoachMark: the intro fires on first visit (no extra
   // condition), the rest only once the user has actually reached that moment
@@ -747,14 +815,24 @@ function Timer({
           : undefined
       }
     >
+      {/* Fixed, not in flow — a coach mark appearing/disappearing here must
+          NEVER push the ring/Start/controls down (unlike Planning/Reports,
+          where top-of-content placement is fine; Timer is the one screen
+          where layout has to stay perfectly stable). Side-margin placement
+          on wide viewports (there's real gutter space next to the centered
+          max-w-xl column); a top-anchored floating card on narrow ones,
+          below the app header, above the ring — still fixed either way, so
+          it can never shift anything. */}
       {!isFullscreen && timerCoachMark && (
-        <CoachMark
-          titleKey={timerCoachMark.titleKey}
-          bodyKey={timerCoachMark.bodyKey}
-          onDismiss={() => onDismissCoachMark(timerCoachMark.id)}
-          onLearnMore={() => onLearnMoreCoachMark(timerCoachMark.id)}
-          className="max-w-xl"
-        />
+        <div className="fixed z-40 top-20 inset-x-4 lg:inset-x-auto lg:top-1/2 lg:-translate-y-1/2 lg:right-6 lg:w-80">
+          <CoachMark
+            titleKey={timerCoachMark.titleKey}
+            bodyKey={timerCoachMark.bodyKey}
+            onDismiss={() => onDismissCoachMark(timerCoachMark.id)}
+            onLearnMore={() => onLearnMoreCoachMark(timerCoachMark.id)}
+            className="max-w-sm mx-auto lg:max-w-none lg:mx-0 shadow-2xl"
+          />
+        </div>
       )}
 
       {/* No card/border here on purpose — mockup 06's calmer direction has
@@ -819,11 +897,10 @@ function Timer({
           chromeBelowRingRegion
         )}
 
-        {!isFullscreen && (
-          <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
-            <p className="text-sage text-xs font-sans">{t('timer.unplannedPrompt')}</p>
-            <UnplannedCapture addTask={addTask} className="w-full" />
-          </div>
+        {isFullscreen ? (
+          <CollapsibleChrome visible={controlsVisible}>{unplannedRegion}</CollapsibleChrome>
+        ) : (
+          unplannedRegion
         )}
       </div>
 
@@ -844,6 +921,32 @@ function Timer({
 
       {shortcutsModalOpen && (
         <KeyboardShortcutsModal onClose={() => setShortcutsModalOpen(false)} />
+      )}
+
+      {motivationOverlayOpen && (
+        <MotivationOverlay
+          used={motivationCardUsed}
+          onDraw={markMotivationCardUsed}
+          onClose={() => setMotivationOverlayOpen(false)}
+          seenCoachMarks={seenCoachMarks}
+          onDismissCoachMark={onDismissCoachMark}
+          onLearnMoreCoachMark={onLearnMoreCoachMark}
+        />
+      )}
+
+      {motivationSignUpPreviewOpen && (
+        <MotivationOverlay
+          guestPreview
+          onClose={() => setMotivationSignUpPreviewOpen(false)}
+          onSignUp={() => {
+            setMotivationSignUpPreviewOpen(false)
+            setMotivationAuthModalOpen(true)
+          }}
+        />
+      )}
+
+      {motivationAuthModalOpen && (
+        <AuthModal initialMode="signUp" onClose={() => setMotivationAuthModalOpen(false)} />
       )}
     </div>
   )

@@ -140,6 +140,65 @@ describe('usePomodoro', () => {
     expect(result.current.pauseCount).toBe(0)
   })
 
+  // The motivation card-draw feature (MotivationOverlay) allows exactly one
+  // draw per completed Pomodoro. This was previously buggy: motivationCardUsed
+  // reset on any fresh work-session *start*, which meant reloading the page,
+  // skipping a break, or voiding a Pomodoro (all of which land back on an
+  // idle fresh work session) could each be used to bypass the limit without
+  // ever actually finishing a Pomodoro. It must now reset in exactly one
+  // place: completeWork(), when a work session genuinely rings.
+  describe('motivationCardUsed', () => {
+    it('is not reset by starting a new work session, only by completing one', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      act(() => result.current.markMotivationCardUsed())
+      expect(result.current.motivationCardUsed).toBe(true)
+
+      // Void the Pomodoro (never completed) and start a fresh one.
+      act(() => result.current.voidPomodoro())
+      act(() => result.current.start())
+      expect(result.current.motivationCardUsed).toBe(true)
+    })
+
+    it('is not reset by skipping a break', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      tick(25 * 60) // completes the Pomodoro, moves to short break
+      act(() => result.current.markMotivationCardUsed())
+      expect(result.current.motivationCardUsed).toBe(true)
+
+      act(() => result.current.skipBreak())
+      expect(result.current.motivationCardUsed).toBe(true)
+    })
+
+    it('is not reset by voiding a Pomodoro', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      act(() => result.current.markMotivationCardUsed())
+      act(() => result.current.voidPomodoro())
+      expect(result.current.motivationCardUsed).toBe(true)
+    })
+
+    it('survives a reload (page-close/reopen) — restored from persisted timer state', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      act(() => result.current.markMotivationCardUsed())
+
+      const { result: resumed } = renderHook(() => usePomodoro())
+      expect(resumed.current.motivationCardUsed).toBe(true)
+    })
+
+    it('resets only once a full Pomodoro actually completes', () => {
+      const { result } = renderHook(() => usePomodoro())
+      act(() => result.current.start())
+      act(() => result.current.markMotivationCardUsed())
+      expect(result.current.motivationCardUsed).toBe(true)
+
+      tick(25 * 60) // rings — a genuine completion
+      expect(result.current.motivationCardUsed).toBe(false)
+    })
+  })
+
   // Rule 3: after `cycleLength` Pomodoros, a long break follows instead of a short one.
   it('moves to a long break after cycleLength Pomodoros, and resets the count once it ends', () => {
     const { result } = renderHook(() => usePomodoro())

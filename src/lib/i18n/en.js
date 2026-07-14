@@ -82,6 +82,206 @@ export default {
     openMiniTimerTitle: 'Mini timer window (picture-in-picture)',
   },
 
+  // Placeholder content only — the user is writing the real quotes/lines/
+  // jokes/facts themselves. Kept as a handful of obviously-labeled
+  // placeholder entries per category/sub-type so the feature is fully
+  // functional/testable; each `entries` array is meant to be expanded later,
+  // same shape, no code changes required. See MotivationOverlay.jsx and
+  // src/lib/motivationCategories.js (the draw logic that reads these paths).
+  motivation: {
+    buttonAria: 'Motivational moment',
+    buttonTitle: 'Draw a card for a motivational moment',
+    usedBadgeAria: 'Already used this Pomodoro',
+    overlayCloseAria: 'Close motivational moment',
+    pickPrompt: 'Pick a card',
+    revealAgainHint: 'Tap a card to see what it holds.',
+    alreadyDrawnTitle: 'Already drawn this Pomodoro',
+    alreadyDrawnMessage: "You've already pulled a card this Pomodoro. A new one will be ready next Pomodoro.",
+    guessItShowAnswer: 'Show answer',
+    rareBadge: 'Rare',
+    // Shown instead of the card table when a guest (not signed in) opens
+    // this — the feature itself is signed-in only. guestPreviewBubble is
+    // the character's own speech-bubble line; guestPreviewMessage is the
+    // explanatory blurb above the Sign Up button (see auth.signUpButton).
+    guestPreviewBubble: "Sign up, and I'll deal you in.",
+    guestPreviewMessage: 'Create a free account to draw motivational cards with me between your Pomodoros.',
+    // One is picked at random each time the overlay opens — flavor/prompt
+    // text only, not the motivational content itself. See MotivationOverlay.jsx.
+    flavorLines: [
+      'Feel which card truly calls to you, and choose it.',
+      "Let your hand drift. The right card already knows it's yours.",
+      "No wrong choice here. Just the one that's calling.",
+      'Close your eyes for a breath, then pick what feels warm.',
+      'Trust the pull. The cards already know.',
+      'One of these is already waiting for you.',
+      'Breathe once. Choose the one that feels right.',
+      'The answer picks you back. Go on.',
+    ],
+    // Easter egg only — shown when the character's head is clicked/tapped.
+    // No functional effect, purely a random reaction. See MotivationOverlay.jsx.
+    headPokeReactions: [
+      "Hey! Careful, I'm not a stress ball!",
+      'Ow! Gentle, please, I bruise like a tomato!',
+      "Don't squeeze the wise one, please!",
+      "I'm ripe, not a button!",
+      'Poke my wisdom, not my face!',
+      "One more poke and I'm rolling away!",
+    ],
+    // The 6-category system — 5 normal categories drawn from a weighted
+    // pick (see CATEGORY_WEIGHTS in motivationCategories.js) plus the
+    // independent 2%-chance Rare roll. `label` is shown under the category
+    // icon once a card is revealed.
+    categories: {
+      focusDiscipline: {
+        label: 'Focus & Discipline',
+        subTypes: {
+          // A generically-framed notable figure — never a named real
+          // person, same "generic thinker" approach the original 3-category
+          // version used to avoid misattribution.
+          notableFigure: {
+            entries: [
+              'A wise mentor once said: the work you avoid is usually the work that grows you most.',
+              'An old craftsman had a motto: precision comes from patience, not from speed.',
+              'A seasoned coach liked to say: discipline is choosing between what you want now and what you want most.',
+              'A quiet philosopher once noted: small steps taken daily outrun great leaps taken rarely.',
+              'A veteran teacher used to remind her students: focus is a muscle, and today is leg day.',
+              'A wise elder once said: the pot only boils once you stop watching it and keep working.',
+            ],
+          },
+          // Original archetypal voices only — never a real copyrighted
+          // character or a verbatim line from one.
+          fictional: {
+            entries: [
+              "The Old Mountain Sage: 'The summit does not move. Only your feet do.'",
+              "The Clockwork Knight: 'A blade dulls from disuse, not from battle. Keep moving.'",
+              "The Lighthouse Keeper: 'I do not light the lamp for calm seas. I light it for the storm.'",
+              "The Wandering Scholar: 'Every page turned is a mile walked toward mastery.'",
+              "The Star Navigator: 'Even off course, a ship that keeps sailing still finds land.'",
+              "The Village Blacksmith: 'The iron does not ask to be hot before it is shaped. Neither should you.'",
+            ],
+          },
+          proverb: {
+            entries: [
+              'A field is not plowed by wishing for rain.',
+              'The tallest tree once stood as a single seed that refused to quit.',
+              'A slow arrow that keeps flying still reaches farther than one left in the quiver.',
+              'Even a small candle can outlast a long night, as long as it keeps burning.',
+              'The river carves stone not with strength, but with patience.',
+              'A single brick laid each day still builds a wall by winter.',
+            ],
+          },
+        },
+      },
+      // Intended tone (for whoever writes the real content later): warm,
+      // supportive, never judgmental about procrastination or an unfinished
+      // task — the opposite register from Focus & Discipline.
+      selfCompassion: {
+        label: 'Self-Compassion',
+        entries: [
+          'You showed up today. That already counts for something.',
+          'Unfinished does not mean failed. It means still in progress.',
+          'Rest is not the opposite of productivity. It is part of it.',
+          'You are allowed to have a slow day and still be proud of yourself.',
+          'Progress does not need to be loud to be real.',
+          'Be as patient with yourself as you would be with a good friend.',
+        ],
+      },
+      // The character's own slightly cheeky-but-charming voice.
+      tomatoManJokes: {
+        label: 'Tomato Man Jokes',
+        entries: [
+          "I'm not saying I'm the most productive vegetable in the room, but I am technically a fruit, so take that as you will.",
+          'They call it a Pomodoro because after twenty five minutes I turn a little red in the face too.',
+          'I used to be a couch potato. Then I got ambitious and became a couch tomato.',
+          "My favorite part of the break is pretending I'm not going to check my phone. Works every time.",
+          'Some people count sheep to relax. I count finished Pomodoros. Works better.',
+          "I'd tell you a joke about procrastination, but I keep putting it off.",
+        ],
+      },
+      funFact: {
+        label: 'Fun Fact',
+        subTypes: {
+          fact: {
+            entries: [
+              'Tomatoes were once feared as poisonous in parts of Europe, mostly because wealthy diners ate them off pewter plates that reacted with their acidity. The tomato was innocent all along.',
+              'The Pomodoro Technique gets its name from a plain kitchen timer shaped like a tomato that its creator, Francesco Cirillo, used as a university student in the late 1980s.',
+              'Botanically speaking, a tomato is a fruit. A famous 1893 US Supreme Court case ruled it a vegetable anyway, purely for tax purposes. Even the law could not stay focused on one answer.',
+              'Attention research suggests the mind naturally starts to drift after roughly twenty to thirty minutes of focused work, which lines up almost exactly with one classic Pomodoro.',
+              'There are more than ten thousand tomato varieties grown around the world, from cherry sized to ones that weigh over a kilogram.',
+              'Short breaks between focused work sessions have been shown to help the brain consolidate memory, quietly filing away what you just learned.',
+            ],
+          },
+          // Interactive: question shown first, answer revealed on tap (see
+          // MotivationOverlay.jsx's GuessItReveal). Each entry is an
+          // object, not a plain string — translate() returns whatever's at
+          // the path untouched when called with no vars, so this round-trips
+          // fine through the same t() lookup every other category uses.
+          guessIt: {
+            entries: [
+              {
+                question: 'True or false: a tomato is technically a fruit, not a vegetable.',
+                answer: 'True. Botanically, a tomato is a fruit because it develops from a flower and carries seeds.',
+              },
+              {
+                question: 'How many minutes does one classic Pomodoro work session last?',
+                answer: 'Twenty five minutes, followed by a short break. You can adjust it in Settings, but 25 is the classic default.',
+              },
+              {
+                question: 'What everyday object inspired the name of the Pomodoro Technique?',
+                answer: "A tomato shaped kitchen timer. 'Pomodoro' is simply Italian for tomato.",
+              },
+              {
+                question: 'Roughly how long can most people sustain deep focus before attention starts to drift?',
+                answer: 'About twenty to thirty minutes, part of why short focused sessions tend to work so well.',
+              },
+              {
+                question: 'True or false: taking short breaks during work can actually improve memory.',
+                answer: 'True. Brief breaks help the brain consolidate what it just learned.',
+              },
+              {
+                question: 'About how many tomato varieties exist worldwide?',
+                answer: 'Over ten thousand, ranging from tiny cherry tomatoes to giants weighing more than a kilogram.',
+              },
+            ],
+          },
+        },
+      },
+      // NOT placeholder — real content, computed from the user's own ticks/
+      // activity log at draw time (see motivationCategories.js's
+      // computeStatValue). {{count}} is filled in with a real number.
+      personalStatCard: {
+        label: 'Personal Stat Card',
+        templates: {
+          today: "You've completed {{count}} Pomodoros today.",
+          week: "You've completed {{count}} Pomodoros this week.",
+          allTime: "You've completed {{count}} Pomodoros in total.",
+          tasksDone: "You've finished {{count}} tasks so far.",
+        },
+      },
+      // Independent 2%-chance roll (RARE_CARD_CHANCE), not part of the
+      // weighted category pick above. One fixed line, not a random pool.
+      rare: {
+        label: 'Rare Card',
+        openingLine: 'A rare thread in time has found you. Pause a moment, and let it land.',
+      },
+    },
+  },
+
+  // Settings > Achievements tab — see CardCollectionStats.jsx. Light-touch
+  // stats view over the card-draw history; not a full achievement/badge
+  // system (achievementsFooter says as much).
+  motivationStats: {
+    title: 'Card Collection',
+    noDrawsYet: 'Draw your first card from the Timer to start your collection.',
+    totalDrawsLabel: 'Cards drawn',
+    distinctCategoriesLabel: 'Categories discovered',
+    rareFoundLabel: 'Rare cards found',
+    firstRareLabel: 'First Rare card',
+    firstRareNone: 'Not found yet',
+    byCategoryTitle: 'By category',
+    achievementsFooter: 'A full achievements system is planned for a future update.',
+  },
+
   notifications: {
     pomodoroCompleteTitle: 'Pomodoro complete',
     longBreakBody: 'Time for a long break.',
@@ -109,13 +309,13 @@ export default {
     selectAria: 'select {{text}} to combine',
     markDoneAria: 'mark as done',
     unplannedBadgeTitle: 'Unplanned',
-    moreThanWarningInline: 'More than {{max}} — break it up (Rule 4)',
-    moreThanWarning: 'More than {{max}} pomodoros — break the task into sub-tasks (Rule 4).',
+    moreThanWarningInline: 'More than {{max}}. Break it up (Rule 4)',
+    moreThanWarning: 'More than {{max}} pomodoros. Break the task into sub-tasks (Rule 4).',
     addToToday: 'Add to today',
     editAria: 'edit inventory item',
     editTitle: 'Edit',
     deleteConfirm: 'Delete this task from the inventory?',
-    combinePrompt: '{{count}} tasks selected — combine into one? (Rule 5)',
+    combinePrompt: '{{count}} tasks selected. Combine into one? (Rule 5)',
     combineButton: 'Combine',
     combineConfirm: "Combine {{count}} tasks into one? The originals will be replaced and this can't be undone.",
     emptyState: 'Add your first task above to start building your backlog.',
@@ -133,7 +333,7 @@ export default {
     addButton: 'Add',
     saveButton: 'Save',
     cancelButton: 'Cancel',
-    moreThanWarning: 'More than {{max}} pomodoros — break the task into sub-tasks (Rule 4).',
+    moreThanWarning: 'More than {{max}} pomodoros. Break the task into sub-tasks (Rule 4).',
     colTask: 'Task',
     colEstimate: 'Est.',
     colReal: 'Real',
@@ -153,10 +353,10 @@ export default {
     deleteTaskAria: 'delete task',
     deleteConfirm: 'Delete this task?',
     alreadyTwoReestimates:
-      'This task already has two re-estimates (Diff I and Diff II) — the second one is locked in.',
+      'This task already has two re-estimates (Diff I and Diff II). The second one is locked in.',
     reestimatePrompt: 'Re-estimate "{{text}}":',
     newEstimateAria: 'New estimate',
-    moreThanWarningInline: 'More than {{max}} — break it up (Rule 4)',
+    moreThanWarningInline: 'More than {{max}}. Break it up (Rule 4)',
     bulkActionsAria: 'task list actions',
     clearFinishedLabel: 'Clear finished tasks',
     clearFinishedConfirm: "This will permanently remove all finished tasks from today's list. Continue?",
@@ -173,7 +373,7 @@ export default {
     useTimetableTitle: "Fill in from today's timetable blocks",
     pomodorosAvailable: 'Pomodoros available',
     plannedLabel: '{{count}} planned',
-    overCapacity: " — over capacity, trim today's list",
+    overCapacity: ". Over capacity, trim today's list",
   },
 
   timetable: {
@@ -218,7 +418,7 @@ export default {
     deleteAria: 'delete {{name}}',
     deleteTitle: 'Delete',
     deleteConfirm: 'Delete category "{{name}}"? Tasks and records using it will show as uncategorized.',
-    emptyState: 'No categories yet — tasks will show as uncategorized.',
+    emptyState: 'No categories yet. Tasks will show as uncategorized.',
     // Guests keep full use of existing categories (assign/edit/delete) —
     // only creating a brand-new one requires an account. See CategoryManager.jsx.
     signUpToCreateHint: 'Creating new categories requires a free account. You can still use, edit, and delete your existing ones.',
@@ -254,13 +454,13 @@ export default {
     periodWeek: 'This Week',
     periodMonth: 'This Month',
     periodYear: 'This Year',
-    noHistoryHint: 'Not enough history yet — filters will differ as you use the app across more days.',
+    noHistoryHint: 'Not enough history yet. Filters will differ as you use the app across more days.',
     noDataForPeriod: 'No data for this period yet.',
     noDataAtAll:
-      "Complete a few Pomodoros and finish a task to see your trends here — estimation accuracy, interruption patterns, and where your focus time goes.",
+      'Complete a few Pomodoros and finish a task to see your trends here: estimation accuracy, interruption patterns, and where your focus time goes.',
     totalFocusTime: 'Total focus time',
     totalFocusTimeTooltip:
-      "Approximation: past Pomodoro count × today's current work-duration setting. If you change your work duration, historical totals shown here shift too — they aren't a literal record of how long each past session actually ran.",
+      "Approximation: past Pomodoro count × today's current work-duration setting. If you change your work duration, historical totals shown here shift too. They aren't a literal record of how long each past session actually ran.",
     pomodorosToday: 'Pomodoros today',
     tasksToday: 'Tasks today',
     tasksTodayActiveCaption: '{{active}} active',
@@ -315,7 +515,7 @@ export default {
   },
 
   dayReview: {
-    title: "Today's Review — {{date}}",
+    title: "Today's Review: {{date}}",
     closeAria: 'close review',
     pomodorosCompleted: 'Pomodoros completed',
     interruptions: 'Interruptions ({{internal}} internal · {{external}} external)',
@@ -408,6 +608,10 @@ export default {
       title: 'Categories help you see patterns',
       body: "Tagging tasks with a category (like Work or Study) lets Reports show you where your focus time actually goes. This becomes especially useful once you're comparing weeks, not just today.",
     },
+    motivationIntro: {
+      title: 'A small moment, on your terms',
+      body: "Tap the card icon any time, whether you're idle, mid-Pomodoro, or on a break, to draw a card for a short quote, joke, fact, or a look at your own stats. One draw per Pomodoro; it resets the next one. Purely optional, and it never touches your running timer.",
+    },
   },
 
   // The optional "deeper learning path" — see MethodologyGuideModal.jsx.
@@ -452,11 +656,10 @@ export default {
     categoryAccount: 'Account',
     categoryData: 'Data',
     categoryAchievements: 'Achievements',
-    achievementsComingSoon: 'Coming in the full version',
     categoryAbout: 'About',
     signInPromptLabel: 'Sync your data across devices',
     aboutDescription:
-      'A faithful implementation of the Pomodoro Technique: planning, tracking, interruption management, estimation, and recording, all in one place — not just a timer.',
+      'A faithful implementation of the Pomodoro Technique: planning, tracking, interruption management, estimation, and recording, all in one place. Not just a timer.',
     aboutContactLabel: 'Contact',
     aboutSourceLabel: 'Source code',
     aboutAttribution:
@@ -492,7 +695,7 @@ export default {
     customThemeLongBreakLabel: 'Long Break',
     customThemeHint: 'General applies to every screen except the Timer, which follows whichever session is active.',
     backgroundLabel: 'Fullscreen background image',
-    backgroundHint: 'Only shown in Fullscreen Focus Mode — not on the Timer, Planning, Reports, or Settings screens.',
+    backgroundHint: 'Only shown in Fullscreen Focus Mode. Not on the Timer, Planning, Reports, or Settings screens.',
     backgroundSignInHint: 'Sign in to unlock this feature',
     backgroundUploadButton: 'Upload image',
     backgroundUploading: 'Uploading…',
@@ -503,7 +706,7 @@ export default {
     backgroundPresetGalleryHint: 'A curated gallery of ready-made backgrounds (no upload needed) is planned for a future update.',
     workDurationLabel: 'Pomodoro (work) duration',
     workDurationDeviationNote:
-      'The Pomodoro Technique specifically uses 25 minutes as the standard work interval — this is a deliberate deviation from the original technique.',
+      'The Pomodoro Technique specifically uses 25 minutes as the standard work interval. This is a deliberate deviation from the original technique.',
     shortBreakLabel: 'Short break duration',
     longBreakLabel: 'Long break duration',
     minutesUnit: 'min',
@@ -563,8 +766,11 @@ export default {
     resetVoidLogLabel: 'Void log',
     resetVoidLogConfirm:
       'This will permanently delete your Void log (voided Pomodoros and their reasons). This cannot be undone. Continue?',
+    resetCardDrawsLabel: 'Card collection',
+    resetCardDrawsConfirm:
+      'This will permanently delete your Motivational Card draw history (Achievements stats). This cannot be undone. Continue?',
     factoryResetConfirm:
-      "This will permanently delete EVERYTHING — Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?",
+      "This will permanently delete EVERYTHING: Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, your Card collection, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?",
   },
 
   dataImport: {
@@ -579,13 +785,13 @@ export default {
     csvImportDesc: "Import records only. Won't bring back tasks or categories.",
     exportButton: 'Export',
     chooseFileButton: 'Choose file',
-    invalidJsonError: "This file doesn't look like a valid backup — no changes were made.",
-    invalidCsvError: "This file doesn't look like a valid Records CSV export — no changes were made.",
+    invalidJsonError: "This file doesn't look like a valid backup. No changes were made.",
+    invalidCsvError: "This file doesn't look like a valid Records CSV export. No changes were made.",
     choosePrompt: 'How should this be imported?',
     replaceButton: 'Replace all data',
     mergeButton: 'Merge with existing',
     jsonReplaceConfirm:
-      "This will permanently REPLACE all your data — Activity Inventory, Today's Tasks, Records, interruption history, Categories, Void log, AND settings — with the contents of this file. This cannot be undone. Continue?",
+      "This will permanently REPLACE all your data (Activity Inventory, Today's Tasks, Records, interruption history, Categories, Void log, AND settings) with the contents of this file. This cannot be undone. Continue?",
     jsonMergeConfirm:
       'This will merge the imported file into your existing data: matching records are kept if newer, and anything only in the file is added. Your current settings are not changed. Continue?',
     csvReplaceConfirm:

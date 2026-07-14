@@ -95,6 +95,21 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   // live/session-scoped display counter; the historical record for Reports
   // is the 'pause' tick pause() also writes.
   const [pauseCount, setPauseCount] = useState(0)
+  // Whether the motivation card (MotivationOverlay) has already been drawn
+  // since the last completed Pomodoro. Reset to false in ONE place only —
+  // completeWork(), when a work session genuinely finishes — and nowhere
+  // else. An earlier version reset it in start() (any fresh, non-resume
+  // work-session start), which was wrong on inspection: skipping a break,
+  // voiding a Pomodoro, or just reloading the page all end up back at an
+  // idle fresh work session, and starting *that* new session isn't the
+  // same thing as having *completed* one. Per the product rule — "the
+  // only, unconditional way to draw again is finishing one full Pomodoro"
+  // — completion is the sole trigger, so this must also be persisted
+  // (unlike pauseCount/completionPulseKey, which are deliberately session-
+  // only): restored from pomodoro_timer_state on mount so a reload can't
+  // be used to bypass the limit either.
+  const [motivationCardUsed, setMotivationCardUsed] = useState(() => restored?.motivationCardUsed ?? false)
+  const markMotivationCardUsed = useCallback(() => setMotivationCardUsed(true), [])
   // Bumped only when a Pomodoro (work session) actually completes — Timer.jsx
   // watches this to trigger a brief one-shot ring-pulse animation. A counter
   // rather than a boolean so consecutive completions each retrigger the
@@ -220,8 +235,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   }, [ambientSound, isRunning, sessionType])
 
   useEffect(() => {
-    saveTimerState({ sessionType, secondsLeft, isRunning, endAt: endAtRef.current })
-  }, [sessionType, secondsLeft, isRunning])
+    saveTimerState({ sessionType, secondsLeft, isRunning, endAt: endAtRef.current, motivationCardUsed })
+  }, [sessionType, secondsLeft, isRunning, motivationCardUsed])
 
   useEffect(() => {
     if (!isRunning) return
@@ -267,6 +282,10 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     const newCount = completedPomodoros + 1
     setCompletedPomodoros(newCount)
     setPauseCount(0)
+    // The one and only place motivationCardUsed resets — see its own
+    // declaration comment above for why every other transition (start,
+    // skip, void, reload) deliberately leaves it alone.
+    setMotivationCardUsed(false)
     pausedRef.current = false
     addTick({
       id: crypto.randomUUID(),
@@ -451,6 +470,8 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     internalCount,
     externalCount,
     pauseCount,
+    motivationCardUsed,
+    markMotivationCardUsed,
     completionPulseKey,
     cycleLength,
     setCycleLength,

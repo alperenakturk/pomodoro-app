@@ -385,6 +385,38 @@ export function removeVoidLogEntry(id) {
   return log
 }
 
+// Card-draw history (MotivationOverlay) — one record per card drawn, so a
+// future achievement system has something to reference (total draws,
+// distinct categories seen, first Rare timestamp) without redesigning this
+// collection. `category` is one of motivationCategories.js's CARD_CATEGORY_IDS
+// plus 'rare'; `subType` is nullable (only focusDiscipline/funFact use it);
+// `isRare` is redundant with category === 'rare' but kept explicit so
+// counting rare draws never needs a string comparison.
+const CARD_DRAWS_KEY = 'pomodoro_card_draws'
+function normalizeCardDraw(draw) {
+  return {
+    id: draw.id,
+    category: draw.category,
+    subType: draw.subType ?? null,
+    isRare: draw.isRare ?? false,
+    date: draw.date,
+    timestamp: draw.timestamp ?? null,
+    ...normalizeMeta(draw),
+  }
+}
+export const loadCardDraws = () => loadJSON(CARD_DRAWS_KEY, []).map(normalizeCardDraw)
+export const saveCardDraws = (draws) => saveJSON(CARD_DRAWS_KEY, draws)
+export function addCardDraw(draw) {
+  const draws = loadCardDraws()
+  draws.push(stampCreated(draw))
+  saveCardDraws(draws)
+  notifyChange()
+  return draws
+}
+export async function clearCardDraws() {
+  await activeProvider.remove(CARD_DRAWS_KEY)
+}
+
 // Timer state: sayfa yenilenince devam eden pomodoro'nun kaybolmaması için
 // sessionType/secondsLeft/isRunning'in anlık görüntüsü.
 const TIMER_STATE_KEY = 'pomodoro_timer_state'
@@ -401,6 +433,12 @@ function normalizeTimerState(state) {
     // per-tick decrement, which drifts under browser tab-throttling and
     // goes stale entirely across a reload/tab-close.
     endAt: state.endAt ?? null,
+    // Whether this Pomodoro's one motivation-card draw has already been
+    // used — persisted (unlike pauseCount/completionPulseKey, which are
+    // deliberately session-only) specifically so a page reload can't be
+    // used to bypass the "one draw per completed Pomodoro" limit. See
+    // usePomodoro.js's completeWork() for the only place this resets.
+    motivationCardUsed: state.motivationCardUsed ?? false,
     ...normalizeMeta(state),
   }
 }
@@ -457,6 +495,7 @@ export async function resetAllData() {
     activeProvider.remove(CATEGORIES_KEY),
     activeProvider.remove(VOID_LOG_KEY),
     activeProvider.remove(SETTINGS_KEY),
+    activeProvider.remove(CARD_DRAWS_KEY),
   ])
 }
 
@@ -472,6 +511,7 @@ export function exportAllData() {
     timetable: loadTimetable(),
     categories: loadCategories(),
     voidLog: loadVoidLog(),
+    cardDraws: loadCardDraws(),
   }
 }
 
@@ -496,6 +536,7 @@ export function importBackup(data, mode) {
     if (Array.isArray(data.timetable)) saveTimetable(data.timetable)
     if (Array.isArray(data.categories)) saveCategories(data.categories)
     if (Array.isArray(data.voidLog)) saveVoidLog(data.voidLog)
+    if (Array.isArray(data.cardDraws)) saveCardDraws(data.cardDraws)
     if (data.settings && typeof data.settings === 'object') saveSettings(data.settings)
   } else {
     if (Array.isArray(data.inventory)) saveInventory(mergeCollectionById(loadInventory(), data.inventory))
@@ -505,6 +546,7 @@ export function importBackup(data, mode) {
     if (Array.isArray(data.timetable)) saveTimetable(mergeCollectionById(loadTimetable(), data.timetable))
     if (Array.isArray(data.categories)) saveCategories(mergeCollectionById(loadCategories(), data.categories))
     if (Array.isArray(data.voidLog)) saveVoidLog(mergeCollectionById(loadVoidLog(), data.voidLog))
+    if (Array.isArray(data.cardDraws)) saveCardDraws(mergeCollectionById(loadCardDraws(), data.cardDraws))
   }
   notifyChange()
 }
@@ -615,6 +657,7 @@ const SYNCED_KEYS = [
   TIMETABLE_KEY,
   CATEGORIES_KEY,
   VOID_LOG_KEY,
+  CARD_DRAWS_KEY,
 ]
 
 window.addEventListener('storage', (e) => {

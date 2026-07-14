@@ -14,6 +14,7 @@ export const BACKUP_ARRAY_KEYS = [
   'timetable',
   'categories',
   'voidLog',
+  'cardDraws',
 ]
 
 // Structural check only (right shape, right types) — not a full schema

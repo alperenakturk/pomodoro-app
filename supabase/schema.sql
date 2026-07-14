@@ -592,3 +592,61 @@ alter table public.settings
 -- ----------------------------------------------------------------------------
 alter table public.settings
   add column if not exists daily_pomodoro_goal integer;
+
+-- ----------------------------------------------------------------------------
+-- card_draws  (pomodoro_card_draws / normalizeCardDraw)
+--
+-- One row per card drawn from MotivationOverlay's card-pick feature (see
+-- src/lib/motivationCategories.js). `category` is one of the 5 normal
+-- categories or 'rare' (a 2%-chance independent roll — see RARE_CARD_CHANCE);
+-- `sub_type` is only meaningful for focusDiscipline (notableFigure/fictional/
+-- proverb) and funFact (fact/guessIt), null otherwise. `is_rare` duplicates
+-- category === 'rare' as an explicit boolean so a future achievement system
+-- (total draws, distinct categories seen, first Rare timestamp — the
+-- groundwork this table exists for) never needs a string comparison to count
+-- rare pulls.
+-- ----------------------------------------------------------------------------
+create table public.card_draws (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  category    text not null check (category in
+                ('focusDiscipline','selfCompassion','tomatoManJokes','funFact','personalStatCard','rare')),
+  sub_type    text,
+  is_rare     boolean not null default false,
+  date        date not null,
+  "timestamp" timestamptz,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create index card_draws_user_id_idx on public.card_draws(user_id);
+create index card_draws_date_idx on public.card_draws(date);
+
+alter table public.card_draws enable row level security;
+
+create policy "card_draws_select_own" on public.card_draws
+  for select using (user_id = auth.uid());
+create policy "card_draws_insert_own" on public.card_draws
+  for insert with check (user_id = auth.uid());
+create policy "card_draws_update_own" on public.card_draws
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "card_draws_delete_own" on public.card_draws
+  for delete using (user_id = auth.uid());
+
+-- This table did not exist when the blanket "grant ... on all tables in
+-- schema public" ran near the top of this file — that statement only
+-- affects tables that already existed at the time it ran (see its own
+-- comment), so any table added afterward needs its own explicit grant.
+grant select, insert, update, delete on public.card_draws to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- motivation_card_used (timer_state) — whether this Pomodoro's one
+-- motivation-card draw has already been used (see usePomodoro.js's
+-- motivationCardUsed / storage.js's normalizeTimerState). Persisted
+-- (unlike pauseCount, which is deliberately session-only) so a page reload
+-- can't be used to bypass the "one draw per completed Pomodoro" limit —
+-- the only place this resets is completeWork(), when a work session
+-- genuinely finishes.
+-- ----------------------------------------------------------------------------
+alter table public.timer_state
+  add column if not exists motivation_card_used boolean not null default false;

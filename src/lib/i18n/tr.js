@@ -86,6 +86,169 @@ export default {
     openMiniTimerTitle: 'Mini zamanlayıcı penceresi (resim içinde resim)',
   },
 
+  motivation: {
+    buttonAria: 'Motivasyon anı',
+    buttonTitle: 'Motivasyon anı için bir kart çek',
+    usedBadgeAria: 'Bu Pomodoro için zaten kullanıldı',
+    overlayCloseAria: 'Motivasyon anını kapat',
+    pickPrompt: 'Bir kart seç',
+    revealAgainHint: 'Ne çıkacağını görmek için bir karta dokun.',
+    alreadyDrawnTitle: 'Bu Pomodoro için zaten çekildi',
+    alreadyDrawnMessage: 'Bu Pomodoro için zaten bir kart çektin. Yeni bir kart bir sonraki Pomodoro\'da hazır olacak.',
+    guessItShowAnswer: 'Cevabı göster',
+    rareBadge: 'Nadir',
+    guestPreviewBubble: 'Kayıt ol, seni de oyuna alayım.',
+    guestPreviewMessage: 'Pomodorolarının arasında benimle motivasyon kartı çekmek için ücretsiz bir hesap oluştur.',
+    flavorLines: [
+      'Hangi kart sana gerçekten sesleniyorsa, onu seç.',
+      'Elin sürüklensin, doğru kart zaten senin olduğunu biliyor.',
+      'Burada yanlış seçim yok. Sadece seni çağıran var.',
+      'Bir nefes gözlerini kapat, sonra sıcak gelen kartı seç.',
+      'Çekimine güven. Kartlar zaten biliyor.',
+      'Bunlardan biri seni bekliyor.',
+      'Bir nefes al. Doğru hissettireni seç.',
+      'Cevap seni de seçer. Hadi.',
+    ],
+    headPokeReactions: [
+      'Hey! Dikkatli ol, ben stres topu değilim!',
+      'Ay! Nazik ol, domates gibi morarırım!',
+      'Bilge domatese böyle dokunulmaz!',
+      'Olgunum, düğme değilim!',
+      'Bilgeliğime dokun, yüzüme değil!',
+      'Bir kere daha dürtersen yuvarlanıp giderim!',
+    ],
+    categories: {
+      focusDiscipline: {
+        label: 'Odak ve Disiplin',
+        subTypes: {
+          notableFigure: {
+            entries: [
+              'Bilge bir öğretmen şöyle derdi: Kaçındığın iş, çoğu zaman seni en çok büyüten iştir.',
+              'Usta bir zanaatkarın sözüydü: Ustalık hızdan değil sabırdan doğar.',
+              'Deneyimli bir antrenör hep şunu söylerdi: Disiplin, şimdi istediğinle en çok istediğin arasında seçim yapmaktır.',
+              'Sessiz bir düşünür bir keresinde şöyle demişti: Her gün atılan küçük adımlar, seyrek atılan büyük sıçramaları geçer.',
+              'Kıdemli bir öğretmen öğrencilerine hep şunu hatırlatırdı: Odak da bir kastır, bugün onun antrenman günü.',
+              'Yaşlı bir bilge şöyle derdi: Tencere, sen izlemeyi bırakıp çalışmaya devam ettiğinde kaynar.',
+            ],
+          },
+          fictional: {
+            entries: [
+              "Yaşlı Dağ Bilgesi: 'Zirve yerinden kımıldamaz. Kımıldayan sadece ayaklarındır.'",
+              "Çelik Şövalye: 'Kılıç savaştan değil, kullanılmamaktan körelir. Durma.'",
+              "Deniz Feneri Bekçisi: 'Feneri sakin denizler için yakmıyorum. Fırtına için yakıyorum.'",
+              "Gezgin Bilgin: 'Çevrilen her sayfa, ustalığa doğru atılmış bir mildir.'",
+              "Yıldız Rehberi: 'Rotasından sapan bir gemi bile yol almaya devam ederse karaya ulaşır.'",
+              "Köy Demircisi: 'Demir, şekillenmeden önce sıcak olmayı istemez. Sen de istemeyi bekleme.'",
+            ],
+          },
+          proverb: {
+            entries: [
+              'Yağmur dilemekle tarla sürülmez.',
+              'En uzun boylu ağaç bile bir zamanlar vazgeçmeyi reddeden tek bir tohumdu.',
+              'Uçmaya devam eden yavaş bir ok, sadakta kalandan daha uzağa gider.',
+              'Küçük bir mum bile, yanmaya devam ettiği sürece uzun bir geceyi aşabilir.',
+              'Nehir taşı gücüyle değil, sabrıyla oyar.',
+              'Her gün konan tek bir tuğla bile kışa kadar bir duvar örer.',
+            ],
+          },
+        },
+      },
+      // Amaçlanan ton (ileride gerçek içeriği yazacak kişi için): sıcak,
+      // destekleyici, ertelemeyi veya bitmemiş bir görevi asla
+      // yargılamayan — Odak ve Disiplin'in tam tersi bir ton.
+      selfCompassion: {
+        label: 'Kendine Şefkat',
+        entries: [
+          'Bugün ortaya çıktın. Bu bile bir şey ifade ediyor.',
+          'Bitmemiş olmak başarısız olmak demek değil, hâlâ devam ediyor demek.',
+          'Dinlenmek üretkenliğin zıttı değil, bir parçasıdır.',
+          'Yavaş geçen bir günün olabilir ve yine de kendinle gurur duyabilirsin.',
+          'İlerlemenin gerçek olması için gürültülü olması gerekmez.',
+          'Kendine, iyi bir arkadaşına gösterdiğin sabrı göster.',
+        ],
+      },
+      tomatoManJokes: {
+        label: 'Domates Adam Şakaları',
+        entries: [
+          'Odadaki en üretken sebze olduğumu söylemiyorum ama teknik olarak bir meyveyim, ne düşünürsen düşün.',
+          'Buna Pomodoro demelerinin bir sebebi var, yirmi beş dakika sonra ben de suratımdan kızarıyorum.',
+          'Eskiden kanepe patatesiydim. Sonra hırslandım ve kanepe domatesi oldum.',
+          'Molanın en sevdiğim kısmı telefonuma bakmayacakmış gibi yapmak. Her seferinde işe yarıyor.',
+          'Kimileri rahatlamak için koyun sayar. Ben bitirdiğim pomodoroları sayarım. Daha iyi çalışıyor.',
+          'Ertelemeyle ilgili bir şaka anlatacaktım ama sürekli erteliyorum.',
+        ],
+      },
+      funFact: {
+        label: 'İlginç Bilgi',
+        subTypes: {
+          fact: {
+            entries: [
+              "Avrupa'nın bazı yerlerinde domatesin zehirli olduğuna inanılırdı, oysa sebep sadece zengin sofralardaki kalay tabakların asitle tepkimeye girmesiydi. Domates baştan beri masumdu.",
+              "Pomodoro Tekniği adını, yaratıcısı Francesco Cirillo'nun 1980'lerin sonunda üniversitede kullandığı domates şeklindeki sade bir mutfak zamanlayıcısından alır.",
+              "Botanik olarak domates bir meyvedir. 1893'te ünlü bir ABD Yüksek Mahkemesi kararı, sadece vergi amacıyla onu sebze saydı. Kanun bile tek bir cevapta odaklanamadı.",
+              'Dikkat üzerine yapılan araştırmalar, zihnin yaklaşık yirmi ila otuz dakikalık odaklı çalışmadan sonra dağılmaya başladığını gösteriyor, tam da klasik bir Pomodoro süresine denk geliyor.',
+              'Dünya genelinde kiraz büyüklüğünden bir kilogramı aşan türlere kadar on binden fazla domates çeşidi yetiştiriliyor.',
+              'Odaklı çalışma seansları arasındaki kısa molaların, beynin az önce öğrendiklerini pekiştirmesine yardımcı olduğu gösterilmiştir.',
+            ],
+          },
+          guessIt: {
+            entries: [
+              {
+                question: 'Doğru mu yanlış mı: Domates teknik olarak bir meyvedir, sebze değildir.',
+                answer: 'Doğru. Botanik olarak domates bir meyvedir çünkü bir çiçekten gelişir ve tohum taşır.',
+              },
+              {
+                question: 'Klasik bir Pomodoro çalışma seansı kaç dakika sürer?',
+                answer: "Yirmi beş dakika, ardından kısa bir mola gelir. Ayarlar'dan değiştirebilirsin ama klasik varsayılan 25'tir.",
+              },
+              {
+                question: "Pomodoro Tekniği'nin adını hangi günlük eşyadan aldı?",
+                answer: "Domates şeklinde bir mutfak zamanlayıcısından. 'Pomodoro' İtalyancada domates demektir.",
+              },
+              {
+                question: 'Çoğu insan dikkati dağılmadan önce derin odağı ne kadar süre koruyabilir?',
+                answer: 'Yaklaşık yirmi ila otuz dakika, kısa odaklı seansların bu kadar işe yaramasının bir nedeni de bu.',
+              },
+              {
+                question: 'Doğru mu yanlış mı: Çalışma sırasında kısa molalar vermek hafızayı gerçekten iyileştirebilir.',
+                answer: 'Doğru. Kısa molalar, beynin az önce öğrendiklerini pekiştirmesine yardımcı olur.',
+              },
+              {
+                question: 'Dünya genelinde aşağı yukarı kaç domates çeşidi var?',
+                answer: 'On binden fazla, küçük kiraz domateslerinden bir kilogramı aşan devasa türlere kadar.',
+              },
+            ],
+          },
+        },
+      },
+      personalStatCard: {
+        label: 'Kişisel İstatistik Kartı',
+        templates: {
+          today: 'Bugün {{count}} Pomodoro tamamladın.',
+          week: 'Bu hafta {{count}} Pomodoro tamamladın.',
+          allTime: 'Toplamda {{count}} Pomodoro tamamladın.',
+          tasksDone: 'Şimdiye kadar {{count}} görev bitirdin.',
+        },
+      },
+      rare: {
+        label: 'Nadir Kart',
+        openingLine: 'Zamanın nadir bir ipliği seni buldu. Bir an dur ve içine işlemesine izin ver.',
+      },
+    },
+  },
+
+  motivationStats: {
+    title: 'Kart Koleksiyonu',
+    noDrawsYet: 'Koleksiyonuna başlamak için Zamanlayıcı\'dan ilk kartını çek.',
+    totalDrawsLabel: 'Çekilen kart',
+    distinctCategoriesLabel: 'Keşfedilen kategori',
+    rareFoundLabel: 'Bulunan nadir kart',
+    firstRareLabel: 'İlk Nadir kart',
+    firstRareNone: 'Henüz bulunamadı',
+    byCategoryTitle: 'Kategoriye göre',
+    achievementsFooter: 'Tam bir başarı sistemi gelecek bir güncelleme için planlanıyor.',
+  },
+
   notifications: {
     pomodoroCompleteTitle: 'Pomodoro tamamlandı',
     longBreakBody: 'Uzun mola zamanı.',
@@ -113,13 +276,13 @@ export default {
     selectAria: "{{text}} görevini birleştirmek için seç",
     markDoneAria: 'tamamlandı olarak işaretle',
     unplannedBadgeTitle: 'Plansız',
-    moreThanWarningInline: "{{max}}'den fazla — parçalara ayır (Kural 4)",
-    moreThanWarning: "{{max}} pomodorodan fazla — görevi alt görevlere böl (Kural 4).",
+    moreThanWarningInline: "{{max}}'den fazla. Parçalara ayır (Kural 4)",
+    moreThanWarning: "{{max}} pomodorodan fazla. Görevi alt görevlere böl (Kural 4).",
     addToToday: "Bugüne ekle",
     editAria: 'envanter öğesini düzenle',
     editTitle: 'Düzenle',
     deleteConfirm: 'Bu görev envanterden silinsin mi?',
-    combinePrompt: '{{count}} görev seçildi — birleştirilsin mi? (Kural 5)',
+    combinePrompt: '{{count}} görev seçildi. Birleştirilsin mi? (Kural 5)',
     combineButton: 'Birleştir',
     combineConfirm: '{{count}} görev tek görevde birleştirilsin mi? Orijinaller kaldırılır ve bu geri alınamaz.',
     emptyState: 'Görev listeni oluşturmaya başlamak için yukarıdan ilk görevini ekle.',
@@ -137,7 +300,7 @@ export default {
     addButton: 'Ekle',
     saveButton: 'Kaydet',
     cancelButton: 'Vazgeç',
-    moreThanWarning: "{{max}} pomodorodan fazla — görevi alt görevlere böl (Kural 4).",
+    moreThanWarning: "{{max}} pomodorodan fazla. Görevi alt görevlere böl (Kural 4).",
     colTask: 'Görev',
     colEstimate: 'Tahmin',
     colReal: 'Gerçek',
@@ -157,10 +320,10 @@ export default {
     deleteTaskAria: 'görevi sil',
     deleteConfirm: 'Bu görev silinsin mi?',
     alreadyTwoReestimates:
-      'Bu görevin zaten iki yeniden tahmini var (Fark I ve Fark II) — ikincisi kilitlendi.',
+      'Bu görevin zaten iki yeniden tahmini var (Fark I ve Fark II). İkincisi kilitlendi.',
     reestimatePrompt: '"{{text}}" için yeniden tahmin:',
     newEstimateAria: 'Yeni tahmin',
-    moreThanWarningInline: "{{max}}'den fazla — parçalara ayır (Kural 4)",
+    moreThanWarningInline: "{{max}}'den fazla. Parçalara ayır (Kural 4)",
     bulkActionsAria: 'görev listesi işlemleri',
     clearFinishedLabel: 'Tamamlanan görevleri temizle',
     clearFinishedConfirm: 'Bu, bugünün listesindeki tüm tamamlanmış görevleri kalıcı olarak silecek. Devam edilsin mi?',
@@ -177,7 +340,7 @@ export default {
     useTimetableTitle: "Bugünün zaman çizelgesi bloklarından doldur",
     pomodorosAvailable: 'Kullanılabilir pomodoro',
     plannedLabel: '{{count}} planlandı',
-    overCapacity: ' — kapasite aşıldı, bugünün listesini kısalt',
+    overCapacity: '. Kapasite aşıldı, bugünün listesini kısalt',
   },
 
   timetable: {
@@ -222,7 +385,7 @@ export default {
     deleteAria: "{{name}} kategorisini sil",
     deleteTitle: 'Sil',
     deleteConfirm: '"{{name}}" kategorisi silinsin mi? Bunu kullanan görev ve kayıtlar kategorisiz görünecek.',
-    emptyState: 'Henüz kategori yok — görevler kategorisiz görünecek.',
+    emptyState: 'Henüz kategori yok. Görevler kategorisiz görünecek.',
     // Misafirler mevcut kategorileri tam olarak kullanmaya devam eder
     // (atama/düzenleme/silme) — sadece yeni bir kategori oluşturmak hesap
     // gerektirir. Bkz. CategoryManager.jsx.
@@ -255,13 +418,13 @@ export default {
     periodWeek: 'Bu Hafta',
     periodMonth: 'Bu Ay',
     periodYear: 'Bu Yıl',
-    noHistoryHint: 'Henüz yeterli geçmiş yok — uygulamayı daha çok gün kullandıkça filtreler farklılaşacak.',
+    noHistoryHint: 'Henüz yeterli geçmiş yok. Uygulamayı daha çok gün kullandıkça filtreler farklılaşacak.',
     noDataForPeriod: 'Bu dönem için henüz veri yok.',
     noDataAtAll:
-      'Eğilimlerini burada görmek için birkaç pomodoro tamamla ve bir görev bitir — tahmin doğruluğu, kesinti örüntüleri ve odak sürenin nereye gittiği burada görünecek.',
+      'Eğilimlerini burada görmek için birkaç pomodoro tamamla ve bir görev bitir: tahmin doğruluğu, kesinti örüntüleri ve odak sürenin nereye gittiği burada görünecek.',
     totalFocusTime: 'Toplam odaklanma süresi',
     totalFocusTimeTooltip:
-      'Yaklaşık bir değerdir: geçmiş pomodoro sayısı × şu anki work-duration ayarı. Work duration\'ı değiştirirsen burada gösterilen geçmiş toplamlar da değişir — her geçmiş oturumun gerçekte kaç dakika sürdüğünün birebir kaydı değildir.',
+      'Yaklaşık bir değerdir: geçmiş pomodoro sayısı × şu anki work-duration ayarı. Work duration\'ı değiştirirsen burada gösterilen geçmiş toplamlar da değişir. Her geçmiş oturumun gerçekte kaç dakika sürdüğünün birebir kaydı değildir.',
     pomodorosToday: 'Bugünkü pomodorolar',
     tasksToday: 'Bugünkü görevler',
     tasksTodayActiveCaption: '{{active}} aktif',
@@ -316,7 +479,7 @@ export default {
   },
 
   dayReview: {
-    title: 'Bugünün Özeti — {{date}}',
+    title: 'Bugünün Özeti: {{date}}',
     closeAria: 'özeti kapat',
     pomodorosCompleted: 'Tamamlanan pomodorolar',
     interruptions: 'Kesintiler ({{internal}} iç · {{external}} dış)',
@@ -407,6 +570,10 @@ export default {
       title: 'Kategoriler örüntüleri görmeni sağlar',
       body: 'Görevleri bir kategoriyle (Iş veya Ders gibi) etiketlemek, Raporlar\'ın odak sürenin gerçekte nereye gittiğini göstermesini sağlar. Bu, özellikle sadece bugünü değil, haftaları karşılaştırırken işe yarar.',
     },
+    motivationIntro: {
+      title: 'Küçük bir an, senin zamanında',
+      body: 'İstediğin an, boşta, Pomodoro sırasında ya da molada, kart simgesine dokunarak kısa bir söz, şaka, bilgi ya da kendi istatistiklerine bir bakış çekebilirsin. Her Pomodoro\'da bir çekiliş hakkın var; bir sonrakinde sıfırlanır. Tamamen isteğe bağlıdır ve çalışan zamanlayıcına asla dokunmaz.',
+    },
   },
 
   // İsteğe bağlı "derinlemesine öğrenme" yolu — bkz. MethodologyGuideModal.jsx.
@@ -451,11 +618,10 @@ export default {
     categoryAccount: 'Hesap',
     categoryData: 'Veri',
     categoryAchievements: 'Başarılar',
-    achievementsComingSoon: 'Tam sürümle beraber eklenecektir',
     categoryAbout: 'Hakkında',
     signInPromptLabel: 'Verilerinizi cihazlar arasında senkronize edin',
     aboutDescription:
-      'Pomodoro Tekniği\'nin sadık bir uygulaması: planlama, takip, kesinti yönetimi, tahmin ve kayıt — hepsi tek bir yerde, sadece bir zamanlayıcı değil.',
+      'Pomodoro Tekniği\'nin sadık bir uygulaması: planlama, takip, kesinti yönetimi, tahmin ve kayıt, hepsi tek bir yerde. Sadece bir zamanlayıcı değil.',
     aboutContactLabel: 'İletişim',
     aboutSourceLabel: 'Kaynak kod',
     aboutAttribution:
@@ -491,7 +657,7 @@ export default {
     customThemeLongBreakLabel: 'Uzun Mola',
     customThemeHint: "Genel, Timer dışındaki tüm ekranlara uygulanır; Timer ise o an aktif olan oturumu takip eder.",
     backgroundLabel: 'Tam ekran arka plan görseli',
-    backgroundHint: 'Yalnızca Tam Ekran Odak Modunda görünür — Zamanlayıcı, Planlama, Raporlar veya Ayarlar ekranlarında gösterilmez.',
+    backgroundHint: 'Yalnızca Tam Ekran Odak Modunda görünür. Zamanlayıcı, Planlama, Raporlar veya Ayarlar ekranlarında gösterilmez.',
     backgroundSignInHint: 'Bu özelliği kullanmak için giriş yapmalısınız',
     backgroundUploadButton: 'Görsel yükle',
     backgroundUploading: 'Yükleniyor…',
@@ -502,7 +668,7 @@ export default {
     backgroundPresetGalleryHint: 'Yükleme gerektirmeyen, hazır arka plan seçeneklerinden oluşan bir galeri gelecek bir güncellemede planlanıyor.',
     workDurationLabel: 'Pomodoro (çalışma) süresi',
     workDurationDeviationNote:
-      'Pomodoro Tekniği, standart çalışma aralığı olarak özellikle 25 dakika kullanır — bu, orijinal tekniğe kasıtlı bir sapmadır.',
+      'Pomodoro Tekniği, standart çalışma aralığı olarak özellikle 25 dakika kullanır. Bu, orijinal tekniğe kasıtlı bir sapmadır.',
     shortBreakLabel: 'Kısa mola süresi',
     longBreakLabel: 'Uzun mola süresi',
     minutesUnit: 'dk',
@@ -562,8 +728,11 @@ export default {
     resetVoidLogLabel: 'İptal günlüğü',
     resetVoidLogConfirm:
       'Bu, İptal günlüğünü (iptal edilen Pomodorolar ve nedenleri) kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
+    resetCardDrawsLabel: 'Kart koleksiyonu',
+    resetCardDrawsConfirm:
+      'Bu, Motivasyon Kartı çekiliş geçmişini (Başarılar istatistikleri) kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
     factoryResetConfirm:
-      "Bu, HER ŞEYİ kalıcı olarak silecek — Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü VE ayarların (döngü uzunluğu, ses, tema). Uygulama ilk açılış durumuna dönecek. Bu geri alınamaz. Devam edilsin mi?",
+      "Bu, HER ŞEYİ kalıcı olarak silecek: Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü, Kart koleksiyonun VE ayarların (döngü uzunluğu, ses, tema). Uygulama ilk açılış durumuna dönecek. Bu geri alınamaz. Devam edilsin mi?",
   },
 
   dataImport: {
@@ -578,13 +747,13 @@ export default {
     csvImportDesc: 'Sadece kayıtları içe aktarır. Görevleri veya kategorileri geri getirmez.',
     exportButton: 'Dışa Aktar',
     chooseFileButton: 'Dosya seç',
-    invalidJsonError: 'Bu dosya geçerli bir yedek gibi görünmüyor — hiçbir değişiklik yapılmadı.',
-    invalidCsvError: 'Bu dosya geçerli bir Kayıtlar CSV dosyası gibi görünmüyor — hiçbir değişiklik yapılmadı.',
+    invalidJsonError: 'Bu dosya geçerli bir yedek gibi görünmüyor. Hiçbir değişiklik yapılmadı.',
+    invalidCsvError: 'Bu dosya geçerli bir Kayıtlar CSV dosyası gibi görünmüyor. Hiçbir değişiklik yapılmadı.',
     choosePrompt: 'Bu nasıl içe aktarılsın?',
     replaceButton: 'Tüm veriyi değiştir',
     mergeButton: 'Mevcut veriyle birleştir',
     jsonReplaceConfirm:
-      "Bu, tüm verini — Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü VE ayarların — bu dosyanın içeriğiyle kalıcı olarak DEĞİŞTİRECEK. Bu geri alınamaz. Devam edilsin mi?",
+      "Bu, tüm verini (Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü VE ayarların) bu dosyanın içeriğiyle kalıcı olarak DEĞİŞTİRECEK. Bu geri alınamaz. Devam edilsin mi?",
     jsonMergeConfirm:
       'Bu, içe aktarılan dosyayı mevcut verinle birleştirecek: eşleşen kayıtlar daha yeniyse korunur, sadece dosyada olanlar eklenir. Mevcut ayarların değişmez. Devam edilsin mi?',
     csvReplaceConfirm:

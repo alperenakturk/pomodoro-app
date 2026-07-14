@@ -23,11 +23,13 @@ import {
   clearTimerState,
   clearCategories,
   clearVoidLog,
+  clearCardDraws,
   resetAllData,
 } from '../lib/storage'
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
+import CardCollectionStats from './CardCollectionStats'
 import CoachMark from './CoachMark'
 import ThemePicker from './ThemePicker'
 import { THEMES } from '../lib/theme'
@@ -58,6 +60,7 @@ const RESET_CATEGORIES = [
   { labelKey: 'settings.resetTimerLabel', confirmKey: 'settings.resetTimerConfirm', action: clearTimerState },
   { labelKey: 'settings.resetCategoriesLabel', confirmKey: 'settings.resetCategoriesConfirm', action: clearCategories },
   { labelKey: 'settings.resetVoidLogLabel', confirmKey: 'settings.resetVoidLogConfirm', action: clearVoidLog },
+  { labelKey: 'settings.resetCardDrawsLabel', confirmKey: 'settings.resetCardDrawsConfirm', action: clearCardDraws },
 ]
 
 // Both await their storage.js action before reloading — for a signed-in
@@ -1020,11 +1023,7 @@ function SettingsModal({
             </div>
           )}
 
-          {activeCategory === 'achievements' && (
-            <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-10 text-center">
-              <p className="text-sage text-sm font-sans">{t('settings.achievementsComingSoon')}</p>
-            </div>
-          )}
+          {activeCategory === 'achievements' && <CardCollectionStats />}
 
           {activeCategory === 'about' && (
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4 text-sage text-xs font-sans leading-relaxed flex flex-col gap-3">

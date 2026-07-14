@@ -14,6 +14,7 @@ const ARRAY_TABLES = {
   pomodoro_timetable: 'timetable',
   pomodoro_categories: 'categories',
   pomodoro_void_log: 'void_log',
+  pomodoro_card_draws: 'card_draws',
 }
 
 // Singletons (one row per user) — see supabase/schema.sql's file-header

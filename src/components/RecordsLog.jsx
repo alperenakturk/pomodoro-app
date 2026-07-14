@@ -208,9 +208,9 @@ function VoidLogRow({ entry, categories, onDelete }) {
     <li className="text-sage text-xs font-sans flex items-center gap-2">
       <span className="flex-1">
         {t('recordsLog.voidedAt', { elapsed: formatElapsed(entry.elapsedSeconds), total: formatElapsed(WORK_SECONDS) })}
-        {entry.activity && <> — {entry.activity}</>}
+        {entry.activity && <>. {entry.activity}</>}
         {category && <CategoryTag category={category} />}
-        {entry.reason && <> — {entry.reason}</>}
+        {entry.reason && <> ({entry.reason})</>}
       </span>
       <button
         type="button"
