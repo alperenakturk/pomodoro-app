@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
 import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
+import { pickCoachMark } from '../lib/constants'
+import CoachMark from './CoachMark'
 import {
   todayString,
   datesForYesterday,
@@ -391,13 +393,27 @@ function LongTermSection({ ticks, activityLog }) {
   )
 }
 
-function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
+function Reports({
+  todayTasks = [],
+  categories = [],
+  workMinutes = 25,
+  seenCoachMarks = [],
+  onDismissCoachMark = () => {},
+  onLearnMoreCoachMark = () => {},
+}) {
   const { t } = useTranslation()
   const [ticks, setTicks] = useState(() => loadTicks())
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
   const [period, setPeriod] = useState('week')
   const [activeSection, setActiveSection] = useState(SECTIONS[0].id)
+
+  // See constants.js's pickCoachMark — the intro fires on first visit, the
+  // second only once there's actually real data to look at (so it can talk
+  // about reading the charts instead of describing an empty page).
+  const reportsCoachMark = pickCoachMark('reports', seenCoachMarks, {
+    'reports-first-data': ticks.length > 0 || activityLog.length > 0,
+  })
 
   // Polling yerine: veri her değiştiğinde anında haber al.
   useEffect(() => {
@@ -437,7 +453,16 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
   }
 
   return (
-    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
+    <div className="flex flex-col gap-4">
+      {reportsCoachMark && (
+        <CoachMark
+          titleKey={reportsCoachMark.titleKey}
+          bodyKey={reportsCoachMark.bodyKey}
+          onDismiss={() => onDismissCoachMark(reportsCoachMark.id)}
+          onLearnMore={() => onLearnMoreCoachMark(reportsCoachMark.id)}
+        />
+      )}
+      <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
       <div className="flex items-center justify-between mb-4">
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('reports.title')}
@@ -452,7 +477,16 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
       </div>
 
       {ticks.length === 0 && activityLog.length === 0 ? (
-        <p className="text-sage text-sm font-sans text-center py-6">{t('reports.noDataAtAll')}</p>
+        // Same dashed-border treatment as EmptyChartState's per-period empties
+        // (goal: don't duplicate this with a separate coach mark — the
+        // Reports coach mark explains *why* these metrics matter, shown once;
+        // this explains *what will appear here*, shown every time there's
+        // genuinely no data yet, regardless of whether the coach mark was
+        // ever seen).
+        <div className="border border-dashed border-cream/15 rounded-xl px-6 py-10 flex flex-col items-center gap-1">
+          <p className="text-sage text-xs font-sans font-semibold">{t('reports.noChartDataTitle')}</p>
+          <p className="text-sage/70 text-xs font-sans text-center max-w-sm">{t('reports.noDataAtAll')}</p>
+        </div>
       ) : (
         <>
           <div className="flex gap-2 justify-center flex-wrap mb-4">
@@ -580,6 +614,7 @@ function Reports({ todayTasks = [], categories = [], workMinutes = 25 }) {
           </div>
         </>
       )}
+      </div>
 
       {showReview && (
         <DayReview

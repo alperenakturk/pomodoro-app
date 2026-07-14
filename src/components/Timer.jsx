@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
+import CoachMark from './CoachMark'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
 import { useTranslation } from '../hooks/useTranslation'
 import { useFullscreenBackgroundUrl } from '../hooks/useFullscreenBackgroundUrl'
 import { themeClassName } from '../lib/theme'
+import { pickCoachMark } from '../lib/constants'
 
 const RING_PULSE_MS = 500
 
@@ -99,8 +101,9 @@ function Timer({
   onGoToPlanning,
   onNavigateTab,
   fullscreenBackgroundPath,
-  showWelcome,
-  onDismissWelcome,
+  seenCoachMarks,
+  onDismissCoachMark,
+  onLearnMoreCoachMark,
   sessionType,
   secondsLeft,
   isRunning,
@@ -712,6 +715,21 @@ function Timer({
     </>
   )
 
+  // Which (if any) of Timer's coach marks should show right now — see
+  // constants.js's pickCoachMark: the intro fires on first visit (no extra
+  // condition), the rest only once the user has actually reached that moment
+  // (a work session running, having just logged an interruption, a break
+  // session running), so they naturally appear later in a real session
+  // rather than all at once. 'timer-first-interruption' is what teaches a
+  // brand-new user what the internal/external counters even are, *before*
+  // Reports' interruption-trend marks (which assume the concept is already
+  // known) can show — see coachMarks.reportsIntro/reportsFirstData.
+  const timerCoachMark = pickCoachMark('timer', seenCoachMarks, {
+    'timer-first-start': isRunning && sessionType === 'work',
+    'timer-first-interruption': internalCount > 0 || externalCount > 0,
+    'timer-first-break': isRunning && sessionType !== 'work',
+  })
+
   return (
     <div
       ref={containerRef}
@@ -726,28 +744,14 @@ function Timer({
           : undefined
       }
     >
-      {!isFullscreen && showWelcome && (
-        <div className="relative bg-pine-dark border border-cream/10 rounded-3xl px-6 py-5 shadow-lg w-full max-w-xl">
-          <button
-            type="button"
-            onClick={onDismissWelcome}
-            className="absolute top-3 right-3 text-sage hover:text-cream text-lg leading-none"
-            aria-label={t('onboarding.dismissAria')}
-          >
-            ×
-          </button>
-          <p className="font-display text-cream font-bold text-xs tracking-widest uppercase mb-2 pr-6">
-            {t('onboarding.title')}
-          </p>
-          <p className="font-sans text-sage text-sm">{t('onboarding.body')}</p>
-          <button
-            type="button"
-            onClick={onDismissWelcome}
-            className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream mt-3"
-          >
-            {t('onboarding.dismiss')}
-          </button>
-        </div>
+      {!isFullscreen && timerCoachMark && (
+        <CoachMark
+          titleKey={timerCoachMark.titleKey}
+          bodyKey={timerCoachMark.bodyKey}
+          onDismiss={() => onDismissCoachMark(timerCoachMark.id)}
+          onLearnMore={() => onLearnMoreCoachMark(timerCoachMark.id)}
+          className="max-w-xl"
+        />
       )}
 
       {/* No card/border here on purpose — mockup 06's calmer direction has

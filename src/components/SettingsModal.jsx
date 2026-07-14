@@ -28,7 +28,9 @@ import {
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
+import CoachMark from './CoachMark'
 import { THEMES } from '../lib/theme'
+import { pickCoachMark } from '../lib/constants'
 import ChangePasswordModal from './ChangePasswordModal'
 import AuthModal from './AuthModal'
 import {
@@ -234,7 +236,14 @@ function SettingsModal({
   addCategory,
   updateCategory,
   removeCategory,
-  onReplayWelcome,
+  // Defaults keep this modal renderable in isolation (e.g. SettingsModal.test.jsx,
+  // which doesn't exercise onboarding) without every call site having to pass
+  // these explicitly.
+  seenCoachMarks = [],
+  onDismissCoachMark = () => {},
+  onLearnMoreCoachMark = () => {},
+  onOpenGuide = () => {},
+  onReplayCoachMarks = () => {},
 }) {
   const { t, language, setLanguage } = useTranslation()
   const { user, deleteAccount } = useAuth()
@@ -357,6 +366,14 @@ function SettingsModal({
 
   const activeLabelKey = CATEGORIES.find((c) => c.id === activeCategory)?.labelKey
 
+  // See constants.js's pickCoachMark — the intro fires on first open of
+  // Settings at all (any category), the second only once the user has
+  // actually opened the Data category (where Categories management and the
+  // Danger Zone live).
+  const settingsCoachMark = pickCoachMark('settings', seenCoachMarks, {
+    'settings-data-intro': activeCategory === 'data',
+  })
+
   // ChangePasswordModal is rendered as a sibling of the backdrop below, not
   // nested inside it — both are `fixed inset-0` overlays with their own
   // backdrop-click-to-close handler, and nesting one inside the other would
@@ -418,6 +435,22 @@ function SettingsModal({
           <h2 className="font-sans text-cream font-semibold text-base mb-4 pr-8">
             {t(activeLabelKey)}
           </h2>
+
+          {/* Whichever of Settings' two marks currently applies (see the
+              pickCoachMark call above) — the intro on first open of any
+              category, the Data-specific one once that category is actually
+              opened. No wrapper div for spacing (which would leave a
+              permanent empty gap once dismissed) — className handles the
+              margin only while actually rendered. */}
+          {settingsCoachMark && (
+            <CoachMark
+              titleKey={settingsCoachMark.titleKey}
+              bodyKey={settingsCoachMark.bodyKey}
+              onDismiss={() => onDismissCoachMark(settingsCoachMark.id)}
+              onLearnMore={() => onLearnMoreCoachMark(settingsCoachMark.id)}
+              className="mb-4"
+            />
+          )}
 
           {activeCategory === 'general' && (
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
@@ -633,6 +666,20 @@ function SettingsModal({
                   onChange={(e) => setCheckToBottom(e.target.checked)}
                   className="flex-shrink-0"
                 />
+              </div>
+
+              {/* Second, persistent entry point into MethodologyGuideModal —
+                  General is the category Settings opens to by default, so
+                  this is reachable without ever scrolling down to About.
+                  Same evergreen button as the one in About below. */}
+              <div className="py-3">
+                <button
+                  type="button"
+                  onClick={() => onOpenGuide()}
+                  className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream hover:border-cream/40"
+                >
+                  {t('settings.howItWorksButton')}
+                </button>
               </div>
             </div>
           )}
@@ -996,17 +1043,28 @@ function SettingsModal({
                 {t('settings.aboutAttribution')}
               </p>
 
-              {onReplayWelcome && (
-                <div className="pt-3 border-t border-cream/10">
-                  <button
-                    type="button"
-                    onClick={onReplayWelcome}
-                    className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream hover:border-cream/40"
-                  >
-                    {t('settings.replayWelcome')}
-                  </button>
-                </div>
-              )}
+              {/* Always visible (not gated on first-visit state) — the
+                  evergreen entry point into MethodologyGuideModal for anyone
+                  curious later, separate from the one-time coach marks. */}
+              <div className="pt-3 border-t border-cream/10">
+                <button
+                  type="button"
+                  onClick={() => onOpenGuide()}
+                  className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream hover:border-cream/40"
+                >
+                  {t('settings.howItWorksButton')}
+                </button>
+              </div>
+
+              <div className="pt-3 border-t border-cream/10">
+                <button
+                  type="button"
+                  onClick={onReplayCoachMarks}
+                  className="font-sans text-xs px-3 py-1.5 rounded-lg border border-cream/20 text-cream hover:border-cream/40"
+                >
+                  {t('settings.replayCoachMarks')}
+                </button>
+              </div>
             </div>
           )}
         </div>

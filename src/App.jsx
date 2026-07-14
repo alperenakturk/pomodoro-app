@@ -9,8 +9,6 @@ import {
   loadSettings,
   patchSettings,
   addVoidLogEntry,
-  loadActivityLog,
-  loadTicks,
   signInToRemote,
   signOutFromRemote,
   clearLocalGuestData,
@@ -29,6 +27,9 @@ import Reports from './components/Reports'
 import TabNav from './components/TabNav'
 import SettingsModal from './components/SettingsModal'
 import ProfileMenu from './components/ProfileMenu'
+import CoachMark from './components/CoachMark'
+import MethodologyGuideModal from './components/MethodologyGuideModal'
+import { COACH_MARKS, pickCoachMark } from './lib/constants'
 
 // sessionStorage (not a ref, which resets on every fresh JS load) — marks
 // that this browser tab has already completed a sign-in sync for a given
@@ -307,36 +308,39 @@ function AppInner() {
     patchSettings({ displayName: value })
   }
 
-  // First-launch welcome card (Timer tab): shown only while every collection
-  // is still empty AND the user hasn't already dismissed it — so it appears
-  // once on a fresh install and never resurfaces afterward, even if the user
-  // later clears their data via the Danger Zone.
-  const [onboardingDismissed, setOnboardingDismissed] = useState(
-    () => loadSettings().onboardingDismissed
-  )
-  // Transient (not persisted) — lets Settings' "Show welcome message again"
-  // bring the card back even for a user who already has data, which the
-  // isAllDataEmpty condition alone would never allow. Cleared again on
-  // dismiss so it behaves like a one-time replay, not a second permanent
-  // on state.
-  const [welcomeReplay, setWelcomeReplay] = useState(false)
-  function dismissOnboarding() {
-    setOnboardingDismissed(true)
-    patchSettings({ onboardingDismissed: true })
-    setWelcomeReplay(false)
+  // Contextual onboarding coach marks (see constants.js's COACH_MARKS/
+  // pickCoachMark) — several short, event-triggered hints per core section
+  // (Timer/Planning/Reports/Settings), each shown at most once. This
+  // replaces the old single first-launch "welcome card" entirely (Timer's
+  // first coach mark — 'timer-intro' — now covers that same "here's the
+  // idea, add a task and press Start" moment).
+  // `seenCoachMarks` holds the ids already dismissed/engaged with; dismissing
+  // or clicking "Learn more" on any of them both mark it seen (so it never
+  // reappears) — "Learn more" additionally opens MethodologyGuideModal at
+  // that mark's most relevant topic.
+  const [seenCoachMarks, setSeenCoachMarksState] = useState(() => loadSettings().seenCoachMarks)
+  function markCoachMarkSeen(id) {
+    setSeenCoachMarksState((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    patchSettings({ seenCoachMarks: [...new Set([...loadSettings().seenCoachMarks, id])] })
   }
-  function replayWelcome() {
-    setWelcomeReplay(true)
-    setActiveTab('timer')
-    setSettingsOpen(false)
+  function replayCoachMarks() {
+    setSeenCoachMarksState([])
+    patchSettings({ seenCoachMarks: [] })
   }
-  const isAllDataEmpty =
-    inventoryApi.items.length === 0 &&
-    todayApi.tasks.length === 0 &&
-    categoriesApi.categories.length === 0 &&
-    loadActivityLog().length === 0 &&
-    loadTicks().length === 0
-  const showWelcome = (!onboardingDismissed && isAllDataEmpty) || welcomeReplay
+  const [guideOpen, setGuideOpen] = useState(false)
+  const [guideInitialSection, setGuideInitialSection] = useState(null)
+  function openGuide(sectionId) {
+    setGuideInitialSection(sectionId ?? null)
+    setGuideOpen(true)
+  }
+  // "Learn more" always both marks the mark seen and opens the guide at its
+  // most relevant topic — shared by every section (Timer computes its own
+  // mark id internally, so it gets this generic id-taking version too).
+  function onLearnMoreCoachMark(id) {
+    const mark = COACH_MARKS.find((m) => m.id === id)
+    markCoachMarkSeen(id)
+    openGuide(mark.guideSection)
+  }
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
 
@@ -416,6 +420,14 @@ function AppInner() {
   // root div wraps other than Timer), or whichever of Focus/Short Break/
   // Long Break matches the session that's currently running for the Timer
   // specifically (see the `timerThemeId` passed down below).
+
+  // Planning's coach mark is computed here (rather than inside TodoToday/
+  // Inventory) since App is the shared ancestor that already has
+  // todayApi.tasks — see constants.js's pickCoachMark for the trigger rules.
+  const planningCoachMark = pickCoachMark('planning', seenCoachMarks, {
+    'planning-first-today-task': todayApi.tasks.length > 0,
+  })
+
   const rootThemeId = theme === 'custom' ? customThemeGeneral : theme
   const timerThemeId =
     theme === 'custom'
@@ -520,19 +532,25 @@ function AppInner() {
             onGoToPlanning={() => setActiveTab('planning')}
             onNavigateTab={setActiveTab}
             fullscreenBackgroundPath={fullscreenBackgroundPath}
-            showWelcome={showWelcome}
-            onDismissWelcome={dismissOnboarding}
+            seenCoachMarks={seenCoachMarks}
+            onDismissCoachMark={markCoachMarkSeen}
+            onLearnMoreCoachMark={onLearnMoreCoachMark}
             {...pomodoro}
           />
         </div>
 
         <div
-          className={
-            activeTab === 'planning'
-              ? 'grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start'
-              : 'hidden'
-          }
+          className={activeTab === 'planning' ? 'flex flex-col gap-6' : 'hidden'}
         >
+          {planningCoachMark && (
+            <CoachMark
+              titleKey={planningCoachMark.titleKey}
+              bodyKey={planningCoachMark.bodyKey}
+              onDismiss={() => markCoachMarkSeen(planningCoachMark.id)}
+              onLearnMore={() => onLearnMoreCoachMark(planningCoachMark.id)}
+            />
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
           {/* Today's Tasks is the dominant panel now (design-mockups/07) —
               Inventory/Available Pomodoros/Timetable moved to a narrower,
               compact secondary column alongside it, reversed from the old
@@ -574,6 +592,7 @@ function AppInner() {
               onManageCategories={openCategoryManager}
             />
           </div>
+          </div>
         </div>
 
         <div
@@ -583,6 +602,9 @@ function AppInner() {
             todayTasks={todayApi.tasks}
             categories={categoriesApi.categories}
             workMinutes={pomodoro.workMinutes}
+            seenCoachMarks={seenCoachMarks}
+            onDismissCoachMark={markCoachMarkSeen}
+            onLearnMoreCoachMark={onLearnMoreCoachMark}
           />
           <RecordsLog categories={categoriesApi.categories} onManageCategories={openCategoryManager} />
         </div>
@@ -634,7 +656,18 @@ function AppInner() {
           setCustomThemeLongBreak={setCustomThemeLongBreak}
           fullscreenBackgroundPath={fullscreenBackgroundPath}
           setFullscreenBackgroundPath={setFullscreenBackgroundPath}
-          onReplayWelcome={replayWelcome}
+          seenCoachMarks={seenCoachMarks}
+          onDismissCoachMark={markCoachMarkSeen}
+          onLearnMoreCoachMark={onLearnMoreCoachMark}
+          onOpenGuide={openGuide}
+          onReplayCoachMarks={replayCoachMarks}
+        />
+      )}
+
+      {guideOpen && (
+        <MethodologyGuideModal
+          onClose={() => setGuideOpen(false)}
+          initialSectionId={guideInitialSection}
         />
       )}
     </div>

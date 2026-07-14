@@ -176,6 +176,22 @@ describe('settings: ambientSound migration', () => {
   })
 })
 
+describe('settings: seenCoachMarks (contextual onboarding)', () => {
+  it('defaults to an empty array when never saved', () => {
+    expect(loadSettings().seenCoachMarks).toEqual([])
+  })
+
+  it('round-trips a saved list via patchSettings', () => {
+    patchSettings({ seenCoachMarks: ['timer', 'planning'] })
+    expect(loadSettings().seenCoachMarks).toEqual(['timer', 'planning'])
+  })
+
+  it('a settings row saved before this field existed still resolves to []', () => {
+    localStorage.setItem('pomodoro_settings', JSON.stringify({ theme: 'dark' }))
+    expect(loadSettings().seenCoachMarks).toEqual([])
+  })
+})
+
 describe('Categories', () => {
   it('round-trips a saved category and can clear all categories', () => {
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])

@@ -192,9 +192,7 @@ const SETTINGS_KEY = 'pomodoro_settings'
 // `language` is null until the user explicitly picks one in Settings — until
 // then the UI auto-detects from navigator.language on every load (see
 // resolveLanguage() in lib/i18n) rather than freezing in whatever was
-// detected the first time. `onboardingDismissed` gates the Timer tab's
-// first-launch welcome card — set true once the user dismisses it, so it
-// never shows again even if they later clear all their data.
+// detected the first time.
 const DEFAULT_SETTINGS = {
   cycleLength: 4,
   workMinutes: 25,
@@ -210,7 +208,6 @@ const DEFAULT_SETTINGS = {
   chimeStyle: 'classic',
   userId: 'local',
   language: null,
-  onboardingDismissed: false,
   // A local personalization field, deliberately separate from Supabase auth
   // — it's just what the header's greeting calls you, so it works the same
   // for guests and signed-in users alike. Empty string means "not set,
@@ -234,10 +231,21 @@ const DEFAULT_SETTINGS = {
   fullscreenBackgroundPath: null,
   // Flips to true the first time useCategories.js seeds its starter
   // category set (see DEFAULT_CATEGORY_SEEDS there) — false means "never
-  // seeded yet," same one-time-only pattern as onboardingDismissed above.
+  // seeded yet," a one-time-only flag, same pattern as seenCoachMarks below.
   // Without this flag, a user who deletes every category on purpose would
   // see the starter set silently reappear on their next reload.
   defaultCategoriesSeeded: false,
+  // Ids of the individual methodology coach marks (see constants.js's
+  // COACH_MARKS/pickCoachMark) the user has already dismissed or engaged
+  // with — each shows at most once. Settings' "Show onboarding hints again"
+  // resets this back to [].
+  // Missing the matching Supabase column (see supabase/schema.sql) is
+  // harmless: loadSettings() below always merges onto DEFAULT_SETTINGS, so
+  // a remote row without this field just resolves to [] for that session,
+  // and remoteProvider.js's per-collection try/catch means a rejected
+  // upsert (if the column hasn't been added yet) only fails to persist this
+  // one field remotely — it never throws or blocks the rest of the app.
+  seenCoachMarks: [],
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map

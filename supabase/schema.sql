@@ -348,6 +348,11 @@ create table public.settings (
   theme                 text not null default 'dark' check (theme in ('dark', 'light')),
   chime_style           text not null default 'classic' check (chime_style in ('classic', 'soft', 'alert')),
   language              text check (language in ('en', 'tr')),
+  -- No longer written or read by the client (the welcome-card feature it
+  -- backed was removed in favor of the 'timer-intro' coach mark — see
+  -- seen_coach_marks below). Left in place rather than dropped: dropping a
+  -- column needs its own manual migration same as adding one, and an unused
+  -- column here is harmless — DEFAULT_SETTINGS simply no longer has this key.
   onboarding_dismissed  boolean not null default false,
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
@@ -561,3 +566,17 @@ alter table public.settings
 
 alter table public.timer_state
   add column if not exists end_at timestamptz;
+
+-- ----------------------------------------------------------------------------
+-- Contextual onboarding coach marks (seenCoachMarks in DEFAULT_SETTINGS) —
+-- ids of the per-section methodology hints (Timer/Planning/Reports/Settings)
+-- the user has already dismissed or engaged with, so each shows at most
+-- once. Stored as jsonb (a JS string array), matching how every other
+-- Postgres-side array field in this schema round-trips a JS array, and
+-- defaulting to an empty array so an existing row that predates this column
+-- reads back exactly like a fresh account (no coach marks seen yet).
+-- Client-side degrades gracefully if this column hasn't been applied yet —
+-- see storage.js's DEFAULT_SETTINGS.seenCoachMarks comment.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists seen_coach_marks jsonb not null default '[]'::jsonb;
