@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { GUIDE_SECTIONS } from '../lib/constants'
+import RichText from './RichText'
 
 // The optional "deeper learning path" for anyone who wants more than a coach
 // mark's one-line hint — a proper reference view of the Pomodoro Technique,
@@ -88,9 +89,7 @@ function MethodologyGuideModal({ onClose, initialSectionId }) {
           </button>
 
           <h2 className="font-sans text-cream font-semibold text-base mb-3 pr-8">{t(activeSection.titleKey)}</h2>
-          <p className="font-sans text-sage text-sm leading-relaxed whitespace-pre-line">
-            {t(activeSection.bodyKey)}
-          </p>
+          <RichText text={t(activeSection.bodyKey)} className="font-sans text-sage text-sm leading-relaxed" />
         </div>
       </div>
     </div>

@@ -364,28 +364,28 @@ export default {
     gotIt: 'Anladım',
     learnMore: 'Daha fazla bilgi',
     timerIntro: {
-      title: 'Hoş geldin — fikir şu',
+      title: 'Fikir şu',
       body: 'Bir Pomodoro, tek bir görev üzerinde 25 dakikalık odaklanmış çalışmadır, ardından kısa bir mola gelir. Planlama sekmesinde bir görev ekle, sonra buraya dön ve ilk Pomodoro\'nu başlatmak için Başlat\'a bas.',
     },
     timerFirstStart: {
       title: 'Bu Pomodoro sonuna kadar sürmeli',
-      body: 'Bir Pomodoro başladıktan sonra 25 dakika boyunca kesintisiz sürmesi beklenir, iki bilinçli istisna dışında. Duraklat — bu uygulamanın kendi eklentisi, orijinal tekniğin bir parçası değil — kapı çalması gibi kısa bir kesinti için yerini korur. İptal Et ise, çalışmanın kendisi durmak zorunda olduğunda seansı tamamen siler.',
+      body: 'Bir Pomodoro başladıktan sonra 25 dakika boyunca kesintisiz sürmesi beklenir. İki bilinçli istisna var:\n\n- Duraklat, kapı çalması gibi kısa bir kesinti için yerini korur. Bu uygulamanın kendi eklentisidir, orijinal tekniğin bir parçası değildir.\n- İptal Et, çalışmanın kendisi durmak zorunda olduğunda seansı tamamen siler.',
     },
     timerFirstInterruption: {
       title: 'Az önce bir kesinti işaretledin',
-      body: 'Amaç tam olarak bu: bir dikkat dağınıklığını (içsel — senden, veya dışsal — başka birinden) hemen tepki vermek yerine not etmek. Pomodoro\'n çalışmaya devam ediyor; bu örüntüleri daha sonra Raporlar\'da göreceksin.',
+      body: 'Amaç tam olarak bu. Bir dikkat dağınıklığını hemen tepki vermek yerine not ediyorsun. İçsel kesintiler senden gelir, dışsal olanlar başka birinden. Her iki durumda da Pomodoro\'n çalışmaya devam ediyor ve bu örüntüleri daha sonra Raporlar\'da göreceksin.',
     },
     timerFirstBreak: {
       title: 'Bu senin molan',
-      body: 'Her Pomodoro\'dan sonraki kısa mola, bir sonrakine geçmeden önce toparlanmanı sağlar. Her 4. Pomodoro\'dan sonra ise daha uzun bir mola alırsın — bu, tüm gün boyunca zinde kalman için tekniğin ritmidir.',
+      body: 'Her Pomodoro\'dan sonraki kısa mola, bir sonrakine geçmeden önce toparlanmanı sağlar. Her 4. Pomodoro\'dan sonra ise daha uzun bir mola alırsın. Bu, tüm gün boyunca zinde kalman için tekniğin ritmidir.',
     },
     planningIntro: {
       title: 'Gününü burada planla',
-      body: 'Görevlerini Envanterine ekle — yapman gereken her şeyin biriktiği liste — sonra bugün gerçekten üzerinde çalışacaklarını seç ve her birinin kaç Pomodoro (25 dakikalık seans) süreceğini tahmin et.',
+      body: 'Görevlerini Envanterine ekle. Bu, yapman gereken her şeyin biriktiği listedir. Sonra bugün gerçekten üzerinde çalışacaklarını seç ve her birinin kaç Pomodoro (25 dakikalık seans) süreceğini tahmin et.',
     },
     planningFirstTodayTask: {
       title: 'Tahmin neden önemli',
-      body: "Bir görev Bugün listesine girdiğinde, onu bitirdiğinde tahminin ne kadar isabetli olduğunu görebileceksin. Bu uygulama tahmin ettiğinle gerçekte olanı karşılaştırır — bu karşılaştırma, Raporlar'ın zamanla daha iyi planlamana yardımcı olmak için kullandığı şeydir.",
+      body: "Bir görev Bugün listesine girdiğinde, onu bitirdiğinde tahminin ne kadar isabetli olduğunu görebileceksin. Bu uygulama tahmin ettiğinle gerçekte olanı karşılaştırır ve bu karşılaştırma, Raporlar'ın zamanla daha iyi planlamana yardımcı olmak için kullandığı şeydir.",
     },
     reportsIntro: {
       title: 'Bunlar bir skor tablosu değil, senin sayıların',
@@ -393,15 +393,15 @@ export default {
     },
     reportsFirstData: {
       title: 'Bu grafikleri okumak',
-      body: '"Fazla tahmin edilen"/"Az tahmin edilen", tahminini — değiştirdiysen en son tahminini — gerçekte olanla karşılaştırır. Kesinti eğilimleri dikkatini neyin dağıttığını gösterir. İkisi birlikte, geçmişi kaydetmekten çok yarınki planlamanı keskinleştirmek içindir.',
+      body: '"Fazla tahmin edilen"/"Az tahmin edilen", tahminini (değiştirdiysen en son tahminini) gerçekte olanla karşılaştırır. Kesinti eğilimleri dikkatini neyin dağıttığını gösterir. İkisi birlikte, geçmişi kaydetmekten çok yarınki planlamanı keskinleştirmek içindir.',
     },
     settingsIntro: {
       title: 'Tekniğin varsayılan ritmi',
-      body: "25 dakika çalışma, kısa bir mola, sonra her 4. Pomodoro'da bir daha uzun mola — bu, Pomodoro Tekniği'nin klasik ritmidir. Zamanlayıcı kategorisindeki süreler bu ritmi doğrudan kontrol eder; değiştirmek sana kalmış, ama orijinal yöntemden bilinçli bir sapmadır.",
+      body: "Pomodoro Tekniği'nin klasik ritmi 25 dakika çalışma, kısa bir mola, sonra her 4. Pomodoro'da bir daha uzun moladır. Aşağıdaki süreler bu ritmi doğrudan kontrol eder. Değiştirmek sana kalmış, ama orijinal yöntemden bilinçli bir sapmadır.",
     },
     settingsDataIntro: {
       title: 'Kategoriler örüntüleri görmeni sağlar',
-      body: 'Görevleri bir kategoriyle (Iş veya Ders gibi) etiketlemek, Raporlar\'ın odak sürenin gerçekte nereye gittiğini göstermesini sağlar — sadece bugünü değil, haftaları karşılaştırırken işe yarar.',
+      body: 'Görevleri bir kategoriyle (Iş veya Ders gibi) etiketlemek, Raporlar\'ın odak sürenin gerçekte nereye gittiğini göstermesini sağlar. Bu, özellikle sadece bugünü değil, haftaları karşılaştırırken işe yarar.',
     },
   },
 
@@ -414,27 +414,27 @@ export default {
     closeAria: 'metodoloji rehberini kapat',
     whatIsIt: {
       title: 'Pomodoro nedir?',
-      body: 'Pomodoro Tekniği, Francesco Cirillo tarafından 1980\'lerin sonunda geliştirilen bir zaman yönetimi yöntemidir. Adını, Cirillo\'nun çalışmalarını ilk kronometrelemek için kullandığı domates şeklindeki mutfak zamanlayıcısından alır ("pomodoro" İtalyanca domates demektir).\n\nTemel fikir basittir: olabildiğince uzun çalışıp odaklanmayı ummak yerine, Pomodoro adı verilen sabit ve kesintisiz bloklar halinde çalışırsın. Her Pomodoro, tek bir görev üzerinde 25 dakikalık odaklanmış çalışmadır, ardından birkaç dakikalık kısa bir mola gelir. Her 4. Pomodoro\'dan sonra, döngü yeniden başlamadan önce genellikle 15 ila 30 dakikalık daha uzun bir mola verirsin.\n\nHer blok kısa ve net sınırlı olduğu için, görevin tamamı bunaltıcı görünse bile bir Pomodoro ulaşılabilir hisseder. Mola önceden yerleşik olduğu için de, tükenmemek için yalnızca irade gücüne güvenmezsin.',
+      body: 'Pomodoro Tekniği, Francesco Cirillo tarafından 1980\'lerin sonunda geliştirilen bir zaman yönetimi yöntemidir. Adını, Cirillo\'nun çalışmalarını ilk kronometrelemek için kullandığı domates şeklindeki mutfak zamanlayıcısından alır. ("Pomodoro" İtalyanca domates demektir.)\n\nTemel fikir basittir. Olabildiğince uzun çalışıp odaklanmayı ummak yerine, Pomodoro adı verilen sabit ve kesintisiz bloklar halinde çalışırsın.\n\n## Temel ritim\n\n- Her Pomodoro, tek bir görev üzerinde 25 dakikalık odaklanmış çalışmadır.\n- Ardından birkaç dakikalık kısa bir mola gelir.\n- Her 4. Pomodoro\'dan sonra, döngü yeniden başlamadan önce genellikle 15 ila 30 dakikalık daha uzun bir mola verirsin.\n\nHer blok kısa ve net sınırlı olduğu için, görevin tamamı bunaltıcı görünse bile bir Pomodoro ulaşılabilir hisseder. Mola önceden yerleşik olduğu için de, tükenmemek için yalnızca irade gücüne güvenmezsin.',
     },
     rules: {
       title: 'İki temel kural',
-      body: 'Bir Pomodoro bölünemez. Parçalara ayrılamaz veya kısmen sayılamaz — ya 25 dakikanın tamamını tamamlarsın, ya da tamamlamazsın. Seni gerçekten durmaya zorlayan bir şey olursa (bir acil durum, kaçınılmaz bir toplantı), Pomodoro iptal edilir: hiç başlamamış gibi tamamen silinir. Kredi yok, kısmi kayıt yok — sadece dürüst bir sıfırlama.\n\nBir Pomodoro başladıktan sonra tam süresince çalması beklenir. Görevini erken bitirirsen, saati durdurmazsın — kalan süreyi yaptığını gözden geçirmek veya iyileştirmek için kullanırsın. Disiplin, süreyi doldurmakta acele etmekte değil, bu kapta yatar.\n\nBu uygulama, bu kurallara bilinçli ve şeffaf bir istisna ekler: Duraklat — Cirillo\'nun orijinal tekniğinin bir parçası değil, bu uygulamanın kendi dürüst eklentisi. Gerçek hayatta, tam bir İptal Et\'i hak etmeyen kısa kesintiler olur — kapı çalması, iki dakikalık bir dikkat dağınıklığı. Duraklat, seansını tam olduğu yerde tutar, hiçbir şey kaybolmaz; tekrar Başlat\'a basmak kaldığın yerden devam ettirir. Açıkça takip edilir (Raporlar\'da ne sıklıkla duraklattığını görebilirsin), böylece gizli bir kısayol değil, görünür bir alışkanlık olarak kalır.',
+      body: 'Bir Pomodoro bölünemez. Parçalara ayrılamaz veya kısmen sayılamaz. Ya 25 dakikanın tamamını tamamlarsın, ya da tamamlamazsın.\n\nSeni gerçekten durmaya zorlayan bir şey olursa, bir acil durum veya kaçınılmaz bir toplantı gibi, Pomodoro iptal edilir. Hiç başlamamış gibi tamamen silinir: kredi yok, kısmi kayıt yok, sadece dürüst bir sıfırlama.\n\nBir Pomodoro başladıktan sonra tam süresince çalması beklenir. Görevini erken bitirirsen, saati durdurmazsın. Bunun yerine kalan süreyi yaptığını gözden geçirmek veya iyileştirmek için kullanırsın. Disiplin, süreyi doldurmakta acele etmekte değil, bu kapta yatar.\n\n## Duraklat: bu uygulamanın kendi istisnası\n\nBu uygulama, bu kurallara bilinçli ve şeffaf bir istisna ekler. Duraklat, Cirillo\'nun orijinal tekniğinin bir parçası değildir; gerçek hayattaki kısa kesintiler için (kapı çalması, iki dakikalık bir dikkat dağınıklığı gibi) burada eklenen dürüst bir özelliktir. Bunlar tam bir İptal Et\'i hak etmez.\n\n- Duraklat, seansını tam olduğu yerde tutar, hiçbir şey kaybolmaz.\n- Tekrar Başlat\'a basmak kaldığın yerden devam ettirir.\n- Açıkça takip edilir, Raporlar\'da ne sıklıkla duraklattığını görebilirsin, böylece gizli bir kısayol değil görünür bir alışkanlık olarak kalır.',
     },
     sizing: {
       title: 'Görevlerini boyutlandırmak',
-      body: 'Çalışmaya başlamadan önce, bir görevin kaç Pomodoro süreceğini tahmin edersin. İki basit kural bu tahmini gerçekçi tutmana yardımcı olur.\n\nBir görev yaklaşık 5 ila 7 Pomodoro\'dan fazla sürecek gibi görünüyorsa, çok büyüktür — Envanterinde daha küçük alt görevlere böl. Büyük ve belirsiz görevleri doğru tahmin etmek zordur ve seni motive tutan düzenli ilerleme hissini vermez.\n\nBir görev tam bir Pomodoro\'dan daha az sürecekse, onun için tüm bir 25 dakikalık blok çalıştırma — birlikte bir Pomodoro\'yu dolduracak şekilde diğer küçük görevlerle birleştir. Bu uygulamanın Envanterinde tam olarak bunun için bir "birleştir" özelliği var: iki veya daha fazla küçük görevi seç, tahminleri toplanarak tek bir görevde birleşsinler.',
+      body: 'Çalışmaya başlamadan önce, bir görevin kaç Pomodoro süreceğini tahmin edersin. İki basit kural bu tahmini gerçekçi tutmana yardımcı olur.\n\n## Bir görev çok büyükse\n\nBir görev yaklaşık 5 ila 7 Pomodoro\'dan fazla sürecek gibi görünüyorsa, Envanterinde daha küçük alt görevlere böl. Büyük ve belirsiz görevleri doğru tahmin etmek zordur ve seni motive tutan düzenli ilerleme hissini vermez.\n\n## Bir görev çok küçükse\n\nBir görev tam bir Pomodoro\'dan daha az sürecekse, onun için tüm bir 25 dakikalık blok çalıştırma. Birlikte bir Pomodoro\'yu dolduracak şekilde diğer küçük görevlerle birleştir. Bu uygulamanın Envanterinde tam olarak bunun için bir "birleştir" özelliği var: iki veya daha fazla küçük görevi seç, tahminleri toplanarak tek bir görevde birleşsinler.',
     },
     interruptions: {
       title: 'Kesintilerle başa çıkmak',
-      body: 'Teknik, kesintileri sadece kötü hissedilecek bir şey olarak değil, yönetilmesi gereken bir şey olarak ele alır. Onları iki türe ayırır.\n\nİçsel kesintiler senden gelir — başka bir şeyi kontrol etme isteği, mevcut görevinle ilgisiz bir düşünce. Dışsal kesintiler başka biri veya bir şeyden gelir — bir meslektaş, bir telefon çağrısı, bir bildirim.\n\nHer iki tür için de tepki aynıdır: kesintiye hemen tepki verme, ama görmezden gelmeye çalışma da. Bunun yerine işaretle (bu uygulamada tam olarak bunun için içsel/dışsal bir sayaç var), dikkatini dağıtan şeyi kaybetmemek için hızlıca bir yere not et ve mevcut Pomodoro\'na geri dön. Kolayca geçiştiremeyeceğin dışsal bir kesinti için klasik yaklaşım şudur: kişiye meşgul olduğunu bildir, geri dönmek için belirli bir zaman üzerinde anlaş, söz verdiğin o zamanı aklından çıkması için hemen not et, ve Pomodoro\'n bittiğinde sözünü gerçekten tut.\n\nAmaç asla kesintiye uğramamak değil — ne sıklıkla olduğunu fark etmek ve içinde bulunduğun Pomodoro\'yu raydan çıkarmasına izin vermemektir.',
+      body: 'Teknik, kesintileri sadece kötü hissedilecek bir şey olarak değil, yönetilmesi gereken bir şey olarak ele alır. Onları iki türe ayırır.\n\n- İçsel kesintiler senden gelir: başka bir şeyi kontrol etme isteği, mevcut görevinle ilgisiz bir düşünce.\n- Dışsal kesintiler başka biri veya bir şeyden gelir: bir meslektaş, bir telefon çağrısı, bir bildirim.\n\nHer iki tür için de tepki aynıdır. Kesintiye hemen tepki verme, ama görmezden gelmeye çalışma da.\n\n## Aslında ne yapmalısın\n\n- İşaretle. Bu uygulamada tam olarak bunun için içsel/dışsal bir sayaç var.\n- Dikkatini dağıtan şeyi kaybetmemek için hızlıca bir yere not et.\n- Mevcut Pomodoro\'na geri dön.\n\nKolayca geçiştiremeyeceğin dışsal bir kesinti için klasik yaklaşım biraz daha kapsamlıdır: kişiye meşgul olduğunu bildir, geri dönmek için belirli bir zaman üzerinde anlaş, söz verdiğin o zamanı aklından çıkması için hemen not et, sonra Pomodoro\'n bittiğinde sözünü gerçekten tut.\n\nAmaç asla kesintiye uğramamak değil. Ne sıklıkla olduğunu fark etmek ve içinde bulunduğun Pomodoro\'yu raydan çıkarmasına izin vermemektir.',
     },
     estimation: {
       title: 'Tahmin ve Gerçek',
-      body: 'Her görev, başlamadan önce bir tahmin alır — kaç Pomodoro süreceğini düşündüğün. Bir görev uzarsa, orijinal tahminin bayatlamasına izin vermek yerine onu (en fazla iki kez) yeniden tahmin edebilirsin. "Gerçek" ise, o görev üzerinde her Pomodoro tamamladığında otomatik olarak sayılan, gerçekte kaç tane sürdüğüdür. Diff, gerçek ile en güncel tahmin arasındaki farktır — yeniden tahmin ettiysen en son tahminin, etmediysen orijinal tahminin.\n\nSıfır diff, tahmininin tam isabetli olduğu anlamına gelir. Pozitif bir diff, görevin planlanandan uzun sürdüğü anlamına gelir (az tahmin); negatif bir diff daha hızlı bittiği anlamına gelir (fazla tahmin). Hiçbiri tek başına bir başarısızlık değildir — zamanla diff\'i takip etmenin amacı, kendi örüntülerini fark ederek bir sonraki tahminini bir öncekinden biraz daha dürüst yapmaktır.\n\nDikkat edilmesi gereken ikinci, daha ince bir hata türü var: bilinen bir görevi yanlış tahmin etmek değil, bir görevi hiç öngörememek — gün ortasında ortaya çıkan planlanmamış bir şey. Bu uygulama bunları ayrı olarak "planlanmamış" görevler olarak takip eder, çünkü bunlar zaman tahmininden çok planlamandaki bir boşluğa işaret eder.',
+      body: 'Her görev, başlamadan önce bir tahmin alır: kaç Pomodoro süreceğini düşündüğün. Bir görev uzarsa, orijinal tahminin bayatlamasına izin vermek yerine onu en fazla iki kez yeniden tahmin edebilirsin.\n\n"Gerçek" ise, o görev üzerinde her Pomodoro tamamladığında otomatik olarak sayılan, gerçekte kaç tane sürdüğüdür. Diff, gerçek ile en güncel tahmin arasındaki farktır: yeniden tahmin ettiysen en son tahminin, etmediysen orijinal tahminin.\n\n- Sıfır diff, tahmininin tam isabetli olduğu anlamına gelir.\n- Pozitif bir diff, görevin planlanandan uzun sürdüğü anlamına gelir (az tahmin).\n- Negatif bir diff, daha hızlı bittiği anlamına gelir (fazla tahmin).\n\nHiçbiri tek başına bir başarısızlık değildir. Zamanla diff\'i takip etmenin amacı, kendi örüntülerini fark ederek bir sonraki tahminini bir öncekinden biraz daha dürüst yapmaktır.\n\nDikkat edilmesi gereken ikinci, daha ince bir hata türü var: bilinen bir görevi yanlış tahmin etmek değil, bir görevi hiç öngörememek, gün ortasında ortaya çıkan planlanmamış bir şey. Bu uygulama bunları ayrı olarak "planlanmamış" görevler olarak takip eder, çünkü bunlar zaman tahmininden çok planlamandaki bir boşluğa işaret eder.',
     },
     reports: {
       title: 'Raporlarını okumak',
-      body: 'Cirillo, bir çalışma gününde beş aşama tanımlar: Planlama, Takip, Kayıt, İşleme ve Görselleştirme. Bu uygulama ilk üçünü çalışırken otomatik olarak yönetir — Raporlar, son ikisinin gerçekleştiği yerdir: İşleme (ham kayıtları sonuçlara dönüştürmek) ve Görselleştirme (bu sonuçları net bir şekilde görmek); birkaç belirli soru etrafında düzenlenmiştir.\n\nTahmin Doğruluğu şunu sorar: tahminlerin gerçeğe ne kadar yakın ve bu fark zamanla küçülüyor mu? Kesinti Eğilimleri şunu sorar: odaklanmanı gerçekte ne bozuyor ve ne sıklıkla? Duraklatma Eğilimleri, bu uygulamanın Duraklat özelliğini ne sıklıkla kullandığını takip eder, çünkü sık duraklatmak tek başına fark edilmeye değer olabilir. Kategori dağılımı, görevleri kategorilerle etiketledikten sonra Pomodoro\'larının gerçekte nereye gittiğini gösterir.\n\nBu sayıların hiçbiri maksimize edilmek için değildir. Tahminlerin sürekli çok yanlışsa yüksek bir Pomodoro sayısı otomatik olarak iyi değildir — amaç, daha büyük bir sayı değil, zamanla daha dürüst ve öngörülebilir hale gelen bir süreçtir.',
+      body: 'Cirillo, bir çalışma gününde beş aşama tanımlar: Planlama, Takip, Kayıt, İşleme ve Görselleştirme. Bu uygulama ilk üçünü çalışırken otomatik olarak yönetir. Raporlar, son ikisinin gerçekleştiği yerdir: İşleme (ham kayıtları sonuçlara dönüştürmek) ve Görselleştirme (bu sonuçları net bir şekilde görmek).\n\n## Her bölüm ne sorar\n\n- Tahmin Doğruluğu: tahminlerin gerçeğe ne kadar yakın ve bu fark zamanla küçülüyor mu?\n- Kesinti Eğilimleri: odaklanmanı gerçekte ne bozuyor ve ne sıklıkla?\n- Duraklatma Eğilimleri: bu uygulamanın Duraklat özelliğini ne sıklıkla kullanıyorsun? Sık duraklatmak tek başına fark edilmeye değer olabilir.\n- Kategori dağılımı: görevleri kategorilerle etiketledikten sonra Pomodoro\'ların gerçekte nereye gidiyor?\n\nBu sayıların hiçbiri maksimize edilmek için değildir. Tahminlerin sürekli çok yanlışsa yüksek bir Pomodoro sayısı otomatik olarak iyi değildir. Amaç, daha büyük bir sayı değil, zamanla daha dürüst ve öngörülebilir hale gelen bir süreçtir.',
     },
   },
 
@@ -524,6 +524,8 @@ export default {
     displayNameLabel: 'Adınız',
     displayNameHint: "Header'daki kişiselleştirilmiş selamda gösterilir.",
     displayNamePlaceholder: 'ör. Sanem',
+    dailyGoalLabel: 'Günlük Pomodoro hedefi',
+    dailyGoalHint: 'Günde hedeflediğin Pomodoro sayısı. İsteğe bağlı, belirlendiğinde Raporlar\'da gösterilir.',
     languageLabel: 'Dil',
     languageEnglish: 'English',
     languageTurkish: 'Türkçe',
@@ -608,12 +610,42 @@ export default {
     signUpSuccessMessage: 'Hesabını onaylamak için e-postana bak.',
   },
 
-  sync: {
-    syncingMessage: 'Verilerin senkronize ediliyor…',
-    migratedNotice: 'Verilerin hesabına senkronize edildi ✓',
+  // Sadece giriş hatası — bkz. App.jsx. Artık giriş yaparken yerel misafir
+  // verisi hiç birleştirilmiyor/taşınmıyor, bu yüzden ayrı bir "senkronize
+  // edildi" başarı bildirimine veya birleştirme onay istemine gerek yok;
+  // sadece "hesabın yüklenemedi, bu yüzden misafir moduna döndük" kaldı.
+  account: {
+    loadErrorNotice: 'Hesabın yüklenemedi. Şimdilik misafir modunda çalışılıyor.',
     dismissAria: 'bildirimi kapat',
-    errorNotice: 'Verilerin senkronize edilemedi — şimdilik yerel olarak çalışılıyor. Verilerin güvende.',
-    mergePromptConfirm:
-      'Yerel değişikliklerinizi hesabınıza eklemek ister misiniz? Hesabınızdaki mevcut veriler silinmeyecek.',
+  },
+
+  // İlk hesap kurulum sihirbazı (AccountSetupFlow.jsx) — yeni bir hesabın ilk
+  // girişinden hemen sonra bir kez gösterilir. Yönlendirme ipucu sisteminden
+  // ayrı bir mekanizma: bu hesap/uygulama hakkındadır (dil, isim, tema,
+  // günlük hedef), Pomodoro Tekniği'nin metodolojisi hakkında değil.
+  accountSetup: {
+    stepIndicator: 'Adım {{current}} / {{total}}',
+    backButton: 'Geri',
+    continueButton: 'Devam et',
+    finishButton: 'Bitir',
+    skipButton: 'Kurulumu atla',
+    welcome: {
+      title: 'Hesabın hazır',
+      body: 'Hızlıca birkaç tercih ayarlayalım. Her adım isteğe bağlıdır ve bunların hepsini daha sonra Ayarlar\'dan değiştirebilirsin.',
+    },
+    language: {
+      title: 'Dilini seç',
+    },
+    name: {
+      title: 'Sana ne diyelim?',
+    },
+    theme: {
+      title: 'Bir görünüm seç',
+    },
+    goal: {
+      title: 'Günlük Pomodoro hedefi belirle',
+      body: 'Günde kaç Pomodoro hedefliyorsun? Bu tamamen isteğe bağlıdır ve sadece kendi referansın içindir.',
+      placeholder: 'ör. 8',
+    },
   },
 }

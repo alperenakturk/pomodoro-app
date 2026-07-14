@@ -29,6 +29,7 @@ import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
 import CoachMark from './CoachMark'
+import ThemePicker from './ThemePicker'
 import { THEMES } from '../lib/theme'
 import { pickCoachMark } from '../lib/constants'
 import ChangePasswordModal from './ChangePasswordModal'
@@ -220,6 +221,8 @@ function SettingsModal({
   setCheckToBottom,
   displayName,
   setDisplayName,
+  dailyPomodoroGoal,
+  setDailyPomodoroGoal,
   theme,
   onSelectTheme,
   customThemeGeneral,
@@ -242,6 +245,7 @@ function SettingsModal({
   seenCoachMarks = [],
   onDismissCoachMark = () => {},
   onLearnMoreCoachMark = () => {},
+  coachMarksSuppressed = false,
   onOpenGuide = () => {},
   onReplayCoachMarks = () => {},
 }) {
@@ -366,13 +370,18 @@ function SettingsModal({
 
   const activeLabelKey = CATEGORIES.find((c) => c.id === activeCategory)?.labelKey
 
-  // See constants.js's pickCoachMark — the intro fires on first open of
-  // Settings at all (any category), the second only once the user has
-  // actually opened the Data category (where Categories management and the
-  // Danger Zone live).
-  const settingsCoachMark = pickCoachMark('settings', seenCoachMarks, {
-    'settings-data-intro': activeCategory === 'data',
-  })
+  // See constants.js's pickCoachMark. Both of Settings' marks are scoped to
+  // the specific category they're actually about, not "Settings opened at
+  // all" — 'settings-intro' talks about work/break durations and cycle
+  // length, which only make sense once the Timer category is open; the data
+  // one only once the Data category (Categories management, Danger Zone) is
+  // open. Neither fires from General/Sound/Account/Achievements/About.
+  const settingsCoachMark = coachMarksSuppressed
+    ? null
+    : pickCoachMark('settings', seenCoachMarks, {
+        'settings-intro': activeCategory === 'timer',
+        'settings-data-intro': activeCategory === 'data',
+      })
 
   // ChangePasswordModal is rendered as a sibling of the backdrop below, not
   // nested inside it — both are `fixed inset-0` overlays with their own
@@ -437,10 +446,13 @@ function SettingsModal({
           </h2>
 
           {/* Whichever of Settings' two marks currently applies (see the
-              pickCoachMark call above) — the intro on first open of any
-              category, the Data-specific one once that category is actually
-              opened. No wrapper div for spacing (which would leave a
-              permanent empty gap once dismissed) — className handles the
+              pickCoachMark call above) — the durations/rhythm one once the
+              Timer category is open, the Data-specific one once that
+              category is open. Rendered once at the top of the body
+              (outside the per-category blocks below) since it's already
+              gated to the right category via its trigger condition, not via
+              render position. No wrapper div for spacing (which would leave
+              a permanent empty gap once dismissed) — className handles the
               margin only while actually rendered. */}
           {settingsCoachMark && (
             <CoachMark
@@ -471,6 +483,23 @@ function SettingsModal({
               </div>
 
               <div className={rowClass}>
+                <div className="flex flex-col gap-0.5">
+                  <label htmlFor="daily-pomodoro-goal">{t('settings.dailyGoalLabel')}</label>
+                  <span className="text-sage/40 text-[10px]">{t('settings.dailyGoalHint')}</span>
+                </div>
+                <input
+                  id="daily-pomodoro-goal"
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={dailyPomodoroGoal ?? ''}
+                  onChange={(e) => setDailyPomodoroGoal(e.target.value === '' ? null : Number(e.target.value))}
+                  placeholder={t('accountSetup.goal.placeholder')}
+                  className="w-16 text-center bg-cream/5 border border-cream/15 rounded-lg text-cream placeholder:text-sage/40 outline-none focus:border-tomato focus:ring-2 focus:ring-tomato/40 px-2 py-1 text-xs"
+                />
+              </div>
+
+              <div className={rowClass}>
                 <label htmlFor="language-select">{t('settings.languageLabel')}</label>
                 <Select
                   id="language-select"
@@ -484,37 +513,7 @@ function SettingsModal({
               <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
                 <span>{t('settings.themeLabel')}</span>
                 <div className="flex flex-wrap gap-2">
-                  {THEMES.map((option) => {
-                    const active =
-                      theme === option.id || (theme === 'light' && option.id === 'light-terracotta')
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => onSelectTheme(option.id)}
-                        aria-pressed={active}
-                        className={
-                          'flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ' +
-                          (active ? 'border-tomato text-cream' : 'border-cream/15 text-sage hover:text-cream')
-                        }
-                      >
-                        <span
-                          className={`${option.id} flex items-center gap-1 rounded p-1 border border-cream/10`}
-                          style={{ backgroundColor: 'var(--color-pine)' }}
-                        >
-                          <span
-                            className="w-3 h-3 rounded-sm"
-                            style={{ backgroundColor: 'var(--color-pine-dark)' }}
-                          />
-                          <span
-                            className="w-3 h-3 rounded-sm"
-                            style={{ backgroundColor: 'var(--color-cream)' }}
-                          />
-                        </span>
-                        {t(option.labelKey)}
-                      </button>
-                    )
-                  })}
+                  <ThemePicker value={theme} onSelect={onSelectTheme} />
 
                   {/* Not one of the five real palettes — a meta-option that
                       picks a *different* real palette for General vs. each

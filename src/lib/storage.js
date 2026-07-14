@@ -246,6 +246,13 @@ const DEFAULT_SETTINGS = {
   // upsert (if the column hasn't been added yet) only fails to persist this
   // one field remotely — it never throws or blocks the rest of the app.
   seenCoachMarks: [],
+  // How many Pomodoros the user is aiming for per day — captured (optionally)
+  // in AccountSetupFlow's last step, also editable afterward in Settings.
+  // null means "never set" (not defaulted to a number like 8, which would
+  // misrepresent an unset goal as a real choice) — Reports/Today's Summary
+  // only show goal-progress UI when this is non-null. Same missing-column
+  // degrades-gracefully reasoning as seenCoachMarks above.
+  dailyPomodoroGoal: null,
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map
@@ -519,79 +526,22 @@ export function importActivityLogCSV(rows, categories, mode) {
 }
 
 // Provider swap (Authentication, see CLAUDE.md): called from App.jsx when
-// useAuth's `user` transitions from null to a real session. Gathers a
-// snapshot via this file's own loadX() functions (still hitting
-// localStorage — activeProvider hasn't switched yet) and hands it to
-// remoteProvider.js's initializeRemoteData(), which fetches the account's
-// existing Supabase data and merges the two by id/updatedAt (same
-// mergeCollectionById() the JSON import feature uses).
+// useAuth's `user` transitions from null to a real session. Simply fetches
+// the account's existing Supabase data via remoteProvider.js's
+// initializeRemoteData() and warms its cache — no local/guest data is read,
+// touched, or merged in here. Signing in never migrates local data
+// automatically; a user who wants their guest-mode data in their account
+// uses the manual JSON/CSV export-then-import feature in Settings > Data
+// instead (DataTransfer.jsx / importBackup below), which is a separate,
+// deliberate, user-initiated action.
 //
 // Only flips activeProvider on success — every loadX()/saveX() call made
-// before that (including everything gathered into localSnapshots above)
-// still went through localStorageProvider, so a failure here (network
-// error, etc.) leaves localStorage completely untouched; the caller is
-// expected to keep treating the session as guest/local for this run and
-// surface `error` to the user. Clearing localStorage once migration
-// succeeds is the caller's job too (App.jsx), not this function's — this
-// file only decides which provider is active, not when it's safe to delete
-// the old data.
-// Whether this guest session has anything actually worth asking the user
-// about before merging into a Supabase account — App.jsx uses this to
-// decide whether sign-in needs a confirmation prompt at all. Deliberately
-// scoped to the data collections that genuinely get *combined* on merge
-// (mergeCollectionById, same as JSON import); pomodoro_settings/timer_state
-// are singletons where an existing remote row always wins outright
-// regardless (see initializeRemoteData), so a guest-only theme tweak isn't
-// the kind of "local change" this prompt is about.
-// Pristine (never edited/renamed) default-seeded categories don't count —
-// see signInToRemote()'s snapshot below for why they're excluded from
-// syncing entirely; a guest who only ever has the auto-seeded starter set
-// has no real local data to ask about merging.
-export function hasLocalGuestData() {
-  return (
-    loadInventory().length > 0 ||
-    loadTodayTasks().length > 0 ||
-    loadActivityLog().length > 0 ||
-    loadTicks().length > 0 ||
-    loadTimetable().length > 0 ||
-    loadCategories().some((c) => !c.isDefault) ||
-    loadVoidLog().length > 0 ||
-    loadTimerState() !== null
-  )
-}
-
-// `skipLocalMerge: true` is how App.jsx honors a user declining the merge
-// prompt (see hasLocalGuestData) — passing empty snapshots means
-// initializeRemoteData just fetches the account's existing remote data with
-// nothing to combine it with. `result.migrated` then stays false, so the
-// caller's usual clearLocalGuestData() step never runs either — the
-// declined local data is left exactly as it was, neither merged nor
-// deleted.
-export async function signInToRemote(userId, { skipLocalMerge = false } = {}) {
-  const localSnapshots = skipLocalMerge
-    ? {}
-    : {
-        pomodoro_inventory: loadInventory(),
-        pomodoro_today_tasks: loadTodayTasks(),
-        pomodoro_activity_log: loadActivityLog(),
-        pomodoro_ticks: loadTicks(),
-        pomodoro_timetable: loadTimetable(),
-        // Pristine default-seeded categories (see useCategories.js's
-        // isDefault flag) are deliberately excluded — every guest install
-        // seeds its own copy with a fresh random id (there's no account to
-        // scope them to yet), so sending them through the normal id-based
-        // merge created a full duplicate set on every fresh guest-then-
-        // sign-in, rather than recognizing them as "the same" defaults.
-        // Once edited/renamed, a category stops being "default" (see
-        // updateCategory) and syncs normally like any other. The account
-        // gets its own default set seeded once, directly — see
-        // seedDefaultCategoriesRemotely() below.
-        pomodoro_categories: loadCategories().filter((c) => !c.isDefault),
-        pomodoro_void_log: loadVoidLog(),
-        pomodoro_timer_state: loadTimerState(),
-        pomodoro_settings: loadSettings(),
-      }
-  const result = await remoteProvider.initializeRemoteData(userId, localSnapshots)
+// before that still went through localStorageProvider, so a failure here
+// (network error, etc.) leaves localStorage completely untouched; the
+// caller is expected to keep treating the session as guest/local for this
+// run and surface `error` to the user.
+export async function signInToRemote(userId) {
+  const result = await remoteProvider.initializeRemoteData(userId)
   if (!result.error) {
     activeProvider = remoteProvider
     await seedDefaultCategoriesRemotely()
@@ -599,16 +549,16 @@ export async function signInToRemote(userId, { skipLocalMerge = false } = {}) {
   return result
 }
 
-// Runs once per account, right after a successful sign-in/migration —
-// mirrors useCategories.js's own local seeding (same DEFAULT_CATEGORY_SEEDS
-// list, same translate() call) but writes straight to whichever collection
+// Runs once per account, right after a successful sign-in — mirrors
+// useCategories.js's own local seeding (same DEFAULT_CATEGORY_SEEDS list,
+// same translate() call) but writes straight to whichever collection
 // activeProvider now points at (remoteProvider, by this point in
 // signInToRemote). Guarded by the *account's own* defaultCategoriesSeeded
 // flag (now synced remotely as part of the settings singleton) so it only
 // ever runs once per account, the same one-time-only pattern useCategories.js
 // uses locally for guests — signing in again later, from any device, never
-// re-seeds. If the account already has categories of its own (merged in
-// from this or an earlier device), there's nothing to seed; just stop asking.
+// re-seeds. If the account already has categories of its own (from an
+// earlier device), there's nothing to seed; just stop asking.
 async function seedDefaultCategoriesRemotely() {
   const settings = loadSettings()
   if (settings.defaultCategoriesSeeded) return
@@ -631,27 +581,6 @@ async function seedDefaultCategoriesRemotely() {
 export function signOutFromRemote() {
   remoteProvider.resetToLocalMode()
   activeProvider = localStorageProvider
-}
-
-// Called by App.jsx only after signInToRemote() resolves with no error AND
-// result.migrated is true — i.e. there really was guest data, and it has
-// already been safely merged into Supabase. Removes the raw localStorage
-// keys directly (bypassing the provider abstraction, since this is
-// specifically about deleting the *old* local copies regardless of which
-// provider is active now) rather than calling resetAllData(), which also
-// wipes pomodoro_settings — a signed-in user's settings now live in
-// Supabase and clearing the local copy here is just tidying up the old
-// storage, not a user-facing "reset."
-export function clearLocalGuestData() {
-  localStorage.removeItem(INVENTORY_KEY)
-  localStorage.removeItem(TODAY_KEY)
-  localStorage.removeItem(ACTIVITY_LOG_KEY)
-  localStorage.removeItem(TICKS_KEY)
-  localStorage.removeItem(TIMETABLE_KEY)
-  localStorage.removeItem(CATEGORIES_KEY)
-  localStorage.removeItem(VOID_LOG_KEY)
-  localStorage.removeItem(TIMER_STATE_KEY)
-  localStorage.removeItem(SETTINGS_KEY)
 }
 
 // Cross-tab sync: the native 'storage' event fires in *other* tabs/windows

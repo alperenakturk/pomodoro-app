@@ -102,7 +102,7 @@ function EmptyChartState({ message }) {
   )
 }
 
-function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
+function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes, dailyPomodoroGoal }) {
   const { t } = useTranslation()
   const today = [todayString()]
   const yesterday = datesForYesterday()
@@ -149,7 +149,7 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes }) {
       />
       <Stat
         label={t('reports.pomodorosToday')}
-        value={todayPomodoros}
+        value={dailyPomodoroGoal ? `${todayPomodoros} / ${dailyPomodoroGoal}` : todayPomodoros}
         trend={<TrendArrow direction={trendDirection(todayPomodoros, yesterdayPomodoros)} goodDirection={null} />}
       />
       <Stat
@@ -397,9 +397,11 @@ function Reports({
   todayTasks = [],
   categories = [],
   workMinutes = 25,
+  dailyPomodoroGoal = null,
   seenCoachMarks = [],
   onDismissCoachMark = () => {},
   onLearnMoreCoachMark = () => {},
+  coachMarksSuppressed = false,
 }) {
   const { t } = useTranslation()
   const [ticks, setTicks] = useState(() => loadTicks())
@@ -411,7 +413,7 @@ function Reports({
   // See constants.js's pickCoachMark — the intro fires on first visit, the
   // second only once there's actually real data to look at (so it can talk
   // about reading the charts instead of describing an empty page).
-  const reportsCoachMark = pickCoachMark('reports', seenCoachMarks, {
+  const reportsCoachMark = coachMarksSuppressed ? null : pickCoachMark('reports', seenCoachMarks, {
     'reports-first-data': ticks.length > 0 || activityLog.length > 0,
   })
 
@@ -593,6 +595,7 @@ function Reports({
                   todayTasks={todayTasks}
                   period={period}
                   workMinutes={workMinutes}
+                  dailyPomodoroGoal={dailyPomodoroGoal}
                 />
               )}
               {activeSection === 'estimation' && (

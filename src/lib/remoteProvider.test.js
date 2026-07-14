@@ -66,117 +66,106 @@ async function loadRemoteProviderWith(responses) {
   return import('./remoteProvider')
 }
 
-const EMPTY_SNAPSHOTS = {
-  pomodoro_inventory: [],
-  pomodoro_today_tasks: [],
-  pomodoro_activity_log: [],
-  pomodoro_ticks: [],
-  pomodoro_timetable: [],
-  pomodoro_categories: [],
-  pomodoro_void_log: [],
-  pomodoro_timer_state: null,
-  pomodoro_settings: { theme: 'dark', cycleLength: 4 },
-}
-
 describe('initializeRemoteData', () => {
-  it('with no local array data and an already-existing remote settings row, resolves with migrated: false', async () => {
-    // loadSettings() always returns a real object (defaults merged in), never
-    // null, so an account with its own existing settings row is the only way
-    // to see migrated: false end-to-end — a brand new account with no
-    // settings row yet would still get one written from the guest defaults
-    // (see the "writes the local settings as the initial row" test below).
+  it('fetches every array table and caches it as-is, with no local data involved at all', async () => {
     const { initializeRemoteData, get } = await loadRemoteProviderWith({
+      inventory: { arraySelect: { data: [{ id: 'i1', text: 'Remote task', user_id: 'user-1' }], error: null } },
       settings: { singleSelect: { data: { theme: 'dark', cycle_length: 4, user_id: 'user-1' }, error: null } },
     })
-    const result = await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
 
-    expect(result).toEqual({ migrated: false, error: null })
-    expect(get('pomodoro_inventory', 'fallback')).toEqual([])
-  })
+    const result = await initializeRemoteData('user-1')
 
-  it('merges local guest data into an account with no prior remote data, and upserts it', async () => {
-    const localSnapshots = {
-      ...EMPTY_SNAPSHOTS,
-      pomodoro_inventory: [{ id: 'i1', text: 'Guest task', updatedAt: '2026-01-01T00:00:00.000Z' }],
-    }
-    const { initializeRemoteData, get } = await loadRemoteProviderWith({
-      inventory: { arraySelect: { data: [], error: null } },
-    })
-
-    const result = await initializeRemoteData('user-1', localSnapshots)
-
-    expect(result.migrated).toBe(true)
     expect(result.error).toBeNull()
-    expect(get('pomodoro_inventory', null)).toMatchObject([{ id: 'i1', text: 'Guest task' }])
-
-    const upsertCall = mockCalls.find((c) => c.table === 'inventory' && c.method === 'upsert')
-    expect(upsertCall.args[0]).toMatchObject([{ id: 'i1', text: 'Guest task', user_id: 'user-1' }])
+    expect(get('pomodoro_inventory', null)).toMatchObject([{ id: 'i1', text: 'Remote task' }])
+    // No upsert should ever be issued for a table that already has data —
+    // this function only ever reads, except for creating a brand-new
+    // account's settings row (see the isNewAccount tests below).
+    expect(mockCalls.some((c) => c.table === 'inventory' && c.method === 'upsert')).toBe(false)
   })
 
-  it('keeps the remote record when it has a newer updatedAt than the local one (same id)', async () => {
-    const localSnapshots = {
-      ...EMPTY_SNAPSHOTS,
-      pomodoro_inventory: [{ id: 'i1', text: 'stale local', updatedAt: '2026-01-01T00:00:00.000Z' }],
-    }
-    const { initializeRemoteData, get } = await loadRemoteProviderWith({
-      inventory: {
-        arraySelect: {
-          data: [{ id: 'i1', text: 'current remote', user_id: 'user-1', updated_at: '2026-02-01T00:00:00.000Z' }],
-          error: null,
-        },
-      },
-    })
-
-    const result = await initializeRemoteData('user-1', localSnapshots)
-
-    expect(result.migrated).toBe(true)
-    expect(get('pomodoro_inventory', null)[0].text).toBe('current remote')
-  })
-
-  it('an account with existing settings keeps them rather than being overwritten by guest defaults', async () => {
-    const localSnapshots = { ...EMPTY_SNAPSHOTS, pomodoro_settings: { theme: 'light', cycleLength: 6 } }
+  it('an existing account with its own settings keeps them, and reports isNewAccount: false', async () => {
     const { initializeRemoteData, get } = await loadRemoteProviderWith({
       settings: { singleSelect: { data: { theme: 'dark', cycle_length: 4, user_id: 'user-1' }, error: null } },
     })
 
-    await initializeRemoteData('user-1', localSnapshots)
+    const result = await initializeRemoteData('user-1')
 
+    expect(result.error).toBeNull()
+    expect(result.isNewAccount).toBe(false)
     expect(get('pomodoro_settings', null)).toMatchObject({ theme: 'dark', cycleLength: 4 })
   })
 
-  it('writes the local settings as the initial row when the account has none yet', async () => {
-    const localSnapshots = { ...EMPTY_SNAPSHOTS, pomodoro_settings: { theme: 'light', cycleLength: 6 } }
+  it('creates a minimal settings row (not a full default object) when none exists yet, and reports isNewAccount: true', async () => {
     const { initializeRemoteData, get } = await loadRemoteProviderWith({
       settings: { singleSelect: { data: null, error: null } },
     })
 
-    const result = await initializeRemoteData('user-1', localSnapshots)
+    const result = await initializeRemoteData('user-1')
 
-    expect(result.migrated).toBe(true)
-    expect(get('pomodoro_settings', null)).toMatchObject({ theme: 'light', cycleLength: 6 })
+    expect(result.error).toBeNull()
+    expect(result.isNewAccount).toBe(true)
+    expect(get('pomodoro_settings', null)).toMatchObject({ userId: 'user-1' })
+
+    // The upsert payload is deliberately minimal — just what toRemoteRow()
+    // always stamps (user_id/created_at/updated_at) — not a full settings
+    // object. There's no local snapshot to send anymore; every other column
+    // is left to its own Postgres-side default and filled in client-side by
+    // loadSettings()'s merge onto DEFAULT_SETTINGS on read.
+    const upsertCall = mockCalls.find((c) => c.table === 'settings' && c.method === 'upsert')
+    expect(upsertCall.args[0]).toMatchObject({ user_id: 'user-1' })
+    expect(upsertCall.args[0]).not.toHaveProperty('theme')
+    expect(upsertCall.args[0]).not.toHaveProperty('cycle_length')
+  })
+
+  // Regression test for the reported bug: AccountSetupFlow re-triggering on
+  // a second sign-in to an account that had already completed it. Root
+  // cause was that the settings row used to only get created when a
+  // (now-removed) local-merge snapshot happened to include settings data —
+  // an account whose first sign-in skipped that write never got a row at
+  // all, so every later call kept finding "no row" and kept reporting
+  // isNewAccount: true forever. Fixed by creating the row unconditionally
+  // the moment its absence is detected (see initializeRemoteData's own
+  // comment) — this test simulates two sign-ins to the same account within
+  // one session by calling initializeRemoteData twice against the same
+  // mock, updating the mock's settings response in between to reflect the
+  // row the first call actually created.
+  it('a second call for the same account finds the row the first call created, and reports isNewAccount: false', async () => {
+    const responses = { settings: { singleSelect: { data: null, error: null } } }
+    const { initializeRemoteData } = await loadRemoteProviderWith(responses)
+
+    const first = await initializeRemoteData('user-1')
+    expect(first.isNewAccount).toBe(true)
+
+    // Reflects the row initializeRemoteData's own upsertSingleton() call
+    // just wrote — a real second sign-in would find exactly this.
+    responses.settings.singleSelect = {
+      data: { user_id: 'user-1', theme: 'light-terracotta', cycle_length: 4 },
+      error: null,
+    }
+
+    const second = await initializeRemoteData('user-1')
+    expect(second.isNewAccount).toBe(false)
   })
 
   // A single collection's fetch failing (e.g. a stray schema/CHECK-constraint
   // mismatch on just one table) must not discard the rest of an otherwise-
-  // successful sync — see initializeRemoteData's own comment for the real
+  // successful load — see initializeRemoteData's own comment for the real
   // bug this regression-tests (a 'pause' tick and a non-default theme value
-  // used to poison the *entire* migration this way, surfacing a false
-  // "couldn't sync" error even though most collections had already synced).
+  // used to poison the *entire* fetch this way, surfacing a false
+  // "couldn't load your account" error even though most collections had
+  // already loaded).
   it("logs but does not surface an error when only one collection's fetch fails, since everything else succeeded", async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { initializeRemoteData, get } = await loadRemoteProviderWith({
       inventory: { arraySelect: { data: null, error: { message: 'network error' } } },
+      settings: { singleSelect: { data: { theme: 'dark', cycle_length: 4, user_id: 'user-1' }, error: null } },
     })
 
-    const result = await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+    const result = await initializeRemoteData('user-1')
 
     expect(result.error).toBeNull()
-    // migrated is true here because EMPTY_SNAPSHOTS' settings fixture still
-    // has a truthy local value with no existing remote row — unrelated to
-    // the inventory failure, just this fixture's own baseline behavior.
-    expect(result.migrated).toBe(true)
     // The failing collection's cache never got warmed — callers fall back
-    // to whatever default they pass to get(), same as "nothing synced yet."
+    // to whatever default they pass to get(), same as "nothing loaded yet".
     expect(get('pomodoro_inventory', 'fallback')).toBe('fallback')
     expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('pomodoro_inventory'), expect.anything())
     consoleErrorSpy.mockRestore()
@@ -197,27 +186,27 @@ describe('initializeRemoteData', () => {
       settings: { singleSelect: failure },
     })
 
-    const result = await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+    const result = await initializeRemoteData('user-1')
 
     expect(result.error).toBeTruthy()
-    expect(result.migrated).toBe(false)
     consoleErrorSpy.mockRestore()
   })
 })
 
 describe('get/set/remove after initializeRemoteData', () => {
   it('set() upserts the new array and deletes ids that were removed from it', async () => {
-    const localSnapshots = {
-      ...EMPTY_SNAPSHOTS,
-      pomodoro_inventory: [
-        { id: 'i1', text: 'A', updatedAt: '2026-01-01T00:00:00.000Z' },
-        { id: 'i2', text: 'B', updatedAt: '2026-01-01T00:00:00.000Z' },
-      ],
-    }
     const { initializeRemoteData, set } = await loadRemoteProviderWith({
-      inventory: { arraySelect: { data: [], error: null } },
+      inventory: {
+        arraySelect: {
+          data: [
+            { id: 'i1', text: 'A', user_id: 'user-1' },
+            { id: 'i2', text: 'B', user_id: 'user-1' },
+          ],
+          error: null,
+        },
+      },
     })
-    await initializeRemoteData('user-1', localSnapshots)
+    await initializeRemoteData('user-1')
     mockCalls.length = 0 // only interested in calls made by set() below
 
     set('pomodoro_inventory', [{ id: 'i1', text: 'A renamed', updatedAt: '2026-01-02T00:00:00.000Z' }])
@@ -239,7 +228,7 @@ describe('get/set/remove after initializeRemoteData', () => {
   it("remove() doesn't resolve until its Supabase delete call actually completes", async () => {
     const responses = { inventory: { arraySelect: { data: [], error: null } } }
     const { initializeRemoteData, remove, get } = await loadRemoteProviderWith(responses)
-    await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+    await initializeRemoteData('user-1')
 
     let resolveDelete
     responses.inventory.arraySelect = new Promise((resolve) => {
@@ -267,7 +256,7 @@ describe('get/set/remove after initializeRemoteData', () => {
     const { initializeRemoteData, resetToLocalMode, get } = await loadRemoteProviderWith({
       inventory: { arraySelect: { data: [{ id: 'i1', text: 'A', user_id: 'user-1' }], error: null } },
     })
-    await initializeRemoteData('user-1', EMPTY_SNAPSHOTS)
+    await initializeRemoteData('user-1')
     expect(get('pomodoro_inventory', null)).toHaveLength(1)
 
     resetToLocalMode()

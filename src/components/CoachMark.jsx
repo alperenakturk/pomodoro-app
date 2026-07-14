@@ -1,4 +1,5 @@
 import { useTranslation } from '../hooks/useTranslation'
+import RichText from './RichText'
 
 // A single, dismissible, short hint — contextual onboarding (see
 // constants.js's COACH_MARKS/pickCoachMark), not a guided tour. Purely
@@ -22,7 +23,7 @@ function CoachMark({ titleKey, bodyKey, onDismiss, onLearnMore, className = '' }
   return (
     <div className={`bg-pine-dark border border-tomato/25 rounded-2xl px-5 py-4 shadow-lg w-full ${className}`}>
       <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1.5">{t(titleKey)}</p>
-      <p className="font-sans text-cream/90 text-sm leading-relaxed">{t(bodyKey)}</p>
+      <RichText text={t(bodyKey)} className="font-sans text-cream/90 text-sm leading-relaxed" />
       <div className="flex items-center gap-4 mt-3">
         <button
           type="button"

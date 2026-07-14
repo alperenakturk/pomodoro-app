@@ -366,28 +366,28 @@ export default {
     gotIt: 'Got it',
     learnMore: 'Learn more',
     timerIntro: {
-      title: 'Welcome — here’s the idea',
+      title: "Here's the idea",
       body: 'A Pomodoro is 25 minutes of focused work on one task, followed by a short break. Add a task in the Planning tab, then come back here and press Start to begin your first one.',
     },
     timerFirstStart: {
       title: 'This Pomodoro should run to the end',
-      body: 'Once started, a Pomodoro is meant to run uninterrupted for the full 25 minutes, with two deliberate exceptions. Pause — this app’s own addition, not part of the original technique — holds your spot for a brief interruption, like someone knocking on your door. Void discards the session entirely, for when the work itself has to stop.',
+      body: "Once started, a Pomodoro is meant to run uninterrupted for the full 25 minutes. There are two deliberate exceptions:\n\n- Pause holds your spot for a brief interruption, like someone knocking on your door. It's this app's own addition, not part of the original technique.\n- Void discards the session entirely, for when the work itself has to stop.",
     },
     timerFirstInterruption: {
       title: 'You just marked an interruption',
-      body: 'That’s the point: noting a distraction — internal (from you) or external (from someone else) — instead of acting on it right away. Your Pomodoro keeps running; you’ll see these patterns later in Reports.',
+      body: "That's the point. You note a distraction instead of acting on it right away. Internal interruptions come from you; external ones come from someone else. Either way, your Pomodoro keeps running, and you'll see these patterns later in Reports.",
     },
     timerFirstBreak: {
       title: 'This is your break',
-      body: "A short break after each Pomodoro helps you reset before the next one. Every 4th Pomodoro, you'll get a longer break instead — that's the technique's rhythm for staying sharp across a whole day.",
+      body: "A short break after each Pomodoro helps you reset before the next one. Every 4th Pomodoro, you'll get a longer break instead. That's the technique's rhythm for staying sharp across a whole day.",
     },
     planningIntro: {
       title: 'Plan your day here',
-      body: 'Add tasks to your Inventory — your running backlog of everything you need to do — then pick what you’ll actually work on today and estimate how many Pomodoros (25-minute sessions) each one will take.',
+      body: "Add tasks to your Inventory, your running backlog of everything you need to do. Then pick what you'll actually work on today and estimate how many Pomodoros (25-minute sessions) each one will take.",
     },
     planningFirstTodayTask: {
       title: 'Why the estimate matters',
-      body: "Once a task is in Today's list, you'll be able to see how close your estimate was once you finish it. This app compares what you estimated to what actually happened — that comparison is what Reports uses to help you plan better over time.",
+      body: "Once a task is in Today's list, you'll be able to see how close your estimate was once you finish it. This app compares what you estimated to what actually happened, and that comparison is what Reports uses to help you plan better over time.",
     },
     reportsIntro: {
       title: 'Your numbers, not a scoreboard',
@@ -395,15 +395,15 @@ export default {
     },
     reportsFirstData: {
       title: 'Reading these charts',
-      body: '"Overestimated"/"Underestimated" compares your estimate — or your latest re-estimate, if you revised it — to what really happened. Interruption trends show what pulled your attention away. Together, they’re meant to sharpen tomorrow’s planning — not just record the past.',
+      body: '"Overestimated"/"Underestimated" compares your estimate (or your latest re-estimate, if you revised it) to what really happened. Interruption trends show what pulled your attention away. Together, they\'re meant to sharpen tomorrow\'s planning, not just record the past.',
     },
     settingsIntro: {
       title: "The technique's default rhythm",
-      body: "25 minutes of work, a short break, then a longer break every 4th Pomodoro — that's the Pomodoro Technique's classic rhythm. The durations in the Timer category control it directly; changing them is your choice, but it's a deliberate departure from the original method.",
+      body: "The Pomodoro Technique's classic rhythm is 25 minutes of work, a short break, then a longer break every 4th Pomodoro. The durations below control it directly. Changing them is your choice, but it's a deliberate departure from the original method.",
     },
     settingsDataIntro: {
       title: 'Categories help you see patterns',
-      body: 'Tagging tasks with a category (like Work or Study) lets Reports show you where your focus time actually goes — useful once you’re comparing weeks, not just today.',
+      body: "Tagging tasks with a category (like Work or Study) lets Reports show you where your focus time actually goes. This becomes especially useful once you're comparing weeks, not just today.",
     },
   },
 
@@ -416,27 +416,27 @@ export default {
     closeAria: 'close methodology guide',
     whatIsIt: {
       title: 'What is a Pomodoro?',
-      body: 'The Pomodoro Technique is a time-management method created by Francesco Cirillo in the late 1980s. Its name comes from the tomato-shaped kitchen timer ("pomodoro" is Italian for tomato) that Cirillo originally used to time his work sessions.\n\nThe core idea is simple: instead of working for as long as you can and hoping to stay focused, you work in fixed, uninterrupted blocks called Pomodoros. Each Pomodoro is 25 minutes of focused work on a single task, followed by a short break of a few minutes. After every 4th Pomodoro, you take a longer break — usually 15 to 30 minutes — before the cycle starts again.\n\nBecause each block is short and clearly bounded, a Pomodoro feels achievable even when the whole task feels overwhelming. And because the break is built in, you’re not relying on willpower alone to avoid burning out.',
+      body: 'The Pomodoro Technique is a time-management method created by Francesco Cirillo in the late 1980s. Its name comes from the tomato-shaped kitchen timer he originally used to time his work sessions. ("Pomodoro" is Italian for tomato.)\n\nThe core idea is simple. Instead of working for as long as you can and hoping to stay focused, you work in fixed, uninterrupted blocks called Pomodoros.\n\n## The basic rhythm\n\n- Each Pomodoro is 25 minutes of focused work on a single task.\n- It\'s followed by a short break of a few minutes.\n- After every 4th Pomodoro, you take a longer break instead, usually 15 to 30 minutes, before the cycle starts again.\n\nBecause each block is short and clearly bounded, a Pomodoro feels achievable even when the whole task feels overwhelming. Because the break is built in, you\'re not relying on willpower alone to avoid burning out.',
     },
     rules: {
       title: 'The two core rules',
-      body: "A Pomodoro is indivisible. It can't be split or partially counted — you either complete the full 25 minutes, or you don't. If something happens that genuinely forces you to stop (an emergency, an unavoidable meeting), the Pomodoro is void: it's discarded entirely, as if it never started. No credit, no partial record — just an honest reset.\n\nOnce a Pomodoro begins, it's meant to ring in full. If you finish your task early, you don't stop the timer — you use the remaining time to review or refine what you did instead. The discipline is in the container, not in rushing to fill it.\n\nThis app adds one deliberate, transparent exception to these rules: Pause — not part of Cirillo's original technique, but an honest addition for this app. Real life includes brief interruptions — a knock at the door, a two-minute distraction — that don't really deserve a full Void. Pause holds your session exactly where it is, with nothing lost; pressing Start again picks up right where you left off. It's tracked openly (you can see how often you pause in Reports) specifically so it stays a visible habit rather than a hidden shortcut.",
+      body: "A Pomodoro is indivisible. It can't be split or partially counted. You either complete the full 25 minutes, or you don't.\n\nIf something genuinely forces you to stop, like an emergency or an unavoidable meeting, the Pomodoro is void. It's discarded entirely, as if it never started: no credit, no partial record, just an honest reset.\n\nOnce a Pomodoro begins, it's meant to ring in full. If you finish your task early, you don't stop the timer. Instead, you use the remaining time to review or refine what you did. The discipline is in the container, not in rushing to fill it.\n\n## Pause: this app's own exception\n\nThis app adds one deliberate, transparent exception to these rules. Pause is not part of Cirillo's original technique; it's an honest addition here for real-life brief interruptions, like a knock at the door or a two-minute distraction, that don't really deserve a full Void.\n\n- Pause holds your session exactly where it is, with nothing lost.\n- Pressing Start again picks up right where you left off.\n- It's tracked openly, so you can see how often you pause in Reports, keeping it a visible habit rather than a hidden shortcut.",
     },
     sizing: {
       title: 'Sizing your tasks',
-      body: "Before you start working, you estimate how many Pomodoros a task will take. Two simple rules keep that estimate realistic.\n\nIf a task looks like it'll take more than about 5 to 7 Pomodoros, it's too big — break it into smaller sub-tasks in your Inventory instead. Big, vague tasks are hard to estimate accurately and don't give you the regular sense of progress that keeps you motivated.\n\nIf a task will take less than one full Pomodoro, don't run a whole 25-minute block for it — combine it with other small tasks until together they fill one. This app's Inventory has a \"combine\" feature for exactly this: select two or more small tasks and merge them into a single one, with their estimates summed.",
+      body: "Before you start working, you estimate how many Pomodoros a task will take. Two simple rules keep that estimate realistic.\n\n## If a task is too big\n\nIf a task looks like it'll take more than about 5 to 7 Pomodoros, break it into smaller sub-tasks in your Inventory instead. Big, vague tasks are hard to estimate accurately, and they don't give you the regular sense of progress that keeps you motivated.\n\n## If a task is too small\n\nIf a task will take less than one full Pomodoro, don't run a whole 25-minute block for it. Combine it with other small tasks until together they fill one. This app's Inventory has a \"combine\" feature for exactly this: select two or more small tasks and merge them into a single one, with their estimates summed.",
     },
     interruptions: {
       title: 'Handling interruptions',
-      body: "The technique treats interruptions as something to manage, not just something to feel bad about. It splits them into two kinds.\n\nInternal interruptions come from you — a sudden urge to check something else, a thought unrelated to your current task. External interruptions come from someone or something else — a colleague, a phone call, a notification.\n\nFor both kinds, the response is the same: don't act on the interruption immediately, and don't just try to ignore it either. Instead, mark it (this app has an internal/external counter for exactly this), quickly note the distraction down somewhere so you won't lose it, and get back to your current Pomodoro. For an external interruption you can't just wave off, the classic approach is to inform the person you're busy, negotiate a specific time to get back to them, write that promised time down immediately so it's off your mind, and then actually follow through once your Pomodoro ends.\n\nThe point isn't to never get interrupted — it's to notice how often it happens and keep it from derailing the Pomodoro you're in.",
+      body: "The technique treats interruptions as something to manage, not just something to feel bad about. It splits them into two kinds.\n\n- Internal interruptions come from you: a sudden urge to check something else, a thought unrelated to your current task.\n- External interruptions come from someone or something else: a colleague, a phone call, a notification.\n\nFor both kinds, the response is the same. Don't act on the interruption immediately, and don't just try to ignore it either.\n\n## What to actually do\n\n- Mark it. This app has an internal/external counter for exactly this.\n- Quickly note the distraction down somewhere so you won't lose it.\n- Get back to your current Pomodoro.\n\nFor an external interruption you can't just wave off, the classic approach is a bit more involved: inform the person you're busy, negotiate a specific time to get back to them, write that promised time down immediately so it's off your mind, then actually follow through once your Pomodoro ends.\n\nThe point isn't to never get interrupted. It's to notice how often it happens and keep it from derailing the Pomodoro you're in.",
     },
     estimation: {
       title: 'Estimate vs. Real',
-      body: "Every task gets an estimate — how many Pomodoros you think it'll take — before you start it. If a task runs long, you can re-estimate it (up to twice) partway through instead of just letting the original guess go stale. \"Real\" is how many Pomodoros it actually took, counted automatically each time you complete one on that task. The diff is the difference between real and whichever estimate is most current — your latest re-estimate if you made one, otherwise your original estimate.\n\nA diff of zero means your estimate was spot-on. A positive diff means the task ran longer than planned (underestimation); a negative diff means it went faster (overestimation). Neither is a failure by itself — the point of tracking diff over time is noticing your own patterns, so your next estimate is a little more honest than the last one.\n\nThere's a second, subtler kind of error worth watching for: not estimating a known task wrong, but failing to anticipate a task at all — something unplanned that shows up mid-day. This app tracks those separately as \"unplanned\" tasks, since they point to a gap in your planning rather than in your time estimate.",
+      body: "Every task gets an estimate before you start it: how many Pomodoros you think it'll take. If a task runs long, you can re-estimate it up to twice partway through instead of just letting the original guess go stale.\n\n\"Real\" is how many Pomodoros it actually took, counted automatically each time you complete one on that task. The diff is the difference between real and whichever estimate is most current: your latest re-estimate if you made one, otherwise your original estimate.\n\n- A diff of zero means your estimate was spot-on.\n- A positive diff means the task ran longer than planned (underestimation).\n- A negative diff means it went faster than planned (overestimation).\n\nNeither is a failure by itself. The point of tracking diff over time is noticing your own patterns, so your next estimate is a little more honest than the last one.\n\nThere's a second, subtler kind of error worth watching for: not estimating a known task wrong, but failing to anticipate a task at all, something unplanned that shows up mid-day. This app tracks those separately as \"unplanned\" tasks, since they point to a gap in your planning rather than in your time estimate.",
     },
     reports: {
       title: 'Reading your Reports',
-      body: "Cirillo describes five stages to a working day: Planning, Tracking, Recording, Processing, and Visualizing. This app handles the first three automatically as you work — Reports is where the last two happen: Processing (turning raw records into conclusions) and Visualizing (seeing those conclusions clearly), organized around a few specific questions.\n\nEstimation Accuracy asks: how close are your estimates to reality, and is that gap shrinking over time? Interruption Trends asks: what's actually breaking your focus, and how often? Pause Trends tracks how often you're using this app's Pause feature, since pausing a lot might be worth noticing on its own. The category breakdown shows where your Pomodoros are actually going once you tag tasks with categories.\n\nNone of these numbers are meant to be maximized. A high Pomodoro count isn't automatically good if your estimates are consistently far off — the goal is a process that gets more honest and predictable over time, not a bigger number.",
+      body: "Cirillo describes five stages to a working day: Planning, Tracking, Recording, Processing, and Visualizing. This app handles the first three automatically as you work. Reports is where the last two happen: Processing, turning raw records into conclusions, and Visualizing, seeing those conclusions clearly.\n\n## What each section asks\n\n- Estimation Accuracy: how close are your estimates to reality, and is that gap shrinking over time?\n- Interruption Trends: what's actually breaking your focus, and how often?\n- Pause Trends: how often are you using this app's Pause feature? Pausing a lot might be worth noticing on its own.\n- Category breakdown: where are your Pomodoros actually going, once you tag tasks with categories?\n\nNone of these numbers are meant to be maximized. A high Pomodoro count isn't automatically good if your estimates are consistently far off. The goal is a process that gets more honest and predictable over time, not a bigger number.",
     },
   },
 
@@ -526,6 +526,8 @@ export default {
     displayNameLabel: 'Your name',
     displayNameHint: 'Shown in a personalized greeting in the header.',
     displayNamePlaceholder: 'e.g. Alex',
+    dailyGoalLabel: 'Daily Pomodoro goal',
+    dailyGoalHint: "How many Pomodoros you're aiming for per day. Optional, shown in Reports once set.",
     languageLabel: 'Language',
     languageEnglish: 'English',
     languageTurkish: 'Türkçe',
@@ -610,12 +612,43 @@ export default {
     signUpSuccessMessage: 'Check your email to confirm your account.',
   },
 
-  sync: {
-    syncingMessage: 'Syncing your data…',
-    migratedNotice: 'Your data has been synced to your account ✓',
+  // Sign-in error only — see App.jsx. Signing in no longer merges/migrates
+  // local guest data at all, so there's no separate "synced" success notice
+  // or merge-confirmation prompt to translate anymore; only "couldn't load
+  // your account, here's why we fell back to guest mode" remains.
+  account: {
+    loadErrorNotice: "Couldn't load your account. Working in guest mode for now.",
     dismissAria: 'dismiss notice',
-    errorNotice: "Couldn't sync your data — working locally for now. Your data is safe.",
-    mergePromptConfirm:
-      'Add your local changes to your account? Your existing account data will not be deleted.',
+  },
+
+  // First-time account setup wizard (AccountSetupFlow.jsx) — shown once,
+  // right after a brand-new account's first-ever sign-in. A separate
+  // mechanism from the coach-mark system: this is about the account/app
+  // itself (language, name, theme, a daily goal), not the Pomodoro
+  // Technique's methodology.
+  accountSetup: {
+    stepIndicator: 'Step {{current}} of {{total}}',
+    backButton: 'Back',
+    continueButton: 'Continue',
+    finishButton: 'Finish',
+    skipButton: 'Skip setup',
+    welcome: {
+      title: 'Your account is ready',
+      body: "Let's quickly set a few preferences. Every step is optional, and you can change any of this later in Settings.",
+    },
+    language: {
+      title: 'Choose your language',
+    },
+    name: {
+      title: 'What should we call you?',
+    },
+    theme: {
+      title: 'Pick a look',
+    },
+    goal: {
+      title: 'Set a daily Pomodoro goal',
+      body: "How many Pomodoros are you aiming for per day? This is entirely optional and just for your own reference.",
+      placeholder: 'e.g. 8',
+    },
   },
 }

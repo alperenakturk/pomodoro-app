@@ -104,6 +104,7 @@ function Timer({
   seenCoachMarks,
   onDismissCoachMark,
   onLearnMoreCoachMark,
+  coachMarksSuppressed,
   sessionType,
   secondsLeft,
   isRunning,
@@ -724,11 +725,13 @@ function Timer({
   // brand-new user what the internal/external counters even are, *before*
   // Reports' interruption-trend marks (which assume the concept is already
   // known) can show — see coachMarks.reportsIntro/reportsFirstData.
-  const timerCoachMark = pickCoachMark('timer', seenCoachMarks, {
-    'timer-first-start': isRunning && sessionType === 'work',
-    'timer-first-interruption': internalCount > 0 || externalCount > 0,
-    'timer-first-break': isRunning && sessionType !== 'work',
-  })
+  const timerCoachMark = coachMarksSuppressed
+    ? null
+    : pickCoachMark('timer', seenCoachMarks, {
+        'timer-first-start': isRunning && sessionType === 'work',
+        'timer-first-interruption': internalCount > 0 || externalCount > 0,
+        'timer-first-break': isRunning && sessionType !== 'work',
+      })
 
   return (
     <div

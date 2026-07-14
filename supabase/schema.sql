@@ -580,3 +580,15 @@ alter table public.timer_state
 -- ----------------------------------------------------------------------------
 alter table public.settings
   add column if not exists seen_coach_marks jsonb not null default '[]'::jsonb;
+
+-- ----------------------------------------------------------------------------
+-- Daily Pomodoro goal (dailyPomodoroGoal in DEFAULT_SETTINGS) — captured
+-- (optionally) in AccountSetupFlow's last step, also editable afterward in
+-- Settings and referenced by Reports' "Pomodoros today" stat. Nullable, no
+-- default: null means "never set," not defaulted to a specific number, which
+-- would misrepresent an unset goal as a real choice. Client-side degrades
+-- gracefully if this column hasn't been applied yet — same reasoning as
+-- seen_coach_marks above.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists daily_pomodoro_goal integer;

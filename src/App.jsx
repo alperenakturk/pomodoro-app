@@ -5,15 +5,7 @@ import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
 import { useTimetable } from './hooks/useTimetable'
 import { useAuth } from './hooks/useAuth'
-import {
-  loadSettings,
-  patchSettings,
-  addVoidLogEntry,
-  signInToRemote,
-  signOutFromRemote,
-  clearLocalGuestData,
-  hasLocalGuestData,
-} from './lib/storage'
+import { loadSettings, patchSettings, addVoidLogEntry, signInToRemote, signOutFromRemote } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import { themeClassName } from './lib/theme'
 import { totalTimetableHours } from './lib/timetable'
@@ -29,18 +21,8 @@ import SettingsModal from './components/SettingsModal'
 import ProfileMenu from './components/ProfileMenu'
 import CoachMark from './components/CoachMark'
 import MethodologyGuideModal from './components/MethodologyGuideModal'
+import AccountSetupFlow from './components/AccountSetupFlow'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
-
-// sessionStorage (not a ref, which resets on every fresh JS load) — marks
-// that this browser tab has already completed a sign-in sync for a given
-// user id. See the App() effect below for why this exists: reloading the
-// page (e.g. Factory Reset's own window.location.reload(), or just hitting
-// refresh) remounts App from scratch, so prevUserIdRef always starts
-// undefined on that first effect run — with nothing else to go on, that run
-// is indistinguishable from a genuine brand-new sign-in, and used to
-// re-offer the "sync local data?" prompt and re-run the full migration dance
-// every single time, purely as a side effect of the JS runtime restarting.
-const SYNCED_SESSION_KEY = 'pomodoro_synced_session_user_id'
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -50,19 +32,29 @@ function nowTime() {
   return new Date().toTimeString().slice(0, 5)
 }
 
-// Auth-transition gate + notice banners live here, one level above the
-// actual app tree (AppInner) — see CLAUDE.md's Authentication section for
-// the full reasoning. In short: guest usage (the common case) never waits
-// on anything, since AppInner mounts immediately in local mode before
+// Auth-transition gate + error banner live here, one level above the actual
+// app tree (AppInner) — see CLAUDE.md's Authentication section for the full
+// reasoning. In short: guest usage (the common case) never waits on
+// anything, since AppInner mounts immediately in local mode before
 // useAuth's initial session check even resolves. Only an *actual* sign-in
-// (user goes from null to a real session) pays for a brief "Syncing…"
-// state while storage.js's signInToRemote() fetches + merges Supabase data;
+// (user goes from null to a real session) pays for a brief loading state
+// while storage.js's signInToRemote() fetches the account's Supabase data;
 // AppInner is then remounted (via `key`) so every hook's
 // `useState(() => loadX())` initializer re-runs against the now-warm cache.
+//
+// Deliberately does NOT touch or migrate any local/guest data on sign-in —
+// there used to be an automatic local-to-cloud merge step here (a
+// confirmation prompt, a "syncing your data" overlay, an id/updatedAt merge
+// against the account's existing data). That whole flow was removed: it was
+// confusing (the prompt and overlay could appear even after declining the
+// merge) and its own account-detection signal was unreliable in a way that
+// re-triggered AccountSetupFlow on returning sign-ins (see
+// remoteProvider.js's initializeRemoteData for the root cause and fix).
+// Guest data is simply left alone now; anyone who wants it in their account
+// uses the manual JSON/CSV export-then-import feature in Settings > Data.
 function App() {
   const { user, loading: authLoading } = useAuth()
-  const { t } = useTranslation()
-  const [dataMode, setDataMode] = useState('guest') // 'guest' | 'syncing' | 'remote'
+  const [dataMode, setDataMode] = useState('guest') // 'guest' | 'loading' | 'remote'
   // Deliberately its own piece of state rather than derived from `user`/
   // `dataMode` at render time (e.g. `user ? user.id : 'guest'`). Deriving it
   // that way used to remount AppInner the instant `user` flipped to null —
@@ -76,8 +68,13 @@ function App() {
   // signInToRemote() have already run inside the effect, guarantees the
   // remount can never race ahead of the provider switch.
   const [appKey, setAppKey] = useState('guest')
-  const [syncNotice, setSyncNotice] = useState(null)
-  const [syncError, setSyncError] = useState(null)
+  const [dataError, setDataError] = useState(null)
+  // AccountSetupFlow's trigger — see remoteProvider.js's initializeRemoteData
+  // for what "new account" actually means here. Read only once, by AppInner's
+  // own lazy useState initializer (see below), at the exact moment AppInner
+  // (re)mounts for this sign-in — so it naturally fires once per real
+  // sign-in and never again on a later reload/sign-in to the same account.
+  const [isNewAccount, setIsNewAccount] = useState(false)
   const prevUserIdRef = useRef(undefined)
 
   useEffect(() => {
@@ -90,65 +87,41 @@ function App() {
       signOutFromRemote()
       setDataMode('guest')
       setAppKey('guest')
-      // Both notices are about *this* signed-in session — carrying either
-      // one across a sign-out (and into whatever account signs in next)
-      // would misreport a previous session's outcome as the new one's.
-      setSyncNotice(null)
-      setSyncError(null)
-      sessionStorage.removeItem(SYNCED_SESSION_KEY)
+      // This error is about *this* signed-in session — carrying it across a
+      // sign-out (and into whatever account signs in next) would misreport a
+      // previous session's outcome as the new one's.
+      setDataError(null)
+      setIsNewAccount(false)
       return
     }
 
     let cancelled = false
-    setSyncError(null)
-    setSyncNotice(null)
-
-    // This tab already completed a sign-in sync for this exact user id at
-    // some point before now (see SYNCED_SESSION_KEY above) — this effect run
-    // is a reload restoring that same session, not a fresh sign-in action,
-    // so there's no local guest data to genuinely ask about and no merge to
-    // perform: just quietly reconnect. Resolved *before* the syncing screen
-    // shows, same as the confirm() case below — a decision that needs to
-    // happen while the app still looks normal, not mid-"Syncing…" transition.
-    // An empty/untouched guest session (hasLocalGuestData() false) also has
-    // nothing to ask about and proceeds silently, exactly as before this
-    // feature existed.
-    const alreadySyncedThisTab = sessionStorage.getItem(SYNCED_SESSION_KEY) === userId
-    const skipLocalMerge =
-      alreadySyncedThisTab || (hasLocalGuestData() && !window.confirm(t('sync.mergePromptConfirm')))
-
-    setDataMode('syncing')
-    signInToRemote(userId, { skipLocalMerge }).then((result) => {
+    setDataError(null)
+    setDataMode('loading')
+    signInToRemote(userId).then((result) => {
       if (cancelled) return
       if (result.error) {
-        console.error('Failed to sync with Supabase:', result.error)
-        setSyncError(result.error)
+        console.error('Failed to load account data from Supabase:', result.error)
+        setDataError(result.error)
         setDataMode('guest') // fall back to local storage for this session
         setAppKey('guest')
         return
       }
-      if (result.migrated) {
-        clearLocalGuestData()
-        setSyncNotice(true)
-      }
-      sessionStorage.setItem(SYNCED_SESSION_KEY, userId)
+      setIsNewAccount(result.isNewAccount)
       setDataMode('remote')
       setAppKey(userId)
     })
     return () => {
       cancelled = true
     }
-  }, [user, authLoading, t])
+  }, [user, authLoading])
 
-  if (dataMode === 'syncing') return <SyncingScreen />
+  if (dataMode === 'loading') return <LoadingAccountScreen />
 
   return (
     <>
-      {syncError && <NoticeBanner tone="error" onDismiss={() => setSyncError(null)} messageKey="sync.errorNotice" />}
-      {syncNotice && (
-        <NoticeBanner tone="success" onDismiss={() => setSyncNotice(null)} messageKey="sync.migratedNotice" />
-      )}
-      <AppInner key={appKey} />
+      {dataError && <ErrorBanner onDismiss={() => setDataError(null)} messageKey="account.loadErrorNotice" />}
+      <AppInner key={appKey} isNewAccount={isNewAccount} />
     </>
   )
 }
@@ -166,36 +139,25 @@ function GearIcon({ className }) {
   )
 }
 
-// Rendered while activeProvider is still localStorageProvider (the switch to
-// remoteProvider only happens after signInToRemote() resolves — see the
-// effect above), so loadSettings() here reads the guest theme the user was
-// just looking at. Same "custom resolves to its General pick" logic as
-// AppInner's rootThemeId below, and the same bg-pine + themeClassName(...)
-// pattern Timer.jsx's PiP portal uses for its own theme-aware full-bleed
-// surface — AppInner isn't mounted yet at this point, so this can't just
-// read its theme state and has to resolve its own from storage directly.
-function SyncingScreen() {
-  const { t } = useTranslation()
-  const settings = loadSettings()
-  const rootThemeId = settings.theme === 'custom' ? settings.customThemeGeneral : settings.theme
-  return (
-    <div className={`min-h-screen bg-pine flex items-center justify-center ${themeClassName(rootThemeId)}`}>
-      <p className="text-sage text-sm font-sans">{t('sync.syncingMessage')}</p>
-    </div>
-  )
+// Rendered only for the brief moment between "user id changed" and
+// signInToRemote() resolving — AppInner's hooks read storage synchronously
+// on mount, so *something* has to gate rendering until activeProvider has
+// actually switched over and its cache is warm, or the fresh hooks would
+// read stale/wrong data. Deliberately minimal: no message text, no per-guest
+// theme resolution (an earlier version tried to match the guest's last-seen
+// theme here, purely to avoid a color flash during the old, much slower
+// merge-and-confirm flow — not worth the complexity now that this is just a
+// plain data fetch, typically well under a second).
+function LoadingAccountScreen() {
+  return <div className="min-h-screen bg-pine" />
 }
 
-function NoticeBanner({ tone, messageKey, onDismiss }) {
+function ErrorBanner({ messageKey, onDismiss }) {
   const { t } = useTranslation()
   return (
-    <div
-      className={
-        'flex items-center justify-between gap-3 px-4 sm:px-6 py-2 text-xs font-sans ' +
-        (tone === 'error' ? 'bg-tomato/15 text-tomato' : 'bg-sage/15 text-sage')
-      }
-    >
+    <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-2 text-xs font-sans bg-tomato/15 text-tomato">
       <span>{t(messageKey)}</span>
-      <button type="button" onClick={onDismiss} aria-label={t('sync.dismissAria')} className="leading-none">
+      <button type="button" onClick={onDismiss} aria-label={t('account.dismissAria')} className="leading-none">
         ×
       </button>
     </div>
@@ -207,7 +169,7 @@ function NoticeBanner({ tone, messageKey, onDismiss }) {
 // top-level export. Every hook here calls storage.js's loadX()/saveX()
 // exactly as before; which provider (localStorage vs Supabase) those hit is
 // entirely decided by App, before this component ever mounts.
-function AppInner() {
+function AppInner({ isNewAccount }) {
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
   const categoriesApi = useCategories()
@@ -307,6 +269,25 @@ function AppInner() {
     setDisplayNameState(value)
     patchSettings({ displayName: value })
   }
+
+  // How many Pomodoros the user is aiming for per day — captured (optionally)
+  // in AccountSetupFlow's last step, also editable afterward in Settings.
+  // null means "never set" (see storage.js's DEFAULT_SETTINGS comment).
+  const [dailyPomodoroGoal, setDailyPomodoroGoalState] = useState(() => loadSettings().dailyPomodoroGoal)
+  function setDailyPomodoroGoal(value) {
+    setDailyPomodoroGoalState(value)
+    patchSettings({ dailyPomodoroGoal: value })
+  }
+
+  // First-time account setup wizard (see AccountSetupFlow.jsx) — seeded once
+  // from the `isNewAccount` prop (itself derived in remoteProvider.js's
+  // initializeRemoteData) via this lazy useState initializer, so it's true
+  // for exactly the one AppInner mount that follows a brand-new account's
+  // first-ever sign-in, and never again on a later reload/remount of an
+  // already-set-up account. Deliberately a *different* mechanism from the
+  // coach-mark system below — see coachMarksSuppressed, which keeps the two
+  // from ever showing at the same time.
+  const [showAccountSetup, setShowAccountSetup] = useState(() => isNewAccount)
 
   // Contextual onboarding coach marks (see constants.js's COACH_MARKS/
   // pickCoachMark) — several short, event-triggered hints per core section
@@ -421,12 +402,24 @@ function AppInner() {
   // Long Break matches the session that's currently running for the Timer
   // specifically (see the `timerThemeId` passed down below).
 
+  // While AccountSetupFlow is open, no coach mark anywhere should render
+  // underneath/behind it — passed down to Timer/Reports/SettingsModal (which
+  // each compute their own mark via pickCoachMark internally) as a plain
+  // boolean; Planning's mark is computed right here in App, so it's gated
+  // the same way inline. Once the flow closes, normal triggers resume
+  // immediately (e.g. 'timer-intro' shows right away), same as for anyone
+  // else — nothing about a coach mark's own seen/trigger state is touched by
+  // this, it's purely a "don't render" gate.
+  const coachMarksSuppressed = showAccountSetup
+
   // Planning's coach mark is computed here (rather than inside TodoToday/
   // Inventory) since App is the shared ancestor that already has
   // todayApi.tasks — see constants.js's pickCoachMark for the trigger rules.
-  const planningCoachMark = pickCoachMark('planning', seenCoachMarks, {
-    'planning-first-today-task': todayApi.tasks.length > 0,
-  })
+  const planningCoachMark = coachMarksSuppressed
+    ? null
+    : pickCoachMark('planning', seenCoachMarks, {
+        'planning-first-today-task': todayApi.tasks.length > 0,
+      })
 
   const rootThemeId = theme === 'custom' ? customThemeGeneral : theme
   const timerThemeId =
@@ -535,6 +528,7 @@ function AppInner() {
             seenCoachMarks={seenCoachMarks}
             onDismissCoachMark={markCoachMarkSeen}
             onLearnMoreCoachMark={onLearnMoreCoachMark}
+            coachMarksSuppressed={coachMarksSuppressed}
             {...pomodoro}
           />
         </div>
@@ -602,9 +596,11 @@ function AppInner() {
             todayTasks={todayApi.tasks}
             categories={categoriesApi.categories}
             workMinutes={pomodoro.workMinutes}
+            dailyPomodoroGoal={dailyPomodoroGoal}
             seenCoachMarks={seenCoachMarks}
             onDismissCoachMark={markCoachMarkSeen}
             onLearnMoreCoachMark={onLearnMoreCoachMark}
+            coachMarksSuppressed={coachMarksSuppressed}
           />
           <RecordsLog categories={categoriesApi.categories} onManageCategories={openCategoryManager} />
         </div>
@@ -644,6 +640,8 @@ function AppInner() {
           setCheckToBottom={setCheckToBottom}
           displayName={displayName}
           setDisplayName={setDisplayName}
+          dailyPomodoroGoal={dailyPomodoroGoal}
+          setDailyPomodoroGoal={setDailyPomodoroGoal}
           theme={theme}
           onSelectTheme={selectTheme}
           customThemeGeneral={customThemeGeneral}
@@ -659,8 +657,21 @@ function AppInner() {
           seenCoachMarks={seenCoachMarks}
           onDismissCoachMark={markCoachMarkSeen}
           onLearnMoreCoachMark={onLearnMoreCoachMark}
+          coachMarksSuppressed={coachMarksSuppressed}
           onOpenGuide={openGuide}
           onReplayCoachMarks={replayCoachMarks}
+        />
+      )}
+
+      {showAccountSetup && (
+        <AccountSetupFlow
+          onFinish={() => setShowAccountSetup(false)}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          theme={theme}
+          onSelectTheme={selectTheme}
+          dailyPomodoroGoal={dailyPomodoroGoal}
+          setDailyPomodoroGoal={setDailyPomodoroGoal}
         />
       )}
 

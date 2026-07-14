@@ -20,7 +20,7 @@ function renderCoachMark(props) {
 describe('CoachMark', () => {
   it('renders its title/body — visibility is entirely up to the caller (no seen/hidden state of its own)', () => {
     renderCoachMark()
-    expect(screen.getByText('Welcome — here’s the idea')).toBeInTheDocument()
+    expect(screen.getByText("Here's the idea")).toBeInTheDocument()
   })
 
   it('calls onDismiss when "Got it" or the × button is clicked', () => {

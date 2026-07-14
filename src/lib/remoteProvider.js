@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient'
-import { mergeCollectionById } from './importData'
 import { mapKeysToSnake, mapKeysToCamel } from './keyCase'
 
 // Maps storage.js's localStorage key strings directly to their Supabase
@@ -60,12 +59,15 @@ function sleep(ms) {
 // A "no row found" result for a singleton that demonstrably exists has been
 // observed transiently right after sign-in (most reproducible with
 // concurrent sign-ins to the same account from two clients at once — e.g.
-// two devices/tabs). Since initializeRemoteData treats "no row" as "create
-// one from local guest defaults," a false negative here would upsert a
-// fresh session's defaults over an established row (onConflict: 'user_id'
-// matches the same row) — silently discarding real state, not just
-// re-writing identical data. One retry after a short delay is cheap
-// insurance against that specific failure mode.
+// two devices/tabs). Since initializeRemoteData treats "no settings row" as
+// "brand new account, create a minimal one," a false negative here would
+// upsert that minimal row over an established one (onConflict: 'user_id'
+// matches the same row) — harmless in practice (the minimal payload only
+// touches user_id/created_at/updated_at, so PostgREST's upsert leaves every
+// other column on an existing row untouched), but still worth avoiding
+// since it would also incorrectly report isNewAccount: true for an
+// established account. One retry after a short delay is cheap insurance
+// against that specific failure mode.
 async function fetchSingletonTableWithRetry(table, userId) {
   const first = await fetchSingletonTable(table, userId)
   if (first) return first
@@ -75,12 +77,11 @@ async function fetchSingletonTableWithRetry(table, userId) {
 
 // Fills in userId (always, in case a stale/placeholder value is present)
 // and createdAt (only if genuinely missing — e.g. an item added in this
-// session, before its first sync) without overriding a createdAt a merged
-// or previously-synced item already carries. updatedAt is always bumped to
+// session, before its first sync) without overriding a createdAt a
+// previously-synced item already carries. updatedAt is always bumped to
 // now: a full-array save always means "this is the current state," and any
 // finer-grained conflict resolution between devices is out of scope here
-// (see CLAUDE.md) — only the one-time migration below reads updatedAt to
-// make a keep-which-side decision.
+// (see CLAUDE.md).
 function toRemoteRow(item, userId) {
   return mapKeysToSnake({
     ...item,
@@ -115,57 +116,68 @@ async function upsertSingleton(table, userId, value) {
 }
 
 // Runs once, right after sign-in, before storage.js switches its active
-// provider to this module — fetches every collection from Supabase, merges
-// in any existing localStorage (guest) data via the exact same
-// mergeCollectionById() the JSON import feature uses (newer `updatedAt`
-// wins; ties/no-timestamp favor the remote side, since that's the
-// established shared state), and warms the cache.
-//
-// `localSnapshots` is supplied by the caller (storage.js) rather than read
-// here directly, so this module never needs to import storage.js itself —
-// storage.js already has every loadX() function in scope and calls this
-// with their results, avoiding a circular import.
+// provider to this module — fetches every collection straight from Supabase
+// and warms the cache. Deliberately does NOT look at localStorage at all:
+// there used to be an automatic local-to-cloud migration step here (snapshot
+// the guest's localStorage, merge it into the account's remote data via
+// mergeCollectionById — the same merge function the JSON-import feature
+// still uses on its own, unrelated path). That whole migration flow was
+// removed — signing in never touches or merges local/guest data anymore; a
+// user who wants their guest data in their account uses the manual JSON/CSV
+// export-then-import feature in Settings > Data instead. This function is
+// now just a fetch.
 //
 // Each collection is isolated in its own try/catch — one table rejecting a
 // row (e.g. a schema/CHECK-constraint mismatch on the Supabase side; see
 // schema.sql's "schema-drift fix" block for the real example that used to
-// hit this) must not discard every OTHER collection that already synced
+// hit this) must not discard every OTHER collection that already fetched
 // successfully. This used to be one big try/catch around the whole
 // function: a single bad row in, say, `ticks` (a tick type added by a
 // later JS feature, e.g. `'pause'`, that the CHECK constraint didn't know
-// about yet) aborted the entire migration — silently leaving
+// about yet) aborted the entire fetch — silently leaving
 // `timetable`/`categories`/`void_log`/`settings`/`timer_state` never even
 // attempted, while `inventory`/`today_tasks`/`activity_log` (processed
-// earlier in the loop) had already upserted fine. The caller still saw a
-// blanket "couldn't sync" error, because the thrown exception discarded
-// that already-successful work along with everything after it.
+// earlier in the loop) had already loaded fine. The caller still saw a
+// blanket "couldn't load your account" error, because the thrown exception
+// discarded that already-successful work along with everything after it.
 //
-// Returns { migrated, error }. `error` is only non-null when NOTHING synced
-// at all (every collection's fetch/upsert failed — a real total failure,
+// Returns { error, isNewAccount }. `error` is only non-null when NOTHING
+// loaded at all (every collection's fetch failed — a real total failure,
 // e.g. network down or a misconfigured project) — anything less than that
 // stays in remote mode, with the specific failure(s) only logged to the
 // console, not surfaced as a scary blanket error for what's actually a
-// partial, mostly-successful sync.
-export async function initializeRemoteData(userId, localSnapshots) {
-  let migrated = false
+// partial, mostly-successful load.
+//
+// `isNewAccount` is AccountSetupFlow's trigger signal (see App.jsx): true
+// only when this user's `pomodoro_settings` row didn't exist yet before this
+// call, i.e. this is the very first session this account has ever
+// completed — regardless of sign-up method (email/Google). When that's the
+// case, this function *unconditionally* creates a minimal settings row right
+// here (see upsertSingleton below — an empty object stamped with
+// userId/createdAt/updatedAt is enough; every other column has its own
+// Postgres-side default, so loadSettings()'s `{ ...DEFAULT_SETTINGS, ...raw }`
+// merge fills in the rest on read). This is the fix for a real bug: an
+// earlier version only wrote this row when the (now-removed) local-merge
+// snapshot happened to include settings data, which depended on a user
+// consent step that didn't always run — an account whose very first sign-in
+// took that skip-the-write path never got a settings row at all, so every
+// later sign-in kept finding "no row" and re-reported isNewAccount: true,
+// re-triggering AccountSetupFlow forever. Creating the row unconditionally,
+// the moment its absence is detected, means every account gets exactly one
+// settings row on its true first sign-in and never looks "new" again after.
+export async function initializeRemoteData(userId) {
   let anySuccess = false
   let lastError = null
+  let isNewAccount = false
 
   for (const [key, table] of Object.entries(ARRAY_TABLES)) {
     try {
-      const remoteItems = await fetchArrayTable(table, userId)
-      const localItems = localSnapshots[key] ?? []
-      let finalItems = remoteItems
-      if (localItems.length > 0) {
-        finalItems = mergeCollectionById(remoteItems, localItems)
-        await upsertArrayTable(table, userId, finalItems)
-        migrated = true
-      }
-      cache[key] = finalItems
-      knownIds[key] = new Set(finalItems.map((item) => item.id))
+      const items = await fetchArrayTable(table, userId)
+      cache[key] = items
+      knownIds[key] = new Set(items.map((item) => item.id))
       anySuccess = true
     } catch (error) {
-      console.error(`Failed to sync ${key} to Supabase:`, error)
+      console.error(`Failed to load ${key} from Supabase:`, error)
       lastError = error
     }
   }
@@ -174,29 +186,25 @@ export async function initializeRemoteData(userId, localSnapshots) {
     for (const [key, table] of Object.entries(SINGLETON_TABLES)) {
       const remoteValue = await fetchSingletonTableWithRetry(table, userId)
       if (remoteValue) {
-        // An established account's existing preferences/timer state win
-        // outright — a fresh guest session's defaults must never silently
-        // clobber them.
         cache[key] = remoteValue
         continue
       }
-      const localValue = localSnapshots[key]
-      if (localValue) {
-        await upsertSingleton(table, userId, localValue)
-        cache[key] = { ...localValue, userId }
-        migrated = true
-      } else {
+      if (key !== 'pomodoro_settings') {
         cache[key] = null
+        continue
       }
+      isNewAccount = true
+      await upsertSingleton(table, userId, {})
+      cache[key] = { userId }
     }
     anySuccess = true
   } catch (error) {
-    console.error('Failed to sync settings/timer state to Supabase:', error)
+    console.error('Failed to load settings/timer state from Supabase:', error)
     lastError = error
   }
 
   if (anySuccess) activeUserId = userId
-  return { migrated, error: anySuccess ? null : lastError }
+  return { error: anySuccess ? null : lastError, isNewAccount }
 }
 
 // Called on sign-out — storage.js switches its active provider back to

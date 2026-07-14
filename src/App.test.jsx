@@ -39,17 +39,24 @@ vi.mock('./hooks/useAuth', () => ({
 // Stands in for the real remoteProvider.js: simulates "this account has
 // REMOTE TASK in it" without any network access, while still going through
 // storage.js's real signInToRemote/signOutFromRemote (only their
-// remoteProvider.* dependency is faked).
+// remoteProvider.* dependency is faked). Signing in no longer reads or
+// merges any local/guest data (see CLAUDE.md's Cloud sync section) —
+// initializeRemoteData takes just a userId now, so this fake ignores
+// whatever's in localStorage entirely, exactly like the real one does.
+// `mockIsNewAccount` is mutable per-test so the AccountSetupFlow regression
+// test below can simulate "first sign-in ever" vs. "returning sign-in" —
+// mirrors how the real initializeRemoteData decides this from whether a
+// settings row already exists (see remoteProvider.js/remoteProvider.test.js).
 let remoteCache = {}
+let mockIsNewAccount = false
 vi.mock('./lib/remoteProvider', () => ({
-  initializeRemoteData: vi.fn(async (userId, localSnapshots) => {
+  initializeRemoteData: vi.fn(async () => {
     remoteCache = {
-      ...localSnapshots,
       pomodoro_inventory: [
         { id: 'remote-1', text: 'REMOTE TASK', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false },
       ],
     }
-    return { migrated: false, error: null }
+    return { error: null, isNewAccount: mockIsNewAccount }
   }),
   resetToLocalMode: vi.fn(() => {
     remoteCache = {}
@@ -66,13 +73,8 @@ vi.mock('./lib/remoteProvider', () => ({
 beforeEach(() => {
   localStorage.clear()
   remoteCache = {}
+  mockIsNewAccount = false
   mockAuthValue = { user: null, loading: false }
-  // This test seeds real guest data before signing in, which now trips the
-  // merge-confirmation prompt (hasLocalGuestData() in storage.js) —
-  // answering "yes" reproduces the pre-existing unconditional-merge
-  // behavior this test was written against, rather than leaving
-  // window.confirm to jsdom's unimplemented (falsy, console-noisy) default.
-  window.confirm = vi.fn(() => true)
 })
 
 describe('App sign-out data-source switch', () => {
@@ -111,5 +113,65 @@ describe('App sign-out data-source switch', () => {
       expect(screen.getByText('GUEST TASK')).toBeInTheDocument()
     })
     expect(screen.queryByText('REMOTE TASK')).not.toBeInTheDocument()
+  })
+})
+
+// Regression test for a reported bug: AccountSetupFlow (the first-time
+// account setup wizard) re-triggered on a SECOND sign-in to an account that
+// had already completed it. Root-caused to remoteProvider.js's
+// initializeRemoteData: the account's settings row used to only get created
+// as a side effect of the (now entirely removed) automatic local-data-merge
+// step, which depended on user consent that didn't always happen — an
+// account whose first sign-in skipped that write never got a row at all, so
+// every later sign-in kept reporting isNewAccount: true and kept re-showing
+// the wizard. The fix makes row creation unconditional (see
+// remoteProvider.js/remoteProvider.test.js for the unit-level regression
+// test); this test verifies the same thing end-to-end through App's actual
+// mount/remount cycle: isNewAccount only ever drives AppInner's
+// showAccountSetup state on the exact mount that follows it being true.
+describe('App AccountSetupFlow trigger', () => {
+  it('shows AccountSetupFlow on a first sign-in, then never again on later sign-ins to the same account', async () => {
+    const { rerender: rerenderRaw } = renderApp()
+    const rerender = () =>
+      rerenderRaw(
+        <LanguageProvider>
+          <App />
+        </LanguageProvider>
+      )
+
+    // First-ever sign-in for this account.
+    mockIsNewAccount = true
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    rerender()
+    await screen.findByText('Your account is ready')
+
+    // Skip the wizard — same as a user clicking through without filling
+    // anything in (every field is optional).
+    screen.getByRole('button', { name: 'Skip setup' }).click()
+    await waitFor(() => expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument())
+
+    // Sign out, then sign back in to the SAME account — a real second
+    // sign-in now finds the settings row the first call created, so
+    // isNewAccount is false, exactly like the real remoteProvider would
+    // report (see remoteProvider.test.js's matching regression test).
+    mockAuthValue = { user: null, loading: false }
+    rerender()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument())
+
+    mockIsNewAccount = false
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    rerender()
+    await screen.findByText('Pomodoro Technique')
+    expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument()
+
+    // Sign out and back in a third time, for good measure — must still
+    // never reappear.
+    mockAuthValue = { user: null, loading: false }
+    rerender()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument())
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    rerender()
+    await screen.findByText('Pomodoro Technique')
+    expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument()
   })
 })
