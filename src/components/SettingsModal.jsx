@@ -253,6 +253,17 @@ function SettingsModal({
   const { user, deleteAccount } = useAuth()
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
+  // Every existing trigger in this modal (background sign-in hint, Account
+  // category's "Sign in" button) opens in the default 'signIn' mode — only
+  // the newer category-creation guest gate below explicitly wants 'signUp',
+  // since its whole point is "create a new account," not "sign in to an
+  // existing one." One shared piece of state (rather than one per trigger)
+  // is enough since only one instance of AuthModal is ever open at a time.
+  const [authModalMode, setAuthModalMode] = useState('signIn')
+  function openAuthModal(mode = 'signIn') {
+    setAuthModalMode(mode)
+    setAuthModalOpen(true)
+  }
   // Defaults to 'general' via the gear icon, but the "+ Add category"
   // shortcut inside CategoryTagPicker (Inventory/Today's Tasks/Records Log)
   // opens straight to 'data' instead — see App.jsx's openCategoryManager.
@@ -595,7 +606,7 @@ function SettingsModal({
                     {!user && (
                       <button
                         type="button"
-                        onClick={() => setAuthModalOpen(true)}
+                        onClick={() => openAuthModal()}
                         className="text-tomato text-[10px] text-left underline decoration-dotted mt-0.5"
                       >
                         {t('settings.backgroundSignInHint')}
@@ -612,7 +623,7 @@ function SettingsModal({
                     />
                     <button
                       type="button"
-                      onClick={() => (user ? backgroundFileInputRef.current?.click() : setAuthModalOpen(true))}
+                      onClick={() => (user ? backgroundFileInputRef.current?.click() : openAuthModal())}
                       disabled={backgroundBusy}
                       className={
                         'border rounded-full px-3 py-1 disabled:opacity-50 ' +
@@ -919,7 +930,7 @@ function SettingsModal({
                     <span>{t('settings.signInPromptLabel')}</span>
                     <button
                       type="button"
-                      onClick={() => setAuthModalOpen(true)}
+                      onClick={() => openAuthModal()}
                       className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
                     >
                       {t('auth.signInButton')}
@@ -968,6 +979,8 @@ function SettingsModal({
                 addCategory={addCategory}
                 updateCategory={updateCategory}
                 removeCategory={removeCategory}
+                canCreateCategories={Boolean(user)}
+                onRequireSignIn={() => openAuthModal('signUp')}
               />
 
               <DataTransfer categories={categories} />
@@ -1071,7 +1084,7 @@ function SettingsModal({
     </div>
 
     {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
-    {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
+    {authModalOpen && <AuthModal initialMode={authModalMode} onClose={() => setAuthModalOpen(false)} />}
     </>
   )
 }

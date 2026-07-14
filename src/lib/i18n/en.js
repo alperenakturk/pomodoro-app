@@ -219,6 +219,9 @@ export default {
     deleteTitle: 'Delete',
     deleteConfirm: 'Delete category "{{name}}"? Tasks and records using it will show as uncategorized.',
     emptyState: 'No categories yet — tasks will show as uncategorized.',
+    // Guests keep full use of existing categories (assign/edit/delete) —
+    // only creating a brand-new one requires an account. See CategoryManager.jsx.
+    signUpToCreateHint: 'Creating new categories requires a free account. You can still use, edit, and delete your existing ones.',
   },
 
   // Seeded once for a brand new account/guest with zero categories ever
@@ -612,6 +615,16 @@ export default {
     signUpSuccessMessage: 'Check your email to confirm your account.',
   },
 
+  // A one-time growth nudge for guests (see GuestSignupNudge.jsx) — shown
+  // once, the first time a guest starts a Pomodoro. Deliberately not part
+  // of the coachMarks namespace: this is a product nudge, not a methodology
+  // hint, and never shows once signed in.
+  guestNudge: {
+    title: 'Get more with an account',
+    body: "- Sync your tasks and history across every device\n- Create unlimited categories\n- Custom fullscreen backgrounds",
+    dismissAria: 'dismiss account nudge',
+  },
+
   // Sign-in error only — see App.jsx. Signing in no longer merges/migrates
   // local guest data at all, so there's no separate "synced" success notice
   // or merge-confirmation prompt to translate anymore; only "couldn't load
@@ -631,10 +644,13 @@ export default {
     backButton: 'Back',
     continueButton: 'Continue',
     finishButton: 'Finish',
-    skipButton: 'Skip setup',
+    skipStepButton: 'Skip this step',
+    skipButton: 'Skip setup entirely',
     welcome: {
       title: 'Your account is ready',
       body: "Let's quickly set a few preferences. Every step is optional, and you can change any of this later in Settings.",
+      dataNote:
+        "Any local data from browsing as a guest isn't moved into this account automatically. To bring it over, use Export/Import in Settings > Data anytime.",
     },
     language: {
       title: 'Choose your language',

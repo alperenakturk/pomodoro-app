@@ -60,6 +60,11 @@ function AccountSetupFlow({
             <p className="font-sans text-sage text-sm leading-relaxed max-w-sm">
               {t('accountSetup.welcome.body')}
             </p>
+            {/* A brief, calm note, not a warning callout — no border/background
+                box, just a smaller/muted line under the main body copy. */}
+            <p className="font-sans text-sage/60 text-xs leading-relaxed max-w-sm">
+              {t('accountSetup.welcome.dataNote')}
+            </p>
           </div>
         )}
 
@@ -136,7 +141,17 @@ function AccountSetupFlow({
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-3 w-full mt-2">
+        {/* Three deliberately distinct tiers, so "skip this one field" and
+            "exit the whole wizard" can never be confused for each other:
+            Continue/Finish (primary, filled) > "Skip this step" (secondary,
+            plain sage text, sits right under Continue) > "Skip setup
+            entirely" (tertiary, smaller and more muted, underlined — the
+            same de-emphasized-exit-link style already used elsewhere in the
+            app). Skipping a step functionally advances the same way
+            Continue does (nothing gets "set" on a step you never touched
+            either way) — the two labels exist for clarity of intent, not
+            because they do different things under the hood. */}
+        <div className="flex flex-col items-center gap-2 w-full mt-2">
           <div className="flex items-center gap-3">
             {stepIndex > 0 && (
               <button
@@ -155,10 +170,13 @@ function AccountSetupFlow({
               {isLastStep ? t('accountSetup.finishButton') : t('accountSetup.continueButton')}
             </button>
           </div>
+          <button type="button" onClick={goNext} className="font-sans text-xs text-sage hover:text-cream">
+            {t('accountSetup.skipStepButton')}
+          </button>
           <button
             type="button"
             onClick={onFinish}
-            className="font-sans text-xs text-sage hover:text-cream underline decoration-dotted"
+            className="font-sans text-[11px] text-sage/50 hover:text-cream underline decoration-dotted mt-1"
           >
             {t('accountSetup.skipButton')}
           </button>

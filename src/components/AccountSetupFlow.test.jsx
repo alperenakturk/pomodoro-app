@@ -49,12 +49,33 @@ describe('AccountSetupFlow', () => {
     expect(screen.getByText('Pick a look')).toBeInTheDocument()
   })
 
-  it('calls onFinish immediately when "Skip setup" is clicked, from any step', () => {
+  it('calls onFinish immediately when "Skip setup entirely" is clicked, from any step', () => {
     const onFinish = vi.fn()
     renderFlow({ onFinish })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // welcome -> language
-    fireEvent.click(screen.getByRole('button', { name: 'Skip setup' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Skip setup entirely' }))
     expect(onFinish).toHaveBeenCalledTimes(1)
+  })
+
+  it('"Skip this step" advances to the next step without exiting the whole flow', () => {
+    const onFinish = vi.fn()
+    renderFlow({ onFinish })
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // welcome -> language
+    expect(screen.getByText('Choose your language')).toBeInTheDocument()
+    expect(onFinish).not.toHaveBeenCalled()
+  })
+
+  it('"Skip this step" and "Skip setup entirely" are both present and distinct on every step', () => {
+    renderFlow()
+    expect(screen.getByRole('button', { name: 'Skip this step' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Skip setup entirely' })).toBeInTheDocument()
+  })
+
+  it('shows a note on the welcome step that local data is not moved automatically', () => {
+    renderFlow()
+    expect(
+      screen.getByText(/local data.*guest.*isn't moved into this account automatically/i)
+    ).toBeInTheDocument()
   })
 
   it('calls setDisplayName as the name field is typed', () => {

@@ -5,7 +5,15 @@ import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
 import { useTimetable } from './hooks/useTimetable'
 import { useAuth } from './hooks/useAuth'
-import { loadSettings, patchSettings, addVoidLogEntry, signInToRemote, signOutFromRemote } from './lib/storage'
+import {
+  loadSettings,
+  patchSettings,
+  addVoidLogEntry,
+  signInToRemote,
+  signOutFromRemote,
+  hasSeenGuestSignupNudge,
+  markGuestSignupNudgeSeen,
+} from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import { themeClassName } from './lib/theme'
 import { totalTimetableHours } from './lib/timetable'
@@ -22,6 +30,8 @@ import ProfileMenu from './components/ProfileMenu'
 import CoachMark from './components/CoachMark'
 import MethodologyGuideModal from './components/MethodologyGuideModal'
 import AccountSetupFlow from './components/AccountSetupFlow'
+import GuestSignupNudge from './components/GuestSignupNudge'
+import AuthModal from './components/AuthModal'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
 
 function todayString() {
@@ -170,6 +180,11 @@ function ErrorBanner({ messageKey, onDismiss }) {
 // exactly as before; which provider (localStorage vs Supabase) those hit is
 // entirely decided by App, before this component ever mounts.
 function AppInner({ isNewAccount }) {
+  // Needed here (not just in the outer App()/SettingsModal/ProfileMenu,
+  // which each already call it independently) for the guest sign-up nudge
+  // below and for gating category creation — a Context hook, so calling it
+  // again from a different component is normal, not prop-drilling.
+  const { user } = useAuth()
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
   const categoriesApi = useCategories()
@@ -289,6 +304,23 @@ function AppInner({ isNewAccount }) {
   // from ever showing at the same time.
   const [showAccountSetup, setShowAccountSetup] = useState(() => isNewAccount)
 
+  // GuestSignupNudge (see GuestSignupNudge.jsx) — a one-time product nudge,
+  // deliberately a *different* mechanism from both AccountSetupFlow above
+  // and the coach-mark system below: guest-only (mutually exclusive with
+  // AccountSetupFlow, which only ever fires for a just-signed-in account),
+  // and tracked via storage.js's own dedicated localStorage flag rather than
+  // seenCoachMarks, since it has no business ever being part of a synced
+  // account's settings (see hasSeenGuestSignupNudge's own comment). Owns its
+  // own AuthModal instance, same pattern as SettingsModal/ProfileMenu each
+  // independently doing the same rather than threading one shared modal
+  // through props.
+  const [guestNudgeSeen, setGuestNudgeSeenState] = useState(() => hasSeenGuestSignupNudge())
+  const [guestNudgeAuthModalOpen, setGuestNudgeAuthModalOpen] = useState(false)
+  function dismissGuestNudge() {
+    setGuestNudgeSeenState(true)
+    markGuestSignupNudgeSeen()
+  }
+
   // Contextual onboarding coach marks (see constants.js's COACH_MARKS/
   // pickCoachMark) — several short, event-triggered hints per core section
   // (Timer/Planning/Reports/Settings), each shown at most once. This
@@ -376,6 +408,15 @@ function AppInner({ isNewAccount }) {
     },
     t,
   })
+
+  // GuestSignupNudge's trigger: a guest's first-ever Pomodoro (work session)
+  // actually starting — mirrors the 'timer-first-start' coach mark's own
+  // condition, just additionally scoped to `!user` and gated on the
+  // separate guestNudgeSeen flag instead of seenCoachMarks. Rendered as a
+  // fixed corner card (see GuestSignupNudge.jsx) independent of activeTab,
+  // so it persists across tab switches like a normal toast/notification
+  // until dismissed or acted on.
+  const showGuestNudge = !user && !guestNudgeSeen && pomodoro.isRunning && pomodoro.sessionType === 'work'
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -680,6 +721,19 @@ function AppInner({ isNewAccount }) {
           onClose={() => setGuideOpen(false)}
           initialSectionId={guideInitialSection}
         />
+      )}
+
+      {showGuestNudge && (
+        <GuestSignupNudge
+          onDismiss={dismissGuestNudge}
+          onSignUp={() => {
+            dismissGuestNudge()
+            setGuestNudgeAuthModalOpen(true)
+          }}
+        />
+      )}
+      {guestNudgeAuthModalOpen && (
+        <AuthModal initialMode="signUp" onClose={() => setGuestNudgeAuthModalOpen(false)} />
       )}
     </div>
   )

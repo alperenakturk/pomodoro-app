@@ -13,12 +13,18 @@ import PasswordVisibilityToggle from './PasswordVisibilityToggle'
 // are additive: dismissing this modal leaves the app exactly as it was,
 // running on localStorage (storage.js), same as before this modal ever
 // existed.
-function AuthModal({ onClose }) {
+//
+// `initialMode` defaults to 'signIn' (every pre-existing call site opens
+// here) but a caller whose own CTA is explicitly about creating a new
+// account — GuestSignupNudge's "Sign up", the category-creation guest gate
+// — passes 'signUp' so the form lands on the right tab immediately instead
+// of making the user click "Don't have an account? Sign up" first.
+function AuthModal({ onClose, initialMode = 'signIn' }) {
   const { t } = useTranslation()
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth()
   const closeButtonRef = useRef(null)
   const previouslyFocused = useRef(document.activeElement)
-  const [mode, setMode] = useState('signIn')
+  const [mode, setMode] = useState(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

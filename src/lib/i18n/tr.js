@@ -223,6 +223,10 @@ export default {
     deleteTitle: 'Sil',
     deleteConfirm: '"{{name}}" kategorisi silinsin mi? Bunu kullanan görev ve kayıtlar kategorisiz görünecek.',
     emptyState: 'Henüz kategori yok — görevler kategorisiz görünecek.',
+    // Misafirler mevcut kategorileri tam olarak kullanmaya devam eder
+    // (atama/düzenleme/silme) — sadece yeni bir kategori oluşturmak hesap
+    // gerektirir. Bkz. CategoryManager.jsx.
+    signUpToCreateHint: 'Yeni kategori oluşturmak ücretsiz bir hesap gerektirir. Mevcut kategorilerini kullanmaya, düzenlemeye ve silmeye devam edebilirsin.',
   },
 
   defaultCategories: {
@@ -610,6 +614,16 @@ export default {
     signUpSuccessMessage: 'Hesabını onaylamak için e-postana bak.',
   },
 
+  // Misafirler için tek seferlik bir büyüme ipucu (bkz. GuestSignupNudge.jsx)
+  // — bir misafirin ilk kez bir Pomodoro başlattığı anda bir kez gösterilir.
+  // Bilinçli olarak coachMarks isim alanının dışında: bu bir ürün ipucudur,
+  // metodoloji ipucu değildir, ve giriş yapıldığında asla gösterilmez.
+  guestNudge: {
+    title: 'Hesapla daha fazlasını al',
+    body: '- Görevlerini ve geçmişini her cihazda senkronize et\n- Sınırsız kategori oluştur\n- Özel tam ekran arka planları',
+    dismissAria: 'hesap ipucunu kapat',
+  },
+
   // Sadece giriş hatası — bkz. App.jsx. Artık giriş yaparken yerel misafir
   // verisi hiç birleştirilmiyor/taşınmıyor, bu yüzden ayrı bir "senkronize
   // edildi" başarı bildirimine veya birleştirme onay istemine gerek yok;
@@ -628,10 +642,13 @@ export default {
     backButton: 'Geri',
     continueButton: 'Devam et',
     finishButton: 'Bitir',
-    skipButton: 'Kurulumu atla',
+    skipStepButton: 'Bu adımı atla',
+    skipButton: 'Kurulumu tamamen atla',
     welcome: {
       title: 'Hesabın hazır',
       body: 'Hızlıca birkaç tercih ayarlayalım. Her adım isteğe bağlıdır ve bunların hepsini daha sonra Ayarlar\'dan değiştirebilirsin.',
+      dataNote:
+        'Misafir olarak gezinirken oluşan yerel veriler bu hesaba otomatik olarak taşınmaz. Aktarmak istersen, istediğin zaman Ayarlar > Veri bölümündeki Dışa/İçe Aktar özelliğini kullanabilirsin.',
     },
     language: {
       title: 'Dilini seç',

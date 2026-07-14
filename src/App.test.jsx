@@ -147,7 +147,7 @@ describe('App AccountSetupFlow trigger', () => {
 
     // Skip the wizard — same as a user clicking through without filling
     // anything in (every field is optional).
-    screen.getByRole('button', { name: 'Skip setup' }).click()
+    screen.getByRole('button', { name: 'Skip setup entirely' }).click()
     await waitFor(() => expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument())
 
     // Sign out, then sign back in to the SAME account — a real second

@@ -583,6 +583,24 @@ export function signOutFromRemote() {
   activeProvider = localStorageProvider
 }
 
+// GuestSignupNudge's one-time "seen" flag (see App.jsx) — deliberately a
+// raw, dedicated localStorage key rather than a DEFAULT_SETTINGS field like
+// seenCoachMarks/onboardingDismissed. Those go through activeProvider, so
+// for a signed-in user they'd become part of every settings upsert to
+// Supabase (and would need a matching column). This flag is guest-only by
+// definition (the nudge never shows once signed in — see App.jsx's `!user`
+// gate) and has no reason to ever exist in an account's synced settings, so
+// it bypasses the provider abstraction entirely and always reads/writes
+// real browser localStorage, regardless of which provider is currently
+// active — it simply isn't part of the account data model.
+const GUEST_SIGNUP_NUDGE_KEY = 'pomodoro_guest_signup_nudge_seen'
+export function hasSeenGuestSignupNudge() {
+  return localStorage.getItem(GUEST_SIGNUP_NUDGE_KEY) === 'true'
+}
+export function markGuestSignupNudgeSeen() {
+  localStorage.setItem(GUEST_SIGNUP_NUDGE_KEY, 'true')
+}
+
 // Cross-tab sync: the native 'storage' event fires in *other* tabs/windows
 // when one of them writes to localStorage (never in the tab that wrote it).
 // Re-dispatching our own change event lets RecordsLog/Reports — which

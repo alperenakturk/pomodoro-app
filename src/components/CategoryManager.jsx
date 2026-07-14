@@ -104,7 +104,21 @@ function CategoryRow({ category, updateCategory, removeCategory }) {
   )
 }
 
-function CategoryManager({ categories, addCategory, updateCategory, removeCategory }) {
+// `canCreateCategories`/`onRequireSignIn` gate NEW category creation to
+// signed-in accounts only (a deliberate product decision, not a bug fix —
+// see CLAUDE.md/the task this came from). Guests keep full use of whatever
+// categories already exist: assign/edit/delete all still work unrestricted
+// below, unaffected by either prop — only the add-form at the top swaps for
+// a sign-up prompt. Both props default so this component stays renderable
+// on its own (e.g. in tests) without every caller having to pass them.
+function CategoryManager({
+  categories,
+  addCategory,
+  updateCategory,
+  removeCategory,
+  canCreateCategories = true,
+  onRequireSignIn = () => {},
+}) {
   const [name, setName] = useState('')
   const [color, setColor] = useState(CATEGORY_COLORS[0].value)
   const { t } = useTranslation()
@@ -123,25 +137,38 @@ function CategoryManager({ categories, addCategory, updateCategory, removeCatego
         {t('categoryManager.title')}
       </p>
 
-      <form onSubmit={handleAdd} className="flex flex-col gap-2 mb-4">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder={t('categoryManager.newCategoryPlaceholder')}
-          aria-label={t('categoryManager.newCategoryAria')}
-          className={`text-xs ${inputClass}`}
-        />
-        <div className="flex items-center justify-between gap-2">
-          <ColorSwatchPicker value={color} onChange={setColor} />
+      {canCreateCategories ? (
+        <form onSubmit={handleAdd} className="flex flex-col gap-2 mb-4">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('categoryManager.newCategoryPlaceholder')}
+            aria-label={t('categoryManager.newCategoryAria')}
+            className={`text-xs ${inputClass}`}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <ColorSwatchPicker value={color} onChange={setColor} />
+            <button
+              type="submit"
+              className="font-sans text-xs px-4 py-2 rounded-xl bg-tomato text-cream flex-shrink-0"
+            >
+              {t('categoryManager.addButton')}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 mb-4 flex flex-col gap-2">
+          <p className="text-sage text-xs font-sans">{t('categoryManager.signUpToCreateHint')}</p>
           <button
-            type="submit"
-            className="font-sans text-xs px-4 py-2 rounded-xl bg-tomato text-cream flex-shrink-0"
+            type="button"
+            onClick={onRequireSignIn}
+            className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream self-start"
           >
-            {t('categoryManager.addButton')}
+            {t('auth.signUpButton')}
           </button>
         </div>
-      </form>
+      )}
 
       {categories.length === 0 ? (
         <p className="text-sage text-xs font-sans text-center py-2">
