@@ -28,13 +28,43 @@ function seedDefaultCategories() {
   }))
 }
 
-export function useCategories() {
+// `deferSeeding`, when true, skips the auto-seed on mount even for an
+// otherwise-eligible (empty, never-seeded) account — see seedIfNeeded below.
+// Used only for a brand-new signed-in account going through AccountSetupFlow
+// (App.jsx passes isNewAccount here): useCategories() is called, and this
+// lazy initializer runs, on AppInner's very first render — the same render
+// that first paints AccountSetupFlow, before the user has had any chance to
+// act on its own 'language' step. Seeding immediately there means
+// seedDefaultCategories()'s resolveLanguage(loadSettings().language) call
+// only ever sees whatever the browser auto-detected (settings.language is
+// still null at that point for a true new account), never whatever the user
+// is about to explicitly pick a few clicks later — so an account whose
+// browser locale is English but who picks Turkish in setup still got English
+// starter categories. Guests and returning accounts (deferSeeding false, the
+// default) have no such wizard in the way, so they keep seeding immediately
+// exactly as before.
+export function useCategories(deferSeeding = false) {
   const [categories, setCategories] = useState(() => {
     const loaded = loadCategories()
-    if (loaded.length > 0 || loadSettings().defaultCategoriesSeeded) return loaded
+    if (loaded.length > 0 || loadSettings().defaultCategoriesSeeded || deferSeeding) return loaded
     patchSettings({ defaultCategoriesSeeded: true })
     return seedDefaultCategories()
   })
+
+  // Called from AccountSetupFlow's onFinish (App.jsx) — the deterministic
+  // point where the language step has already resolved, whether the user
+  // explicitly picked one (setLanguage already persisted it via
+  // patchSettings before this fires) or skipped it (settings.language is
+  // still null, same auto-detect fallback a guest would get). No-ops for
+  // every caller that doesn't need it (deferSeeding was false, or seeding
+  // already happened) via the same eligibility check the initializer above
+  // uses, so it's safe to call unconditionally on every AccountSetupFlow
+  // finish without re-checking isNewAccount itself.
+  const seedIfNeeded = useCallback(() => {
+    if (loadCategories().length > 0 || loadSettings().defaultCategoriesSeeded) return
+    patchSettings({ defaultCategoriesSeeded: true })
+    setCategories(seedDefaultCategories())
+  }, [])
 
   useEffect(() => {
     saveCategories(categories)
@@ -64,5 +94,5 @@ export function useCategories() {
     setCategories((prev) => prev.filter((c) => c.id !== id))
   }, [])
 
-  return { categories, addCategory, updateCategory, removeCategory }
+  return { categories, addCategory, updateCategory, removeCategory, seedIfNeeded }
 }

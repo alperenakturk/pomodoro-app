@@ -340,12 +340,17 @@ function normalizeCategory(category) {
     id: category.id,
     name: category.name,
     color: category.color ?? null,
-    // Local-only bookkeeping (never sent to Supabase — see signInToRemote's
-    // migration snapshot below): true for a still-pristine, auto-seeded
-    // default category (useCategories.js's seedDefaultCategories), false
-    // once the user creates their own or edits a default one (updateCategory
-    // clears it, since an edited category is real user data, not a
-    // reproducible default anymore).
+    // True for a still-pristine, auto-seeded default category
+    // (useCategories.js's seedDefaultCategories), false once the user
+    // creates their own or edits a default one (updateCategory clears it,
+    // since an edited category is real user data, not a reproducible
+    // default anymore). IS synced to Supabase, on every category upsert
+    // (not just default ones) — see supabase/schema.sql's `is_default`
+    // column comment; an earlier version of this comment claimed it was
+    // "never sent to Supabase" via a local-merge snapshot mechanism that
+    // was since removed entirely, and that stale claim is why the matching
+    // column was never added, silently breaking all category sync for
+    // signed-in users until it was found and fixed.
     isDefault: category.isDefault ?? false,
     ...normalizeMeta(category),
   }
@@ -586,21 +591,44 @@ export async function signInToRemote(userId) {
   const result = await remoteProvider.initializeRemoteData(userId)
   if (!result.error) {
     activeProvider = remoteProvider
-    await seedDefaultCategoriesRemotely()
+    // Skipped for a genuinely new account (result.isNewAccount) — this used
+    // to run unconditionally, which was the real, always-reproducible cause
+    // of default categories being seeded in the wrong language: this
+    // function runs here, inside signInToRemote's await chain, BEFORE
+    // App.jsx ever calls setDataMode('remote')/setAppKey(userId) — i.e.
+    // before AppInner (and therefore useCategories() and AccountSetupFlow)
+    // have mounted even once. For a new account, settings.language is still
+    // null at this exact point (the user hasn't reached AccountSetupFlow's
+    // language step yet, since it hasn't rendered), so
+    // resolveLanguage(settings.language) always fell back to the browser's
+    // auto-detected language — and, critically, this call also stamped
+    // defaultCategoriesSeeded: true, so by the time useCategories.js's own
+    // (correctly-deferred, see its own comment) seeding logic got a chance
+    // to run later, it always saw "already seeded" and did nothing. A
+    // returning account (isNewAccount false) has no such wizard in the way,
+    // so it keeps this immediate-seed path exactly as before — it only ever
+    // matters for an account that somehow still has zero categories
+    // (e.g. an old account from before default-category seeding existed).
+    if (!result.isNewAccount) {
+      await seedDefaultCategoriesRemotely()
+    }
   }
   return result
 }
 
-// Runs once per account, right after a successful sign-in — mirrors
-// useCategories.js's own local seeding (same DEFAULT_CATEGORY_SEEDS list,
-// same translate() call) but writes straight to whichever collection
-// activeProvider now points at (remoteProvider, by this point in
-// signInToRemote). Guarded by the *account's own* defaultCategoriesSeeded
-// flag (now synced remotely as part of the settings singleton) so it only
-// ever runs once per account, the same one-time-only pattern useCategories.js
-// uses locally for guests — signing in again later, from any device, never
-// re-seeds. If the account already has categories of its own (from an
-// earlier device), there's nothing to seed; just stop asking.
+// Runs once per RETURNING account (isNewAccount false — see signInToRemote
+// above; a new account defers to useCategories.js's seedIfNeeded(), called
+// from AccountSetupFlow's onFinish once the language step has resolved),
+// right after a successful sign-in — mirrors useCategories.js's own local
+// seeding (same DEFAULT_CATEGORY_SEEDS list, same translate() call) but
+// writes straight to whichever collection activeProvider now points at
+// (remoteProvider, by this point in signInToRemote). Guarded by the
+// *account's own* defaultCategoriesSeeded flag (now synced remotely as part
+// of the settings singleton) so it only ever runs once per account, the
+// same one-time-only pattern useCategories.js uses locally for guests —
+// signing in again later, from any device, never re-seeds. If the account
+// already has categories of its own (from an earlier device), there's
+// nothing to seed; just stop asking.
 async function seedDefaultCategoriesRemotely() {
   const settings = loadSettings()
   if (settings.defaultCategoriesSeeded) return
@@ -641,6 +669,60 @@ export function hasSeenGuestSignupNudge() {
 }
 export function markGuestSignupNudgeSeen() {
   localStorage.setItem(GUEST_SIGNUP_NUDGE_KEY, 'true')
+}
+
+// --- Post-reload bootstrap hints --------------------------------------------
+// Two tiny, always-plain-localStorage flags (same bypass-the-provider
+// reasoning as GUEST_SIGNUP_NUDGE_KEY above) read by App.jsx on its very
+// first render — before useAuth's async getSession() or signInToRemote's
+// data fetch have resolved. Neither is real app data; they only exist so
+// that first render doesn't have to guess "guest" and paint something that
+// turns out to be wrong a moment later.
+//
+// Without these, a signed-in user reloading the page used to see: AppInner
+// mount immediately in guest mode (App.jsx's dataMode starts 'guest', and
+// the effect that would change that skips its body entirely while
+// useAuth's authLoading is still true) — reading local guest-mode
+// localStorage for theme/seenCoachMarks/motivationCardUsed/etc, all of
+// which are typically empty/default on the account's actual device — then,
+// once the real session resolved a beat later, a blank loading screen, then
+// a full remount with the real data. Three visibly different paints:
+// wrong-theme-and-"unseen"-coach-marks, blank, correct. That's the reported
+// flicker and the reappearing coach marks — not a persistence bug (nothing
+// was ever actually lost), a render-race in what gets painted before the
+// real answer is known.
+
+// "Did this browser most recently finish loading as a signed-in account?"
+// Set only once signInToRemote() actually succeeds; cleared on explicit
+// sign-out. A reload that finds this true starts dataMode at 'loading'
+// instead of 'guest', skipping the throwaway guest-mode paint entirely (see
+// App.jsx). Left untouched on a *failed* remote load (network hiccup, etc.)
+// — that's a signed-in user whose data just didn't load this one time, not
+// someone who should be downgraded to the fast guest path on their next
+// reload too.
+const AUTH_HINT_KEY = 'pomodoro_had_session'
+export function hasAuthHint() {
+  return localStorage.getItem(AUTH_HINT_KEY) === 'true'
+}
+export function setAuthHint() {
+  localStorage.setItem(AUTH_HINT_KEY, 'true')
+}
+export function clearAuthHint() {
+  localStorage.removeItem(AUTH_HINT_KEY)
+}
+
+// Best-guess resolved theme class (already run through themeClassName) for
+// that same loading screen's own background, so it isn't just an unstyled
+// flash of the hardcoded default while the real settings load. Purely a
+// visual guess — updated every time App.jsx knows the real resolved theme
+// (guest or signed-in) — and self-corrects the instant real data arrives,
+// same as every other field this bug affects.
+const LAST_THEME_HINT_KEY = 'pomodoro_last_theme'
+export function getLastThemeHint() {
+  return localStorage.getItem(LAST_THEME_HINT_KEY)
+}
+export function setLastThemeHint(themeClass) {
+  localStorage.setItem(LAST_THEME_HINT_KEY, themeClass)
 }
 
 // Cross-tab sync: the native 'storage' event fires in *other* tabs/windows

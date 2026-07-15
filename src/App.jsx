@@ -13,8 +13,14 @@ import {
   signOutFromRemote,
   hasSeenGuestSignupNudge,
   markGuestSignupNudgeSeen,
+  hasAuthHint,
+  setAuthHint,
+  clearAuthHint,
+  getLastThemeHint,
+  setLastThemeHint,
 } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
+import { LanguageProvider } from './lib/i18n/LanguageContext'
 import { themeClassName } from './lib/theme'
 import { totalTimetableHours } from './lib/timetable'
 import Timer from './components/Timer'
@@ -64,7 +70,13 @@ function nowTime() {
 // uses the manual JSON/CSV export-then-import feature in Settings > Data.
 function App() {
   const { user, loading: authLoading } = useAuth()
-  const [dataMode, setDataMode] = useState('guest') // 'guest' | 'loading' | 'remote'
+  // Starts at 'loading' (skipping the guest paint entirely) rather than
+  // always 'guest' when this browser's last successful load was signed in
+  // — see storage.js's hasAuthHint for the full reasoning; this is the fix
+  // for the reload flicker/reappearing-coach-marks bug. Guests (the common
+  // case, hint never set) are completely unaffected: dataMode still starts
+  // 'guest' and AppInner still mounts on the very first render, no wait.
+  const [dataMode, setDataMode] = useState(() => (hasAuthHint() ? 'loading' : 'guest')) // 'guest' | 'loading' | 'remote'
   // Deliberately its own piece of state rather than derived from `user`/
   // `dataMode` at render time (e.g. `user ? user.id : 'guest'`). Deriving it
   // that way used to remount AppInner the instant `user` flipped to null —
@@ -102,6 +114,9 @@ function App() {
       // previous session's outcome as the new one's.
       setDataError(null)
       setIsNewAccount(false)
+      // A genuinely signed-out browser should get the fast guest path on its
+      // next reload too, not keep paying for the 'loading' gate.
+      clearAuthHint()
       return
     }
 
@@ -120,6 +135,10 @@ function App() {
       setIsNewAccount(result.isNewAccount)
       setDataMode('remote')
       setAppKey(userId)
+      // Marks this browser as "signed in as of last successful load" so the
+      // *next* reload's very first render can skip straight to 'loading'
+      // instead of guest — see hasAuthHint's own comment.
+      setAuthHint()
     })
     return () => {
       cancelled = true
@@ -129,10 +148,19 @@ function App() {
   if (dataMode === 'loading') return <LoadingAccountScreen />
 
   return (
-    <>
+    // Keyed the same as AppInner, and wrapping it (rather than staying at
+    // main.jsx's top level, above this whole gate) so language state
+    // remounts in lockstep with every other per-account field below —
+    // before this, LanguageProvider's language was read once, at the very
+    // first ever paint of the whole app, and never revisited: a signed-in
+    // account's saved language preference silently never applied on reload
+    // (the app just kept whatever guest/auto-detected language it guessed
+    // at that first paint), the same class of bug as the theme/coach-mark
+    // flicker above but with no visible flicker to notice it by.
+    <LanguageProvider key={appKey}>
       {dataError && <ErrorBanner onDismiss={() => setDataError(null)} messageKey="account.loadErrorNotice" />}
       <AppInner key={appKey} isNewAccount={isNewAccount} />
-    </>
+    </LanguageProvider>
   )
 }
 
@@ -149,17 +177,19 @@ function GearIcon({ className }) {
   )
 }
 
-// Rendered only for the brief moment between "user id changed" and
-// signInToRemote() resolving — AppInner's hooks read storage synchronously
-// on mount, so *something* has to gate rendering until activeProvider has
-// actually switched over and its cache is warm, or the fresh hooks would
-// read stale/wrong data. Deliberately minimal: no message text, no per-guest
-// theme resolution (an earlier version tried to match the guest's last-seen
-// theme here, purely to avoid a color flash during the old, much slower
-// merge-and-confirm flow — not worth the complexity now that this is just a
-// plain data fetch, typically well under a second).
+// Rendered for the brief moment between "we suspect/know this is a signed-in
+// browser" and signInToRemote() resolving — AppInner's hooks read storage
+// synchronously on mount, so *something* has to gate rendering until
+// activeProvider has actually switched over and its cache is warm, or the
+// fresh hooks would read stale/wrong data. Deliberately minimal: no message
+// text, no spinner. It does apply storage.js's cached last-known theme class
+// (getLastThemeHint) though — a plain hardcoded background here would itself
+// be a visible flash-of-wrong-theme for any returning user whose real theme
+// isn't the default, on top of the swap to their actual theme a moment
+// later. Falls back to 'dark' (via themeClassName(null)) the first time
+// this browser has ever loaded, same as the app's overall default.
 function LoadingAccountScreen() {
-  return <div className="min-h-screen bg-pine" />
+  return <div className={`min-h-screen bg-pine ${themeClassName(getLastThemeHint())}`} />
 }
 
 function ErrorBanner({ messageKey, onDismiss }) {
@@ -187,7 +217,10 @@ function AppInner({ isNewAccount }) {
   const { user } = useAuth()
   const inventoryApi = useInventory()
   const todayApi = useTodayTasks()
-  const categoriesApi = useCategories()
+  // isNewAccount defers default-category seeding until AccountSetupFlow
+  // finishes (see useCategories' own comment) — irrelevant for guests/
+  // returning accounts, which are never isNewAccount and seed immediately.
+  const categoriesApi = useCategories(isNewAccount)
   // Lifted up from TodoToday (design-mockups/07): AvailablePomodoros and
   // Timetable moved to Planning's secondary column, as Inventory's
   // neighbors rather than TodoToday's children, so the hook has to live
@@ -463,6 +496,16 @@ function AppInner({ isNewAccount }) {
       })
 
   const rootThemeId = theme === 'custom' ? customThemeGeneral : theme
+
+  // Keeps App()'s LoadingAccountScreen's best-guess background current —
+  // see storage.js's setLastThemeHint. Runs for guests too (harmless,
+  // just keeps the guess fresh in case this browser signs in later); the
+  // real, authoritative theme always wins the instant it's actually known,
+  // this only affects what's painted for the brief window before that.
+  useEffect(() => {
+    setLastThemeHint(themeClassName(rootThemeId))
+  }, [rootThemeId])
+
   const timerThemeId =
     theme === 'custom'
       ? { work: customThemeFocus, shortBreak: customThemeShortBreak, longBreak: customThemeLongBreak }[
@@ -706,7 +749,16 @@ function AppInner({ isNewAccount }) {
 
       {showAccountSetup && (
         <AccountSetupFlow
-          onFinish={() => setShowAccountSetup(false)}
+          // seedIfNeeded runs here, not earlier — this is the deterministic
+          // point where the wizard's own language step (if the user touched
+          // it) has already been persisted via setLanguage/patchSettings, so
+          // seedDefaultCategories() picks up the language the user actually
+          // ended up with instead of whatever the browser auto-detected
+          // before they had a chance to choose. See useCategories.js.
+          onFinish={() => {
+            setShowAccountSetup(false)
+            categoriesApi.seedIfNeeded()
+          }}
           displayName={displayName}
           setDisplayName={setDisplayName}
           theme={theme}

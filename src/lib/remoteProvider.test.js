@@ -30,7 +30,26 @@ function createMockSupabase(responses) {
       },
       upsert(rows, options) {
         calls.push({ table, method: 'upsert', args: [rows, options] })
-        return resolveWith('upsertResult', { error: null })
+        // Returns a chain (not a bare promise) so upsertSingletonAndFetch's
+        // `.upsert(...).select().single()` can keep chaining off it, while
+        // still resolving directly for every other caller that just
+        // `await`s the upsert call bare (upsertArrayTable/upsertSingleton) —
+        // its own .then() below resolves with the plain 'upsertResult' key,
+        // untouched by the .select()/.single() addition.
+        return {
+          select(columns) {
+            calls.push({ table, method: 'select', args: [columns] })
+            return {
+              single() {
+                calls.push({ table, method: 'single' })
+                return resolveWith('upsertAndFetchResult', { data: null, error: null })
+              },
+            }
+          },
+          then(onFulfilled, onRejected) {
+            return resolveWith('upsertResult', { error: null }).then(onFulfilled, onRejected)
+          },
+        }
       },
       delete() {
         calls.push({ table, method: 'delete' })
@@ -97,7 +116,14 @@ describe('initializeRemoteData', () => {
 
   it('creates a minimal settings row (not a full default object) when none exists yet, and reports isNewAccount: true', async () => {
     const { initializeRemoteData, get } = await loadRemoteProviderWith({
-      settings: { singleSelect: { data: null, error: null } },
+      settings: {
+        singleSelect: { data: null, error: null },
+        // What Postgres actually returns for the row this call creates —
+        // see upsertSingletonAndFetch, which now trusts this response for
+        // the cache instead of assuming the payload it sent is the whole
+        // row (see the false-negative regression test below for why).
+        upsertAndFetchResult: { data: { user_id: 'user-1' }, error: null },
+      },
     })
 
     const result = await initializeRemoteData('user-1')
@@ -117,6 +143,72 @@ describe('initializeRemoteData', () => {
     expect(upsertCall.args[0]).not.toHaveProperty('cycle_length')
   })
 
+  // Regression test for a MAJOR reported bug: a signed-in user's theme,
+  // language, display name, daily Pomodoro goal, and seen-coach-marks all
+  // reverting to their defaults on a page reload — while Planning/Reports
+  // data and categories (all separate array tables, unaffected by this code
+  // path) kept persisting fine. Root cause: fetchSingletonTableWithRetry's
+  // "no row found" result is trusted as conclusive proof of a brand-new
+  // account after just one retry, but that single retry was never proven to
+  // rule out every real-world false negative (see its own comment) — e.g.
+  // replication lag right after this exact account's row was written moments
+  // earlier, or a page reload racing a still-in-flight write. When that
+  // happens for an account that already has a real settings row server-side,
+  // the old code still hardcoded the local cache to `{ userId }`, discarding
+  // every real field for the rest of the session — exactly the theme/
+  // language/name/goal/coachmarks reset that was reported, and, if anything
+  // in that session later called patchSettings (routine — e.g. the coach-
+  // mark or default-category-seeding effects that run right after sign-in),
+  // it would push that blanked object back to Supabase and clobber the real
+  // row server-side too, turning a transient hiccup into permanent loss.
+  // Fixed by trusting upsertSingletonAndFetch's response (a real .select()
+  // read of the row Postgres ends up with) for the cache instead of
+  // assuming the minimal upsert payload IS the whole row — self-healing to
+  // the account's real data even when the "no row" signal was wrong.
+  it('recovers the real settings instead of wiping them when "no row found" turns out to be a false negative', async () => {
+    const realExistingRow = {
+      user_id: 'user-1',
+      theme: 'dark',
+      language: 'tr',
+      display_name: 'Alperen',
+      daily_pomodoro_goal: 8,
+      seen_coach_marks: ['timer-intro', 'planning-intro'],
+    }
+    const { initializeRemoteData, get } = await loadRemoteProviderWith({
+      settings: {
+        // The SELECT (used for the "does a row exist" check) comes back
+        // empty even though the row genuinely exists — simulating the
+        // documented, unproven-but-possible false-negative race.
+        singleSelect: { data: null, error: null },
+        // But the upsert's own .select() (a real read of the resulting row,
+        // issued moments later in the same request) sees it — Postgres
+        // upsert with a `{ user_id }`-only payload only touches user_id/
+        // created_at/updated_at, so the pre-existing columns are exactly as
+        // they were.
+        upsertAndFetchResult: { data: realExistingRow, error: null },
+      },
+    })
+
+    const result = await initializeRemoteData('user-1')
+
+    // isNewAccount is still (incorrectly) true here — this fix doesn't
+    // claim to make that determination race-proof, only to stop it from
+    // costing the user their real data. AccountSetupFlow re-showing once in
+    // this rare case is the accepted residual cosmetic cost.
+    expect(result.isNewAccount).toBe(true)
+    expect(result.error).toBeNull()
+    // The important part: the account's REAL settings, not a blanked
+    // { userId } object, are what's in the cache after this call.
+    expect(get('pomodoro_settings', null)).toMatchObject({
+      userId: 'user-1',
+      theme: 'dark',
+      language: 'tr',
+      displayName: 'Alperen',
+      dailyPomodoroGoal: 8,
+      seenCoachMarks: ['timer-intro', 'planning-intro'],
+    })
+  })
+
   // Regression test for the reported bug: AccountSetupFlow re-triggering on
   // a second sign-in to an account that had already completed it. Root
   // cause was that the settings row used to only get created when a
@@ -130,7 +222,12 @@ describe('initializeRemoteData', () => {
   // mock, updating the mock's settings response in between to reflect the
   // row the first call actually created.
   it('a second call for the same account finds the row the first call created, and reports isNewAccount: false', async () => {
-    const responses = { settings: { singleSelect: { data: null, error: null } } }
+    const responses = {
+      settings: {
+        singleSelect: { data: null, error: null },
+        upsertAndFetchResult: { data: { user_id: 'user-1' }, error: null },
+      },
+    }
     const { initializeRemoteData } = await loadRemoteProviderWith(responses)
 
     const first = await initializeRemoteData('user-1')

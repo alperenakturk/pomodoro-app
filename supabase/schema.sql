@@ -650,3 +650,49 @@ grant select, insert, update, delete on public.card_draws to authenticated;
 -- ----------------------------------------------------------------------------
 alter table public.timer_state
   add column if not exists motivation_card_used boolean not null default false;
+
+-- ----------------------------------------------------------------------------
+-- default_categories_seeded (settings) — this column was never added despite
+-- DEFAULT_SETTINGS.defaultCategoriesSeeded (storage.js) being a real field
+-- since before the "Schema-drift fix" block above. Root-caused via the
+-- browser Network tab: every settings write sends the *full* merged
+-- settings object (see toRemoteRow/upsertSingleton in remoteProvider.js),
+-- so a payload containing this unrecognized key was rejected outright by
+-- PostgREST — "PGRST204: Could not find the 'default_categories_seeded'
+-- column of 'settings' in the schema cache" — which failed the ENTIRE row
+-- upsert, not just this one field. In practice this meant every settings
+-- change for a signed-in user (theme, display name, daily goal, coach
+-- marks, anything) silently stopped persisting the moment
+-- defaultCategoriesSeeded became part of the payload, which is on the very
+-- first sign-in — matching the reported "theme/name/goal/coach-marks all
+-- reset on reload" symptom (they were never being saved, not literally
+-- reset). Unlike seen_coach_marks/daily_pomodoro_goal above, a missing
+-- column here is NOT harmless, because it poisons the whole-object upsert
+-- every other field rides along in. Same boolean-flag convention as
+-- check_to_bottom.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists default_categories_seeded boolean not null default false;
+
+-- ----------------------------------------------------------------------------
+-- is_default (categories) — same missing-column class of bug as
+-- default_categories_seeded above, found by auditing every other
+-- normalize*() function in storage.js against this file after the settings
+-- bug turned up. normalizeCategory's `isDefault` field (storage.js) marks a
+-- still-pristine, auto-seeded starter category (useCategories.js) — cleared
+-- the moment the user edits one. It is sent as `is_default` on EVERY
+-- category upsert (default-seeded or user-created, not just at seed time —
+-- normalizeCategory always fills this key in), via the same generic
+-- saveCategories -> upsertArrayTable path every other category write uses.
+-- storage.js's own comment on this field claims it is "never sent to
+-- Supabase" via a "signInToRemote migration snapshot" — that snapshot
+-- mechanism was removed entirely when the automatic local-to-cloud merge
+-- flow was deleted (see Cloud sync in AGENTS.md history), leaving that
+-- comment stale and incorrect; nothing in the current code filters this
+-- field out. Without this column, every category add/rename/recolor/delete
+-- for a signed-in user has been silently failing to sync (caught and only
+-- console.error'd by remoteProvider.js's set()), since is_default is always
+-- present in the row.
+-- ----------------------------------------------------------------------------
+alter table public.categories
+  add column if not exists is_default boolean not null default false;

@@ -33,10 +33,41 @@ import {
   addTick,
   importBackup,
   importActivityLogCSV,
+  signInToRemote,
+  signOutFromRemote,
 } from './storage'
+
+// Only needed by the signInToRemote describe block below — every other test
+// in this file exercises the plain localStorage path and never touches
+// remoteProvider at all, so this mock is inert for them.
+const remoteCache = {}
+let mockIsNewAccount = false
+let mockRemoteSettings = {}
+vi.mock('./remoteProvider', () => ({
+  initializeRemoteData: vi.fn(async (userId) => {
+    remoteCache.pomodoro_settings = { userId, ...mockRemoteSettings }
+    remoteCache.pomodoro_categories = remoteCache.pomodoro_categories ?? []
+    return { error: null, isNewAccount: mockIsNewAccount }
+  }),
+  resetToLocalMode: vi.fn(() => {
+    delete remoteCache.pomodoro_settings
+    delete remoteCache.pomodoro_categories
+  }),
+  get: vi.fn((collection, fallback) => remoteCache[collection] ?? fallback),
+  set: vi.fn((collection, value) => {
+    remoteCache[collection] = value
+  }),
+  remove: vi.fn((collection) => {
+    remoteCache[collection] = []
+  }),
+}))
 
 beforeEach(() => {
   localStorage.clear()
+  delete remoteCache.pomodoro_settings
+  delete remoteCache.pomodoro_categories
+  mockIsNewAccount = false
+  mockRemoteSettings = {}
 })
 
 describe('load-time normalization', () => {
@@ -240,6 +271,65 @@ describe('Categories', () => {
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-02T00:00:00.000Z',
     })
+  })
+})
+
+// Regression tests for a reported bug: a brand-new signed-in account's
+// starter categories were always seeded in English, regardless of what
+// language the user picked in AccountSetupFlow. Root cause was here, not in
+// useCategories.js (an earlier fix attempt targeted useCategories.js's own
+// seeding, which turned out to never even run for signed-in users — see
+// below): signInToRemote() used to call seedDefaultCategoriesRemotely()
+// unconditionally, straight after initializeRemoteData() resolved and
+// *before* App.jsx ever mounts AppInner/useCategories()/AccountSetupFlow.
+// At that point in time, for a genuinely new account, settings.language is
+// still null (the user hasn't reached AccountSetupFlow's language step
+// yet), so resolveLanguage() always fell back to the browser's auto-detected
+// language — and this call also stamped defaultCategoriesSeeded: true, so
+// useCategories.js's own (correctly-deferred) seeding always found "already
+// seeded" and did nothing once it got a chance to run. Fixed by skipping
+// this call entirely when initializeRemoteData reports isNewAccount: true —
+// that responsibility now belongs to useCategories.js's seedIfNeeded(),
+// called from AccountSetupFlow's onFinish once the language step (if used)
+// has actually resolved.
+describe('signInToRemote: default-category seeding language', () => {
+  afterEach(() => {
+    signOutFromRemote()
+  })
+
+  it('does NOT seed categories for a brand-new account (defers to useCategories/AccountSetupFlow instead)', async () => {
+    mockIsNewAccount = true
+    mockRemoteSettings = { language: null } // no language chosen yet — matches a true new account
+    const result = await signInToRemote('user-1')
+
+    expect(result.isNewAccount).toBe(true)
+    expect(loadCategories()).toEqual([])
+    expect(loadSettings().defaultCategoriesSeeded).toBe(false)
+  })
+
+  it('still seeds immediately for a returning account with somehow-zero categories (old behavior preserved)', async () => {
+    mockIsNewAccount = false
+    mockRemoteSettings = { language: 'tr' }
+    await signInToRemote('user-1')
+
+    expect(loadCategories().length).toBeGreaterThan(0)
+    expect(loadCategories().every((c) => c.name)).toBe(true)
+    // Seeded using the account's own already-known language (tr), unlike
+    // the new-account path this doesn't need to wait for anything.
+    expect(loadCategories().map((c) => c.name)).toEqual(
+      expect.arrayContaining(['İş', 'Ders', 'Kişisel', 'Yönetimsel', 'Sağlık'])
+    )
+    expect(loadSettings().defaultCategoriesSeeded).toBe(true)
+  })
+
+  it('does not seed (new or returning) when the account already has its own categories', async () => {
+    remoteCache.pomodoro_categories = [{ id: 'existing', name: 'Existing', color: '#000' }]
+    mockIsNewAccount = false
+    mockRemoteSettings = {}
+    await signInToRemote('user-1')
+
+    expect(loadCategories()).toHaveLength(1)
+    expect(loadCategories()[0]).toMatchObject({ id: 'existing', name: 'Existing', color: '#000' })
   })
 })
 

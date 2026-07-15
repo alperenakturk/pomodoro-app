@@ -5,7 +5,17 @@ import { diffClass, diffLabel } from '../lib/diffHelpers'
 import UnplannedCapture from './UnplannedCapture'
 import CategoryTagPicker from './CategoryTagPicker'
 
-const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_26px_26px_26px_16px_16px_16px] gap-1.5 items-center'
+// The three 40px columns hold the estimate/real/diff header labels and
+// values — sized for the Turkish header text ("Tahmin"/"Gerçek"/"Fark"),
+// which is wider than the English ("Est."/"Real"/"Diff") that used to size
+// this at 26px. Each row (including the header row above the list) renders
+// as its own independent grid container rather than a shared CSS grid/table,
+// so column widths can't auto-align across rows via intrinsic sizing (e.g.
+// `max-content`) — only matching fixed pixel widths keep the header and
+// every row's cells lined up. Fixed widths also mean any text wider than
+// its column isn't clipped, just overflows into the neighbor — which is
+// exactly what was happening with the Turkish labels at 26px.
+const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_40px_40px_40px_16px_16px_16px] gap-1.5 items-center'
 
 function diffOf(task) {
   return task.estimate != null ? task.realized - task.estimate : null

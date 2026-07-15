@@ -86,3 +86,70 @@ describe('useCategories default seeding', () => {
     expect(result.current.categories[0].name).toBe('Existing')
   })
 })
+
+// Regression tests for a reported bug: a brand-new signed-in account's
+// starter categories were always seeded in English regardless of what
+// language the user picked during AccountSetupFlow. Root cause: useCategories'
+// seeding used to run unconditionally in its lazy useState initializer, which
+// fires on AppInner's very first render — the exact render that first paints
+// AccountSetupFlow, before the user could possibly have acted on its
+// 'language' step yet. seedDefaultCategories() always resolved whatever
+// language was in settings *at that instant* (null for a true new account,
+// so it fell back to the browser's auto-detected language), never the
+// language the user went on to explicitly choose a few clicks later. Fixed
+// with a `deferSeeding` param (App.jsx passes isNewAccount) that skips the
+// auto-seed on mount, plus a `seedIfNeeded()` escape hatch App.jsx calls from
+// AccountSetupFlow's onFinish — the point where the language step (if
+// touched) has already been persisted.
+describe('useCategories deferred seeding (new-account language fix)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('does not seed on mount when deferSeeding is true', () => {
+    const { result } = renderHook(() => useCategories(true))
+    expect(result.current.categories).toHaveLength(0)
+  })
+
+  it('seeds using the language chosen before seedIfNeeded is called, not whatever was set at mount time', () => {
+    // Nothing chosen yet at mount (a true new account's settings.language
+    // starts null) -> mirrors the moment AccountSetupFlow first paints.
+    const { result } = renderHook(() => useCategories(true))
+    expect(result.current.categories).toHaveLength(0)
+
+    // Simulates the user picking Turkish partway through AccountSetupFlow's
+    // own 'language' step (LanguageContext's setLanguage calls exactly this).
+    localStorage.setItem('pomodoro_settings', JSON.stringify({ language: 'tr' }))
+
+    // AccountSetupFlow finishing (Continue through every step, or Skip) is
+    // when App.jsx calls seedIfNeeded().
+    act(() => result.current.seedIfNeeded())
+
+    expect(result.current.categories).toHaveLength(DEFAULT_CATEGORY_SEEDS.length)
+    expect(result.current.categories.map((c) => c.name)).toEqual(
+      expect.arrayContaining(['İş', 'Ders', 'Kişisel', 'Yönetimsel', 'Sağlık'])
+    )
+  })
+
+  it('seedIfNeeded is a no-op once seeding already happened', () => {
+    const { result } = renderHook(() => useCategories(true))
+    act(() => result.current.seedIfNeeded())
+    expect(result.current.categories).toHaveLength(DEFAULT_CATEGORY_SEEDS.length)
+
+    act(() => {
+      result.current.categories.forEach((c) => result.current.removeCategory(c.id))
+    })
+    expect(result.current.categories).toHaveLength(0)
+
+    // A second seedIfNeeded call (e.g. AccountSetupFlow somehow finishing
+    // twice) must not silently bring the starter set back after the user
+    // deleted it — same one-time-only guarantee as the immediate-seeding path.
+    act(() => result.current.seedIfNeeded())
+    expect(result.current.categories).toHaveLength(0)
+  })
+
+  it('a guest/returning account (deferSeeding false) still seeds immediately, unaffected by this fix', () => {
+    const { result } = renderHook(() => useCategories(false))
+    expect(result.current.categories).toHaveLength(DEFAULT_CATEGORY_SEEDS.length)
+  })
+})

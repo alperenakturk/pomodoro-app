@@ -116,6 +116,23 @@ async function upsertSingleton(table, userId, value) {
   if (error) throw error
 }
 
+// Same upsert as above, but returns the row Postgres actually ends up with
+// (via .select()) instead of discarding the response — see
+// initializeRemoteData's "no row found" branch for why this distinction
+// matters. A plain upsert's response isn't fetched at all normally (fire-
+// and-forget saves via set() don't need it), so this is a separate function
+// rather than a flag on upsertSingleton, to keep that hot path's response
+// handling unchanged.
+async function upsertSingletonAndFetch(table, userId, value) {
+  const { data, error } = await supabase
+    .from(table)
+    .upsert(toRemoteRow(value, userId), { onConflict: 'user_id' })
+    .select()
+    .single()
+  if (error) throw error
+  return mapKeysToCamel(data)
+}
+
 // Runs once, right after sign-in, before storage.js switches its active
 // provider to this module — fetches every collection straight from Supabase
 // and warms the cache. Deliberately does NOT look at localStorage at all:
@@ -195,8 +212,31 @@ export async function initializeRemoteData(userId) {
         continue
       }
       isNewAccount = true
-      await upsertSingleton(table, userId, {})
-      cache[key] = { userId }
+      // Uses the *AndFetch variant and trusts its response for the cache,
+      // rather than assuming the upsert created a blank row and hardcoding
+      // cache[key] = { userId }. That assumption was a real bug: when the
+      // "no row found" signal above is a false negative (fetchSingleton-
+      // TableWithRetry's own comment already flags this as a known,
+      // unproven-but-not-ruled-out race — e.g. replication lag right after
+      // this same account's real first-ever row was written, or two tabs
+      // signing in at once), the row already exists with the user's real
+      // theme/language/displayName/seenCoachMarks/dailyPomodoroGoal — this
+      // upsert's payload (just `{ userId }`) only touches user_id/created_at/
+      // updated_at (Postgres upsert leaves columns absent from the payload
+      // untouched), so the *server* row was always safe. But hardcoding the
+      // *local* cache to `{ userId }` regardless meant this session's UI
+      // showed every settings field reset to default anyway — and, worse,
+      // the next time anything called patchSettings() (e.g. the coach-mark/
+      // category-seeding effects below, or just the user touching a Settings
+      // toggle), it would merge onto that blanked cache and push the full
+      // default-filled object back to Supabase, this time actually
+      // clobbering the real row for good. Fetching the row back after the
+      // upsert closes that gap: a genuinely new account gets the freshly-
+      // created minimal row back (identical to the old hardcoded value), but
+      // a false-negative "no row" for an established account self-heals to
+      // its real data within this same session instead of only fixing
+      // itself server-side while the client stays wrong.
+      cache[key] = await upsertSingletonAndFetch(table, userId, {})
     }
     anySuccess = true
   } catch (error) {
