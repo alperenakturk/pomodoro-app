@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { isCurrentBlock } from '../lib/timetable'
 import { useTranslation } from '../hooks/useTranslation'
 import CollapseToggle from './CollapseToggle'
@@ -119,4 +119,7 @@ function Timetable({ blocks, addBlock, removeBlock }) {
   )
 }
 
-export default Timetable
+// Memoized — see Inventory.jsx's identical note. blocks/addBlock/removeBlock
+// are already stable across unrelated re-renders (useTimetable's own state +
+// useCallback), so this needs no App.jsx-side changes to be effective.
+export default memo(Timetable)

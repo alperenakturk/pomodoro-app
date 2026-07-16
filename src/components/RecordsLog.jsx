@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import {
   loadActivityLog,
   subscribeToChanges,
@@ -350,4 +350,7 @@ function RecordsLog({ categories = [], onManageCategories }) {
   )
 }
 
-export default RecordsLog
+// Memoized — see Inventory.jsx's identical note. Relies on App.jsx
+// useCallback-wrapping onManageCategories so this doesn't get a fresh prop
+// identity (and re-filter/re-render its whole log) every second.
+export default memo(RecordsLog)

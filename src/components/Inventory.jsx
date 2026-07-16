@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
@@ -457,4 +457,12 @@ function Inventory({
   )
 }
 
-export default Inventory
+// Memoized: App.jsx's usePomodoro tick (once a second while a Pomodoro is
+// running) lives in the same parent as this component, and every other tab
+// panel — none of this component's own state depends on the countdown at
+// all, so re-rendering it (and every one of its InventoryRow children) every
+// second was pure waste. Effective only as long as every prop passed in
+// from App.jsx stays referentially stable across an unrelated re-render —
+// see App.jsx's own useCallback wrapping of onSendToToday/onManageCategories
+// for the half of that contract this file doesn't control.
+export default memo(Inventory)

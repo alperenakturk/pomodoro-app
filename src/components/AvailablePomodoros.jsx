@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { loadSettings } from '../lib/storage'
 import { countAvailablePomodoros } from '../lib/pomodoroMath'
 import { useTranslation } from '../hooks/useTranslation'
@@ -84,4 +84,8 @@ function AvailablePomodoros({ plannedTotal, suggestedHours = 0 }) {
   )
 }
 
-export default AvailablePomodoros
+// Memoized — see Inventory.jsx's identical note. plannedTotal/suggestedHours
+// are plain numbers (see App.jsx's useMemo wrapping their computation) —
+// primitive props compare correctly by value even across an unmemoized
+// computation, so this needs no further prop-stabilization to be effective.
+export default memo(AvailablePomodoros)

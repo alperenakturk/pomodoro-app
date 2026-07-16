@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useInventory } from './hooks/useInventory'
 import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
@@ -31,7 +31,6 @@ import Timetable from './components/Timetable'
 import RecordsLog from './components/RecordsLog'
 import Reports from './components/Reports'
 import TabNav from './components/TabNav'
-import SettingsModal from './components/SettingsModal'
 import ProfileMenu from './components/ProfileMenu'
 import CoachMark from './components/CoachMark'
 import MethodologyGuideModal from './components/MethodologyGuideModal'
@@ -39,6 +38,14 @@ import AccountSetupFlow from './components/AccountSetupFlow'
 import GuestSignupNudge from './components/GuestSignupNudge'
 import AuthModal from './components/AuthModal'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
+
+// Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
+// `settingsOpen` is true (see its conditional render below), and never
+// needed for first paint (the Timer tab). Splitting it into its own chunk
+// keeps it out of the bundle everyone downloads on first load, including
+// guests who never open it in a session. See the <Suspense> wrapper below
+// for the fallback shown for the brief moment the chunk is still loading.
+const SettingsModal = lazy(() => import('./components/SettingsModal'))
 
 function todayString() {
   return new Date().toISOString().slice(0, 10)
@@ -242,10 +249,15 @@ function AppInner({ isNewAccount }) {
   // opens (conditionally rendered below), so setting this right before
   // setSettingsOpen(true) is enough.
   const [settingsInitialCategory, setSettingsInitialCategory] = useState('general')
-  function openCategoryManager() {
+  // useCallback (stable identity, [] deps — only ever touches setState
+  // functions) so this stays referentially stable across an unrelated
+  // re-render — Inventory/TodoToday/RecordsLog are now memo()'d and take
+  // this as a prop, so a fresh identity here every render would silently
+  // defeat that memoization.
+  const openCategoryManager = useCallback(() => {
     setSettingsInitialCategory('data')
     setSettingsOpen(true)
-  }
+  }, [])
 
   const [theme, setTheme] = useState(() => loadSettings().theme)
 
@@ -365,54 +377,111 @@ function AppInner({ isNewAccount }) {
   // reappears) — "Learn more" additionally opens MethodologyGuideModal at
   // that mark's most relevant topic.
   const [seenCoachMarks, setSeenCoachMarksState] = useState(() => loadSettings().seenCoachMarks)
-  function markCoachMarkSeen(id) {
-    setSeenCoachMarksState((prev) => (prev.includes(id) ? prev : [...prev, id]))
-    patchSettings({ seenCoachMarks: [...new Set([...loadSettings().seenCoachMarks, id])] })
-  }
+  // Reads the previous value from the functional setState updater instead of
+  // a separate loadSettings() call — patchSettings() already does its own
+  // internal loadSettings() to merge onto, so the old explicit call here was
+  // reading the exact same data a second time for no reason. `next` is also
+  // reused for both the state update and the persisted value, so the two
+  // never have a chance to disagree.
+  // useCallback ([] deps — only closes over the stable setState function and
+  // the module-level patchSettings import) so this stays referentially
+  // stable across an unrelated re-render — Reports is now memo()'d and takes
+  // this as onDismissCoachMark, so a fresh identity here every render would
+  // silently defeat that memoization.
+  const markCoachMarkSeen = useCallback((id) => {
+    setSeenCoachMarksState((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id]
+      patchSettings({ seenCoachMarks: next })
+      return next
+    })
+  }, [])
   function replayCoachMarks() {
     setSeenCoachMarksState([])
     patchSettings({ seenCoachMarks: [] })
   }
   const [guideOpen, setGuideOpen] = useState(false)
   const [guideInitialSection, setGuideInitialSection] = useState(null)
-  function openGuide(sectionId) {
+  // useCallback — see markCoachMarkSeen above; openGuide is itself a
+  // dependency of onLearnMoreCoachMark below, which is also passed to
+  // memo()'d Reports.
+  const openGuide = useCallback((sectionId) => {
     setGuideInitialSection(sectionId ?? null)
     setGuideOpen(true)
-  }
+  }, [])
   // "Learn more" always both marks the mark seen and opens the guide at its
   // most relevant topic — shared by every section (Timer computes its own
   // mark id internally, so it gets this generic id-taking version too).
-  function onLearnMoreCoachMark(id) {
-    const mark = COACH_MARKS.find((m) => m.id === id)
-    markCoachMarkSeen(id)
-    openGuide(mark.guideSection)
-  }
+  // useCallback: passed to memo()'d Reports as onLearnMoreCoachMark.
+  const onLearnMoreCoachMark = useCallback(
+    (id) => {
+      const mark = COACH_MARKS.find((m) => m.id === id)
+      markCoachMarkSeen(id)
+      openGuide(mark.guideSection)
+    },
+    [markCoachMarkSeen, openGuide]
+  )
 
   const activeTask = todayApi.tasks.find((t) => t.id === todayApi.activeTaskId)
+
+  // Memoized so AvailablePomodoros (now memo()'d) doesn't recompute — and,
+  // since both are plain numbers, doesn't even see a "changed" prop — on an
+  // unrelated re-render (e.g. the once-a-second Pomodoro tick above) when
+  // neither todayApi.tasks nor timetableApi.blocks actually changed.
+  const plannedTotal = useMemo(
+    () => todayApi.tasks.reduce((sum, task) => sum + (task.estimate || 0), 0),
+    [todayApi.tasks]
+  )
+  const suggestedHours = useMemo(() => totalTimetableHours(timetableApi.blocks), [timetableApi.blocks])
 
   // Envanterden normal planlamayla gelen bir görev "urgent" değildir —
   // Unplanned & Urgent bölümü sadece gün içinde aniden çıkan işler için.
   // Category tags and notes carry over from the Inventory item, per the
   // request that copying a task to Today shouldn't lose either.
-  function handleSendToToday(item) {
-    todayApi.addTask(item.text, item.estimate, {
-      inventoryId: item.id,
-      unplanned: item.unplanned,
-      categoryIds: item.categoryIds,
-      notes: item.notes,
-    })
-  }
+  // useCallback: passed to memo()'d Inventory as onSendToToday — a fresh
+  // identity every render would defeat that memoization (see Inventory.jsx).
+  const handleSendToToday = useCallback(
+    (item) => {
+      todayApi.addTask(item.text, item.estimate, {
+        inventoryId: item.id,
+        unplanned: item.unplanned,
+        categoryIds: item.categoryIds,
+        notes: item.notes,
+      })
+    },
+    // react-hooks/exhaustive-deps can't see that todayApi.addTask (a
+    // useCallback with [] deps inside useTodayTasks.js) is individually
+    // stable even though the todayApi object it lives on is a fresh literal
+    // every render — it only knows how to ask for the whole object, which
+    // would defeat the point of this useCallback (see the comment above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [todayApi.addTask]
+  )
 
   // Görev bittiğinde, eğer envanterden geldiyse envanterden de siliyoruz
   // (kitaptaki "tamamlanan işleri envanterden sil" kuralına uygun).
   // Bu, timer'dan tamamen bağımsız — bir görevi bitirmek çalışan Pomodoro'yu
   // durdurmaz (overlearning için kalan süre kullanılabilir).
-  function handleFinishTask(id) {
-    const task = todayApi.tasks.find((t) => t.id === id)
-    todayApi.finishTask(id)
-    if (checkToBottom) todayApi.moveTaskToEnd(id)
-    if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
-  }
+  // useCallback: passed to memo()'d TodoToday as finishTask — same
+  // referential-stability reasoning as handleSendToToday above. Deliberately
+  // depends on todayApi.tasks/todayApi.finishTask (both change only when
+  // tasks actually change, not on every unrelated re-render), so this still
+  // gets a fresh identity exactly when TodoToday needs to re-render anyway.
+  const handleFinishTask = useCallback(
+    (id) => {
+      const task = todayApi.tasks.find((t) => t.id === id)
+      todayApi.finishTask(id)
+      if (checkToBottom) todayApi.moveTaskToEnd(id)
+      if (task?.inventoryId) inventoryApi.removeItem(task.inventoryId)
+    },
+    // Same react-hooks/exhaustive-deps limitation as handleSendToToday above
+    // — todayApi.finishTask/moveTaskToEnd and inventoryApi.removeItem are
+    // each individually stable (or, for finishTask, deliberately re-created
+    // only when todayApi.tasks itself changes); the lint rule can't verify
+    // that and would rather see the whole (per-render-fresh) todayApi/
+    // inventoryApi objects, which would break the stability this exists for.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [todayApi.tasks, todayApi.finishTask, checkToBottom, todayApi.moveTaskToEnd, inventoryApi.removeItem]
+  )
 
   // Instantiated here (not inside Timer) so the countdown keeps running and
   // stays controllable from the Settings tab regardless of which tab is
@@ -649,10 +718,7 @@ function AppInner({ isNewAccount }) {
           />
 
           <div className="flex flex-col gap-4">
-            <AvailablePomodoros
-              plannedTotal={todayApi.tasks.reduce((sum, task) => sum + (task.estimate || 0), 0)}
-              suggestedHours={totalTimetableHours(timetableApi.blocks)}
-            />
+            <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={suggestedHours} />
             <Timetable
               blocks={timetableApi.blocks}
               addBlock={timetableApi.addBlock}
@@ -692,6 +758,10 @@ function AppInner({ isNewAccount }) {
       </main>
 
       {settingsOpen && (
+        // fallback dims the screen immediately (matching SettingsModal's own
+        // eventual bg-black/60 backdrop) instead of a blank gap while the
+        // lazy chunk loads — see the `lazy(...)` import above.
+        <Suspense fallback={<div className="fixed inset-0 bg-black/60 z-50" />}>
         <SettingsModal
           onClose={() => setSettingsOpen(false)}
           initialCategory={settingsInitialCategory}
@@ -745,6 +815,7 @@ function AppInner({ isNewAccount }) {
           onOpenGuide={openGuide}
           onReplayCoachMarks={replayCoachMarks}
         />
+        </Suspense>
       )}
 
       {showAccountSetup && (

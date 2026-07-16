@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
@@ -554,4 +554,7 @@ function TodoToday({
   )
 }
 
-export default TodoToday
+// Memoized — see Inventory.jsx's identical note. Relies on App.jsx
+// useCallback-wrapping finishTask/onManageCategories so this doesn't get a
+// fresh prop identity (and re-render its whole task list) every second.
+export default memo(TodoToday)

@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import UnplannedCapture from './UnplannedCapture'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
-import MotivationOverlay from './MotivationOverlay'
 import CoachMark from './CoachMark'
 import AuthModal from './AuthModal'
 import { isPipSupported, copyStylesToWindow, fillPipDocument } from '../lib/pip'
@@ -11,6 +10,13 @@ import { useAuth } from '../hooks/useAuth'
 import { useFullscreenBackgroundUrl } from '../hooks/useFullscreenBackgroundUrl'
 import { themeClassName } from '../lib/theme'
 import { pickCoachMark } from '../lib/constants'
+
+// Lazy-loaded: MotivationOverlay is ~1200 lines of card-draw animation/
+// pixel-art code, only ever rendered after a Pomodoro completes (see
+// motivationOverlayOpen/motivationSignUpPreviewOpen below) — never needed
+// for Timer's own first paint. Splitting it into its own chunk keeps it out
+// of the bundle everyone downloads on first load.
+const MotivationOverlay = lazy(() => import('./MotivationOverlay'))
 
 const RING_PULSE_MS = 500
 
@@ -923,26 +929,33 @@ function Timer({
         <KeyboardShortcutsModal onClose={() => setShortcutsModalOpen(false)} />
       )}
 
-      {motivationOverlayOpen && (
-        <MotivationOverlay
-          used={motivationCardUsed}
-          onDraw={markMotivationCardUsed}
-          onClose={() => setMotivationOverlayOpen(false)}
-          seenCoachMarks={seenCoachMarks}
-          onDismissCoachMark={onDismissCoachMark}
-          onLearnMoreCoachMark={onLearnMoreCoachMark}
-        />
-      )}
+      {(motivationOverlayOpen || motivationSignUpPreviewOpen) && (
+        // fallback is a plain dark full-viewport layer (roughly matching
+        // MotivationOverlay's own eventual background) instead of a blank
+        // gap while the lazy chunk loads — see the `lazy(...)` import above.
+        <Suspense fallback={<div className="fixed inset-0 z-50 bg-pine" />}>
+          {motivationOverlayOpen && (
+            <MotivationOverlay
+              used={motivationCardUsed}
+              onDraw={markMotivationCardUsed}
+              onClose={() => setMotivationOverlayOpen(false)}
+              seenCoachMarks={seenCoachMarks}
+              onDismissCoachMark={onDismissCoachMark}
+              onLearnMoreCoachMark={onLearnMoreCoachMark}
+            />
+          )}
 
-      {motivationSignUpPreviewOpen && (
-        <MotivationOverlay
-          guestPreview
-          onClose={() => setMotivationSignUpPreviewOpen(false)}
-          onSignUp={() => {
-            setMotivationSignUpPreviewOpen(false)
-            setMotivationAuthModalOpen(true)
-          }}
-        />
+          {motivationSignUpPreviewOpen && (
+            <MotivationOverlay
+              guestPreview
+              onClose={() => setMotivationSignUpPreviewOpen(false)}
+              onSignUp={() => {
+                setMotivationSignUpPreviewOpen(false)
+                setMotivationAuthModalOpen(true)
+              }}
+            />
+          )}
+        </Suspense>
       )}
 
       {motivationAuthModalOpen && (

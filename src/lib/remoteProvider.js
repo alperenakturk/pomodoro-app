@@ -189,65 +189,90 @@ async function upsertSingletonAndFetch(table, userId, value) {
 // re-triggering AccountSetupFlow forever. Creating the row unconditionally,
 // the moment its absence is detected, means every account gets exactly one
 // settings row on its true first sign-in and never looks "new" again after.
+// Every table fetch below is independently scoped by user_id, so none of
+// them have to wait on each other — they're issued concurrently (Promise.all
+// over per-table async functions that each catch their own error, rather
+// than a bare Promise.all/allSettled over the raw fetches) so a slow or
+// failing table doesn't hold up the others, and total sign-in latency is the
+// slowest single table instead of the sum of all of them. Each table keeps
+// exactly the same isolated try/catch it had when this ran sequentially — a
+// rejection is caught right where it happens and turned into a plain
+// { key, error } result, never left to reject the surrounding Promise.all
+// itself, so one bad table still can't discard the others' already-resolved
+// results (see the two loops below for the real bug this isolation exists
+// for).
 export async function initializeRemoteData(userId) {
   let anySuccess = false
   let lastError = null
   let isNewAccount = false
 
-  for (const [key, table] of Object.entries(ARRAY_TABLES)) {
-    try {
-      const items = await fetchArrayTable(table, userId)
-      cache[key] = items
-      knownIds[key] = new Set(items.map((item) => item.id))
-      anySuccess = true
-    } catch (error) {
-      console.error(`Failed to load ${key} from Supabase:`, error)
-      lastError = error
+  const arrayOutcomes = await Promise.all(
+    Object.entries(ARRAY_TABLES).map(async ([key, table]) => {
+      try {
+        const items = await fetchArrayTable(table, userId)
+        return { key, items }
+      } catch (error) {
+        console.error(`Failed to load ${key} from Supabase:`, error)
+        return { key, error }
+      }
+    })
+  )
+  for (const outcome of arrayOutcomes) {
+    if (outcome.error) {
+      lastError = outcome.error
+      continue
     }
+    cache[outcome.key] = outcome.items
+    knownIds[outcome.key] = new Set(outcome.items.map((item) => item.id))
+    anySuccess = true
   }
 
-  try {
-    for (const [key, table] of Object.entries(SINGLETON_TABLES)) {
-      const remoteValue = await fetchSingletonTableWithRetry(table, userId)
-      if (remoteValue) {
-        cache[key] = remoteValue
-        continue
+  const singletonOutcomes = await Promise.all(
+    Object.entries(SINGLETON_TABLES).map(async ([key, table]) => {
+      try {
+        const remoteValue = await fetchSingletonTableWithRetry(table, userId)
+        if (remoteValue) return { key, value: remoteValue }
+        if (key !== 'pomodoro_settings') return { key, value: null }
+        // Uses the *AndFetch variant and trusts its response for the cache,
+        // rather than assuming the upsert created a blank row and hardcoding
+        // cache[key] = { userId }. That assumption was a real bug: when the
+        // "no row found" signal above is a false negative (fetchSingleton-
+        // TableWithRetry's own comment already flags this as a known,
+        // unproven-but-not-ruled-out race — e.g. replication lag right after
+        // this same account's real first-ever row was written, or two tabs
+        // signing in at once), the row already exists with the user's real
+        // theme/language/displayName/seenCoachMarks/dailyPomodoroGoal — this
+        // upsert's payload (just `{ userId }`) only touches user_id/created_at/
+        // updated_at (Postgres upsert leaves columns absent from the payload
+        // untouched), so the *server* row was always safe. But hardcoding the
+        // *local* cache to `{ userId }` regardless meant this session's UI
+        // showed every settings field reset to default anyway — and, worse,
+        // the next time anything called patchSettings() (e.g. the coach-mark/
+        // category-seeding effects below, or just the user touching a Settings
+        // toggle), it would merge onto that blanked cache and push the full
+        // default-filled object back to Supabase, this time actually
+        // clobbering the real row for good. Fetching the row back after the
+        // upsert closes that gap: a genuinely new account gets the freshly-
+        // created minimal row back (identical to the old hardcoded value), but
+        // a false-negative "no row" for an established account self-heals to
+        // its real data within this same session instead of only fixing
+        // itself server-side while the client stays wrong.
+        const created = await upsertSingletonAndFetch(table, userId, {})
+        return { key, value: created, isNewAccount: true }
+      } catch (error) {
+        console.error(`Failed to load ${key} from Supabase:`, error)
+        return { key, error }
       }
-      if (key !== 'pomodoro_settings') {
-        cache[key] = null
-        continue
-      }
-      isNewAccount = true
-      // Uses the *AndFetch variant and trusts its response for the cache,
-      // rather than assuming the upsert created a blank row and hardcoding
-      // cache[key] = { userId }. That assumption was a real bug: when the
-      // "no row found" signal above is a false negative (fetchSingleton-
-      // TableWithRetry's own comment already flags this as a known,
-      // unproven-but-not-ruled-out race — e.g. replication lag right after
-      // this same account's real first-ever row was written, or two tabs
-      // signing in at once), the row already exists with the user's real
-      // theme/language/displayName/seenCoachMarks/dailyPomodoroGoal — this
-      // upsert's payload (just `{ userId }`) only touches user_id/created_at/
-      // updated_at (Postgres upsert leaves columns absent from the payload
-      // untouched), so the *server* row was always safe. But hardcoding the
-      // *local* cache to `{ userId }` regardless meant this session's UI
-      // showed every settings field reset to default anyway — and, worse,
-      // the next time anything called patchSettings() (e.g. the coach-mark/
-      // category-seeding effects below, or just the user touching a Settings
-      // toggle), it would merge onto that blanked cache and push the full
-      // default-filled object back to Supabase, this time actually
-      // clobbering the real row for good. Fetching the row back after the
-      // upsert closes that gap: a genuinely new account gets the freshly-
-      // created minimal row back (identical to the old hardcoded value), but
-      // a false-negative "no row" for an established account self-heals to
-      // its real data within this same session instead of only fixing
-      // itself server-side while the client stays wrong.
-      cache[key] = await upsertSingletonAndFetch(table, userId, {})
+    })
+  )
+  for (const outcome of singletonOutcomes) {
+    if (outcome.error) {
+      lastError = outcome.error
+      continue
     }
+    cache[outcome.key] = outcome.value
     anySuccess = true
-  } catch (error) {
-    console.error('Failed to load settings/timer state from Supabase:', error)
-    lastError = error
+    if (outcome.isNewAccount) isNewAccount = true
   }
 
   if (anySuccess) activeUserId = userId

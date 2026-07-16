@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo } from 'react'
 import { loadTicks, loadActivityLog, subscribeToChanges } from '../lib/storage'
 import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
@@ -766,4 +766,9 @@ function DiffTrend({ records }) {
   )
 }
 
-export default Reports
+// Memoized — see Inventory.jsx's identical note. Particularly worth it here:
+// ActivityHeatmap alone rebuilds a 91-day array and re-aggregates every tick
+// on every unmemoized render, whether or not Reports is even the visible tab.
+// Relies on App.jsx useCallback-wrapping onDismissCoachMark/
+// onLearnMoreCoachMark so this doesn't get a fresh prop identity every second.
+export default memo(Reports)
