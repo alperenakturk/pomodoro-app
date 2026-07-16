@@ -4,6 +4,7 @@ import { useTodayTasks } from './hooks/useTodayTasks'
 import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
 import { useTimetable } from './hooks/useTimetable'
+import { useStreak } from './hooks/useStreak'
 import { useAuth } from './hooks/useAuth'
 import {
   loadSettings,
@@ -37,6 +38,8 @@ import MethodologyGuideModal from './components/MethodologyGuideModal'
 import AccountSetupFlow from './components/AccountSetupFlow'
 import GuestSignupNudge from './components/GuestSignupNudge'
 import AuthModal from './components/AuthModal'
+import StreakCelebration from './components/StreakCelebration'
+import StreakDetailsModal from './components/StreakDetailsModal'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
@@ -234,6 +237,8 @@ function AppInner({ isNewAccount }) {
   // somewhere both TodoToday and the secondary column can reach — App is
   // that shared ancestor, same reasoning as every other hook here.
   const timetableApi = useTimetable()
+  const streak = useStreak()
+  const [streakDetailsOpen, setStreakDetailsOpen] = useState(false)
   const { t, localeTag } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
 
@@ -623,17 +628,31 @@ function AppInner({ isNewAccount }) {
               {t('header.greeting', { name: displayName.trim() })}
             </p>
           )}
-          {/* Streak placeholder — no real streak tracking yet, just an icon
-              that names the future feature when clicked. */}
-          <button
-            type="button"
-            onClick={() => window.alert(t('header.streakComingSoon'))}
-            aria-label={t('header.streakAria')}
-            title={t('header.streakAria')}
-            className="text-sm leading-none flex-shrink-0"
-          >
-            🍅
-          </button>
+          {/* Real streak counter (src/hooks/useStreak.js) — dim/sage-toned
+              until today's Pomodoro is done (the "gray flame" convention),
+              tomato-bold once it is. Click opens StreakDetailsModal;
+              StreakCelebration overlays a one-shot animation on top when
+              useStreak reports a fresh increment/milestone. */}
+          <div className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setStreakDetailsOpen(true)}
+              aria-label={t('header.streakAria')}
+              title={t('header.streakAria')}
+              className={
+                'flex items-center gap-1 text-xs font-sans tabular-nums leading-none ' +
+                (streak.todayDone ? 'text-tomato' : 'text-sage')
+              }
+            >
+              <span>🍅</span>
+              <span>{streak.currentStreak}</span>
+            </button>
+            <StreakCelebration
+              celebration={streak.celebration}
+              streak={streak.currentStreak}
+              onDone={streak.clearCelebration}
+            />
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -764,6 +783,18 @@ function AppInner({ isNewAccount }) {
         </div>
 
       </main>
+
+      {streakDetailsOpen && (
+        <StreakDetailsModal
+          currentStreak={streak.currentStreak}
+          longestStreak={streak.longestStreak}
+          freezeAvailable={streak.freezeAvailable}
+          daysUntilNextFreeze={streak.daysUntilNextFreeze}
+          nextMilestone={streak.nextMilestone}
+          recentDays={streak.recentDays}
+          onClose={() => setStreakDetailsOpen(false)}
+        />
+      )}
 
       {settingsOpen && (
         // fallback dims the screen immediately (matching SettingsModal's own

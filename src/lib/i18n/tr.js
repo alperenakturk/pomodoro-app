@@ -32,8 +32,26 @@ export default {
     greeting: 'Merhaba, {{name}}! Odaklan',
     settingsAria: 'Ayarlar',
     accountMenuAria: 'Hesap menüsü',
-    streakAria: 'Seri',
-    streakComingSoon: 'Streak özelliği yakında gelecek',
+    streakAria: 'Seri detaylarını görüntüle',
+  },
+
+  streak: {
+    detailsTitle: 'Serin',
+    closeAria: 'Seri detaylarını kapat',
+    currentStreakLabel: '{{count}} günlük seri',
+    longestStreakLabel: 'En uzun: {{count}} gün',
+    freezeAvailableYes: 'Dondurma hakkı hazır',
+    freezeAvailableNo: 'Sonraki dondurma hakkı {{days}} gün sonra',
+    freezeExplainer: 'Bir günü kaçırırsan, elindeki dondurma hakkı seriyi otomatik korur — haftada 1 hak.',
+    nextMilestoneLabel: '{{milestone}} günlük kilometre taşına {{days}} gün kaldı',
+    allMilestonesReached: 'Tüm kilometre taşlarını geçtin — etkileyici!',
+    recentDaysCaption: 'Son 14 gün',
+    recentDayDone: '{{date}}: Pomodoro tamamlandı',
+    recentDayFrozen: '{{date}}: dondurma hakkıyla korundu',
+    recentDayMissed: '{{date}}: kaçırıldı',
+    celebrationIncrementAria: 'Seri {{count}} güne çıktı',
+    celebrationMilestoneTitle: '{{count}} Günlük Seri!',
+    celebrationMilestoneAria: 'Kilometre taşına ulaşıldı: {{count}} günlük seri',
   },
 
   timer: {
@@ -247,6 +265,14 @@ export default {
     firstRareNone: 'Henüz bulunamadı',
     byCategoryTitle: 'Kategoriye göre',
     achievementsFooter: 'Tam bir başarı sistemi gelecek bir güncelleme için planlanıyor.',
+  },
+
+  streakMilestones: {
+    title: 'Seri Kilometre Taşları',
+    summary: 'Mevcut seri: {{current}} gün · En uzun: {{longest}} gün',
+    milestoneLabel: '{{days}} günlük seri',
+    reachedAria: 'Ulaşıldı',
+    lockedAria: 'Henüz ulaşılmadı',
   },
 
   notifications: {

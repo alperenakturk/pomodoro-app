@@ -30,6 +30,7 @@ import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
 import CardCollectionStats from './CardCollectionStats'
+import StreakMilestones from './StreakMilestones'
 import CoachMark from './CoachMark'
 import ThemePicker from './ThemePicker'
 import { THEMES } from '../lib/theme'
@@ -1023,7 +1024,12 @@ function SettingsModal({
             </div>
           )}
 
-          {activeCategory === 'achievements' && <CardCollectionStats />}
+          {activeCategory === 'achievements' && (
+            <div className="flex flex-col gap-4">
+              <StreakMilestones />
+              <CardCollectionStats />
+            </div>
+          )}
 
           {activeCategory === 'about' && (
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4 text-sage text-xs font-sans leading-relaxed flex flex-col gap-3">

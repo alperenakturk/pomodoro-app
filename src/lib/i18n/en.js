@@ -28,8 +28,26 @@ export default {
     greeting: 'Hello, {{name}}! Focus',
     settingsAria: 'Settings',
     accountMenuAria: 'Account menu',
-    streakAria: 'Streak',
-    streakComingSoon: 'Streak feature coming soon',
+    streakAria: 'View streak details',
+  },
+
+  streak: {
+    detailsTitle: 'Your Streak',
+    closeAria: 'Close streak details',
+    currentStreakLabel: '{{count}} day streak',
+    longestStreakLabel: 'Longest: {{count}} days',
+    freezeAvailableYes: 'Streak Freeze ready',
+    freezeAvailableNo: 'Next Streak Freeze in {{days}} days',
+    freezeExplainer: 'Miss a day and an available Streak Freeze protects your streak automatically — one per week.',
+    nextMilestoneLabel: '{{days}} days to the {{milestone}}-day milestone',
+    allMilestonesReached: "You've passed every milestone — impressive!",
+    recentDaysCaption: 'Last 14 days',
+    recentDayDone: '{{date}}: Pomodoro completed',
+    recentDayFrozen: '{{date}}: covered by a Streak Freeze',
+    recentDayMissed: '{{date}}: missed',
+    celebrationIncrementAria: 'Streak increased to {{count}}',
+    celebrationMilestoneTitle: '{{count}}-Day Streak!',
+    celebrationMilestoneAria: 'Milestone reached: {{count}} day streak',
   },
 
   timer: {
@@ -280,6 +298,14 @@ export default {
     firstRareNone: 'Not found yet',
     byCategoryTitle: 'By category',
     achievementsFooter: 'A full achievements system is planned for a future update.',
+  },
+
+  streakMilestones: {
+    title: 'Streak Milestones',
+    summary: 'Current streak: {{current}} days · Longest: {{longest}} days',
+    milestoneLabel: '{{days}}-day streak',
+    reachedAria: 'Reached',
+    lockedAria: 'Not reached yet',
   },
 
   notifications: {

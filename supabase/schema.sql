@@ -696,3 +696,24 @@ alter table public.settings
 -- ----------------------------------------------------------------------------
 alter table public.categories
   add column if not exists is_default boolean not null default false;
+
+-- ----------------------------------------------------------------------------
+-- Streak Freeze state (streakFreezeAvailable/streakFreezeGrantedAt/
+-- streakFreezeUsedDates in DEFAULT_SETTINGS — see src/lib/streak.js). The
+-- current/longest streak count itself is never stored anywhere, client or
+-- server — it's always derived live from the ticks table, same
+-- derive-don't-duplicate reasoning as every other Reports stat. Only the
+-- Streak Freeze — a resource granted/spent over time that can't be
+-- reconstructed from ticks alone — needs real persistence. Same
+-- missing-column degrades-gracefully class as seen_coach_marks/
+-- daily_pomodoro_goal above (not the default_categories_seeded/is_default
+-- class): a missing column here just means a signed-in user's freeze state
+-- doesn't sync remotely yet, it doesn't poison the rest of the settings
+-- upsert.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists streak_freeze_available boolean not null default false;
+alter table public.settings
+  add column if not exists streak_freeze_granted_at date;
+alter table public.settings
+  add column if not exists streak_freeze_used_dates jsonb not null default '[]'::jsonb;

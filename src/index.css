@@ -190,6 +190,17 @@ body {
   opacity: 1;
 }
 
+/* StreakCelebration's mascot pop/explode (src/components/StreakCelebration.jsx)
+   — purely decorative flourish layered on top of the streak number, which is
+   already visible and announced on its own, same reasoning as
+   animate-task-check above: default invisible under reduced motion rather
+   than a frozen mid-animation pose. */
+.animate-streak-pop,
+.animate-streak-explode,
+.animate-streak-particle {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes ring-pulse {
     0% {
@@ -337,5 +348,46 @@ body {
   .animate-reveal-pop-rare {
     opacity: 0;
     animation: reveal-pop-rare 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* StreakCelebration's small daily bump — the tomato-man mascot does a
+     quick bounce next to the streak number every time it increments by one.
+     Same timing family as task-check-pop above (scale up then settle), just
+     shorter since this fires far more often. */
+  @keyframes streak-pop {
+    0% { opacity: 0; transform: scale(0.5) translateY(6px); }
+    40% { opacity: 1; transform: scale(1.15) translateY(-2px); }
+    60% { transform: scale(1) translateY(0); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .animate-streak-pop {
+    animation: streak-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* StreakCelebration's milestone burst — the mascot grows and settles while
+     its seed-particle siblings (separate .animate-streak-particle spans,
+     each given its own --angle/--distance custom properties inline by the
+     component for a radial spread) fly outward and fade. */
+  @keyframes streak-explode {
+    0% { opacity: 0; transform: scale(0.4) rotate(-6deg); }
+    35% { opacity: 1; transform: scale(1.3) rotate(4deg); }
+    55% { transform: scale(1.1) rotate(-2deg); }
+    75% { opacity: 1; transform: scale(1.15) rotate(0deg); }
+    100% { opacity: 0; transform: scale(1.3) rotate(0deg); }
+  }
+  .animate-streak-explode {
+    animation: streak-explode 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes streak-particle {
+    0% { opacity: 0; transform: rotate(var(--angle)) translateX(0) scale(0.6); }
+    25% { opacity: 1; }
+    100% {
+      opacity: 0;
+      transform: rotate(var(--angle)) translateX(var(--distance)) scale(0.3);
+    }
+  }
+  .animate-streak-particle {
+    animation: streak-particle 1.6s ease-out forwards;
   }
 }

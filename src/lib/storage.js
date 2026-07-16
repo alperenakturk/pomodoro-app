@@ -263,6 +263,17 @@ const DEFAULT_SETTINGS = {
   // only show goal-progress UI when this is non-null. Same missing-column
   // degrades-gracefully reasoning as seenCoachMarks above.
   dailyPomodoroGoal: null,
+  // Streak system (src/lib/streak.js) — the current/longest streak count
+  // itself is never stored here, it's always derived live from ticks (same
+  // "derive, don't duplicate" principle Reports.jsx already follows). Only
+  // the Streak Freeze state genuinely can't be reconstructed from ticks
+  // alone, so only these three are persisted. Same missing-column
+  // degrades-gracefully reasoning as seenCoachMarks above: worst case a
+  // signed-in user's freeze silently doesn't sync until the Supabase column
+  // exists, it doesn't block anything else from saving.
+  streakFreezeAvailable: false,
+  streakFreezeGrantedAt: null,
+  streakFreezeUsedDates: [],
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map
