@@ -73,10 +73,18 @@ function TrendArrow({ direction, goodDirection }) {
 // "tasks today" needs an active/done breakdown) — it renders as a smaller
 // third line instead of being crammed into the big-number slot, which used
 // to make one stat box wrap to two lines while its siblings stayed on one.
-function Stat({ label, value, trend, caption }) {
+// `emphasize` bumps the value to text-3xl — the same headline size
+// AvailablePomodoros.jsx already uses for its own big number — reserved for
+// the one stat in a row meant to read as the headline (Total focus time in
+// the Overview row), not a new arbitrary size.
+function Stat({ label, value, trend, caption, emphasize = false }) {
   return (
     <div className="bg-cream/5 border border-cream/10 rounded-xl px-3 py-3 text-center">
-      <p className="font-display text-2xl text-cream tabular-nums flex items-center justify-center gap-1.5">
+      <p
+        className={`font-display text-cream tabular-nums flex items-center justify-center gap-1.5 ${
+          emphasize ? 'text-3xl' : 'text-2xl'
+        }`}
+      >
         {value}
         {trend}
       </p>
@@ -131,8 +139,9 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes, dai
   const focusMinutes = totalFocusMinutes(ticks, datesForPeriod(period), workMinutes)
 
   return (
-    <div className="grid grid-cols-2 gap-3 font-sans">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 font-sans">
       <Stat
+        emphasize
         label={
           <span className="inline-flex items-center gap-1">
             {t('reports.totalFocusTime')}
@@ -408,7 +417,10 @@ function Reports({
   const [activityLog, setActivityLog] = useState(() => loadActivityLog())
   const [showReview, setShowReview] = useState(false)
   const [period, setPeriod] = useState('week')
-  const [activeSection, setActiveSection] = useState(SECTIONS[0].id)
+  // null = the launcher menu; a SECTIONS id = that section's full-page detail
+  // view (design-mockups/10 — drill-down command center, replacing both the
+  // old one-at-a-time stepper and the sidebar+bento-grid dashboard).
+  const [selectedSection, setSelectedSection] = useState(null)
 
   // See constants.js's pickCoachMark — the intro fires on first visit, the
   // second only once there's actually real data to look at (so it can talk
@@ -426,32 +438,68 @@ function Reports({
     return unsubscribe
   }, [])
 
-  const sectionIndex = SECTIONS.findIndex((section) => section.id === activeSection)
+  const sectionIndex = SECTIONS.findIndex((section) => section.id === selectedSection)
 
+  // Pages to the adjacent section's detail view directly — unlike the old
+  // stepper this never touches the menu in between, so flipping through all
+  // six via Previous/Next stays a pure detail-to-detail move.
   function stepTo(delta) {
     const next = SECTIONS[sectionIndex + delta]
-    if (next) setActiveSection(next.id)
+    if (next) setSelectedSection(next.id)
+  }
+
+  function sectionLabel(id) {
+    return t(SECTIONS.find((section) => section.id === id).labelKey)
   }
 
   // Only 'today' gets a live subtitle (design-mockups/04 shows real numbers
   // there specifically) — the other four are static taglines already on
   // each SECTIONS entry. Computed here (not reusing TodaySection's own copy
-  // of this math) since the sidebar needs it regardless of which section is
-  // actually active.
+  // of this math) since the launcher menu needs it regardless of which
+  // section (if any) is currently open.
   const todayDates = [todayString()]
   const todayPomodoros = countTicksInDates(ticks, 'pomodoro', todayDates)
   const todayInterruptions =
     countTicksInDates(ticks, 'interruption-internal', todayDates) +
     countTicksInDates(ticks, 'interruption-external', todayDates)
 
-  function sectionSubtitle(section) {
-    if (section.id === 'today') {
-      return t('reports.todaySummarySubtitle', { poms: todayPomodoros, interruptions: todayInterruptions })
+  // One headline number per launcher card, scoped to the current period
+  // filter — every calculation here reuses the exact same reportsMath.js
+  // functions (and in the 'today'/'longterm' cases, the exact same math) the
+  // corresponding *Section component computes internally; this only exists
+  // so the menu can show a teaser before the user drills into the detail
+  // page. A null/no-data result renders as '-', the same convention every
+  // section already uses (see e.g. PauseTrendsSection's avgPerDay).
+  function sectionTeaser(id) {
+    const periodDates = datesForPeriod(period)
+    if (id === 'today') {
+      const focusMinutes = totalFocusMinutes(ticks, periodDates, workMinutes)
+      return {
+        value: formatFocusDuration(focusMinutes),
+        caption: t('reports.todaySummarySubtitle', { poms: todayPomodoros, interruptions: todayInterruptions }),
+      }
     }
-    if (section.id === 'longterm') {
-      return t('reports.longTermSubtitle', { weeks: HEATMAP_WEEKS })
+    if (id === 'estimation') {
+      const avg = avgAbsDiff(recordsInDates(activityLog, periodDates))
+      return { value: avg == null ? '-' : avg.toFixed(1), caption: t('reports.estimationAccuracySubtitle') }
     }
-    return t(section.subtitleKey)
+    if (id === 'interruptions') {
+      const avg = avgInterruptionsPerTask(recordsInDates(activityLog, periodDates))
+      return { value: avg == null ? '-' : avg.toFixed(1), caption: t('reports.interruptionTrendsSubtitle') }
+    }
+    if (id === 'pauses') {
+      const avg = avgPausesPerDay(ticks, periodDates)
+      return { value: avg == null ? '-' : avg.toFixed(1), caption: t('reports.pauseTrendsSubtitle') }
+    }
+    if (id === 'category') {
+      const buckets = pomodorosByCategory(recordsInDates(activityLog, periodDates), categories, t('reports.uncategorized'))
+      const total = buckets.reduce((sum, bucket) => sum + bucket.total, 0)
+      return { value: t('reports.pomSuffix', { count: total }), caption: t('reports.categoryBreakdownSubtitle') }
+    }
+    // 'longterm' is always month/quarter/13-week, independent of the period
+    // filter — same as LongTermSection itself.
+    const monthPomodoros = countTicksInDates(ticks, 'pomodoro', datesForMonth())
+    return { value: monthPomodoros, caption: t('reports.longTermSubtitle', { weeks: HEATMAP_WEEKS }) }
   }
 
   return (
@@ -469,6 +517,9 @@ function Reports({
         <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
           {t('reports.title')}
         </p>
+        {/* Stays reachable from a detail page too, not just the menu — a
+            drill-down page shouldn't hide the app's other persistent
+            actions. */}
         <button
           type="button"
           onClick={() => setShowReview(true)}
@@ -510,51 +561,81 @@ function Reports({
             ))}
           </div>
 
-          {hasNoHistoryYet(ticks, activityLog) && (
+          {selectedSection == null && hasNoHistoryYet(ticks, activityLog) && (
             <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
               {t('reports.noHistoryHint')}
             </p>
           )}
 
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Previous/Next lives at the bottom of the sidebar, not below
-                the section content — the content pane's height varies a lot
-                by section (a heatmap vs. a short stat grid), which used to
-                make the buttons jump up and down and turned "click Next
-                repeatedly" into a moving target. The sidebar's own height
-                is constant (same 5 items every time), so anchoring the
-                stepper there keeps it at a fixed position regardless of
-                which section is showing. */}
-            <nav className="flex flex-col gap-1 md:w-52 flex-shrink-0">
+          {selectedSection == null ? (
+            // Menu: 6 clickable launcher cards, one per SECTIONS entry —
+            // teaser value + caption only, the real chart/detail lives one
+            // click away.
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {SECTIONS.map((section) => {
-                const active = section.id === activeSection
+                const teaser = sectionTeaser(section.id)
                 return (
                   <button
                     key={section.id}
                     type="button"
-                    onClick={() => setActiveSection(section.id)}
-                    aria-current={active ? 'page' : undefined}
-                    className={
-                      'text-left px-3 py-2 rounded-lg border flex-shrink-0 transition-colors ' +
-                      (active ? 'bg-tomato/10 border-tomato/30' : 'border-transparent hover:border-cream/15')
-                    }
+                    onClick={() => setSelectedSection(section.id)}
+                    className="text-left bg-cream/5 border border-cream/10 hover:border-cream/30 rounded-2xl px-4 py-4 transition-colors"
                   >
-                    <p
-                      className={
-                        'font-display text-[11px] tracking-widest uppercase ' +
-                        (active ? 'text-cream' : 'text-sage')
-                      }
-                    >
+                    <p className="font-display text-[11px] tracking-widest uppercase text-sage mb-2">
                       {t(section.labelKey)}
                     </p>
-                    <p className="text-sage/60 text-[10px] font-sans">
-                      {sectionSubtitle(section)}
-                    </p>
+                    <p className="font-display text-2xl text-cream tabular-nums">{teaser.value}</p>
+                    <p className="text-sage/60 text-[10px] font-sans mt-1">{teaser.caption}</p>
                   </button>
                 )
               })}
+            </div>
+          ) : (
+            // Detail: breadcrumb back to the menu, the section's own heading,
+            // then the exact same section component the old designs used —
+            // it never cared what container it's rendered inside.
+            <div>
+              <button
+                type="button"
+                onClick={() => setSelectedSection(null)}
+                className="flex items-center gap-1.5 text-sage hover:text-cream text-xs font-sans mb-4"
+              >
+                <span>← {t('reports.title')}</span>
+                <span className="text-cream/30">/</span>
+                <span className="text-cream">{sectionLabel(selectedSection)}</span>
+              </button>
 
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-cream/10 font-sans text-xs">
+              <h2 className="font-sans text-cream font-semibold text-base mb-4">
+                {sectionLabel(selectedSection)}
+              </h2>
+
+              {selectedSection === 'today' && (
+                <TodaySection
+                  ticks={ticks}
+                  activityLog={activityLog}
+                  todayTasks={todayTasks}
+                  period={period}
+                  workMinutes={workMinutes}
+                  dailyPomodoroGoal={dailyPomodoroGoal}
+                />
+              )}
+              {selectedSection === 'estimation' && (
+                <EstimationAccuracySection activityLog={activityLog} period={period} />
+              )}
+              {selectedSection === 'interruptions' && (
+                <InterruptionTrendsSection activityLog={activityLog} period={period} />
+              )}
+              {selectedSection === 'pauses' && (
+                <PauseTrendsSection ticks={ticks} period={period} />
+              )}
+              {selectedSection === 'category' && (
+                <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
+              )}
+              {selectedSection === 'longterm' && (
+                <LongTermSection ticks={ticks} activityLog={activityLog} />
+              )}
+
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-cream/10 font-sans text-xs">
                 <button
                   type="button"
                   onClick={() => stepTo(-1)}
@@ -575,46 +656,8 @@ function Reports({
                   {t('reports.stepNext')}
                 </button>
               </div>
-            </nav>
-
-            <div className="flex-1 min-w-0 border-t md:border-t-0 md:border-l border-cream/10 pt-4 md:pt-0 md:pl-5">
-              {/* Normal-case, larger, sans — deliberately NOT the small
-                  uppercase-mono treatment the sidebar button just left of
-                  it uses. Both used to render the same section name in the
-                  identical heavy caps style back to back, which read as
-                  redundant shouting; this reads as "nav label -> the actual
-                  reading content's heading" instead. */}
-              <h2 className="font-sans text-cream font-semibold text-base mb-4">
-                {t(SECTIONS[sectionIndex].labelKey)}
-              </h2>
-
-              {activeSection === 'today' && (
-                <TodaySection
-                  ticks={ticks}
-                  activityLog={activityLog}
-                  todayTasks={todayTasks}
-                  period={period}
-                  workMinutes={workMinutes}
-                  dailyPomodoroGoal={dailyPomodoroGoal}
-                />
-              )}
-              {activeSection === 'estimation' && (
-                <EstimationAccuracySection activityLog={activityLog} period={period} />
-              )}
-              {activeSection === 'interruptions' && (
-                <InterruptionTrendsSection activityLog={activityLog} period={period} />
-              )}
-              {activeSection === 'pauses' && (
-                <PauseTrendsSection ticks={ticks} period={period} />
-              )}
-              {activeSection === 'category' && (
-                <CategoryBreakdownSection activityLog={activityLog} categories={categories} period={period} />
-              )}
-              {activeSection === 'longterm' && (
-                <LongTermSection ticks={ticks} activityLog={activityLog} />
-              )}
             </div>
-          </div>
+          )}
         </>
       )}
       </div>
