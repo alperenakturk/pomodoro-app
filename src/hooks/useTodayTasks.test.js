@@ -237,4 +237,57 @@ describe('useTodayTasks', () => {
     act(() => result.current.addInterruption(id, 'internal', -1))
     expect(result.current.tasks[0].internal).toBe(0)
   })
+
+  // OPTIMIZATIONS.md finding #3: single-item edits (updateTask, finishTask,
+  // reestimateTask, addInterruption, incrementRealized) now stamp updatedAt
+  // on just the touched task, leaving every sibling task's object (and its
+  // own updatedAt) exactly as it was — see useInventory.test.js's identical
+  // describe block for the full rationale.
+  describe('updatedAt on edit (finding #3)', () => {
+    it('bumps updatedAt only on the edited task for updateTask, addInterruption, and reestimateTask', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => {
+        result.current.addTask('Task A', 2)
+        result.current.addTask('Task B', 2)
+      })
+      const [a, b] = result.current.tasks
+
+      act(() => result.current.updateTask(a.id, { text: 'Task A (renamed)' }))
+      let [updatedA, untouchedB] = result.current.tasks
+      expect(updatedA.updatedAt).toEqual(expect.any(String))
+      expect(untouchedB.updatedAt).toBe(b.updatedAt)
+
+      const afterRename = updatedA.updatedAt
+      act(() => result.current.addInterruption(a.id, 'internal', 1))
+      ;[updatedA, untouchedB] = result.current.tasks
+      expect(updatedA.updatedAt).toEqual(expect.any(String))
+      expect(untouchedB.updatedAt).toBe(b.updatedAt)
+
+      act(() => result.current.reestimateTask(a.id, 4))
+      ;[updatedA, untouchedB] = result.current.tasks
+      expect(updatedA.updatedAt).toEqual(expect.any(String))
+      expect(untouchedB.updatedAt).toBe(b.updatedAt)
+      // Not asserting inequality between successive timestamps here (fake
+      // timers aren't in play, so two same-millisecond stamps are possible
+      // and not a bug) — the point is only that it's a real stamp each time
+      // and B is never touched.
+      expect(afterRename).toEqual(expect.any(String))
+    })
+
+    it('bumps updatedAt when finishTask marks a task done, without touching an unrelated task', () => {
+      const { result } = renderHook(() => useTodayTasks())
+      act(() => {
+        result.current.addTask('Task A', 2)
+        result.current.addTask('Task B', 2)
+      })
+      const [a, b] = result.current.tasks
+
+      act(() => result.current.finishTask(a.id))
+
+      const finished = result.current.tasks.find((t) => t.id === a.id)
+      const untouched = result.current.tasks.find((t) => t.id === b.id)
+      expect(finished.updatedAt).toEqual(expect.any(String))
+      expect(untouched.updatedAt).toBe(b.updatedAt)
+    })
+  })
 })

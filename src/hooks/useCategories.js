@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadCategories, saveCategories, loadSettings, patchSettings } from '../lib/storage'
+import { loadCategories, saveCategories, loadSettings, patchSettings, stampUpdated } from '../lib/storage'
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_SEEDS } from '../lib/constants'
 import { resolveLanguage, translate } from '../lib/i18n'
 
@@ -82,8 +82,13 @@ export function useCategories(deferSeeding = false) {
   // Any explicit edit clears isDefault — a renamed/recolored category is the
   // user's own data now, not a reproducible starter default (see
   // seedDefaultCategories above), so it should sync like any other category.
+  // stampUpdated (only on the matched category — every other category passes
+  // through map() untouched) is what lets remoteProvider.js's set() tell this
+  // one row actually changed without having to re-upsert (and re-stamp
+  // updated_at on) the rest of the collection — see storage.js's
+  // stampUpdated comment and OPTIMIZATIONS.md finding #3.
   const updateCategory = useCallback((id, patch) => {
-    setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch, isDefault: false } : c)))
+    setCategories((prev) => prev.map((c) => (c.id === id ? stampUpdated({ ...c, ...patch, isDefault: false }) : c)))
   }, [])
 
   // Deliberately no cascade delete — tasks/records referencing this id just

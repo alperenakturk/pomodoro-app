@@ -95,7 +95,17 @@ function stampCreated(record) {
   }
 }
 
-function stampUpdated(record) {
+// Exported so useInventory.js/useTodayTasks.js/useCategories.js can stamp
+// updatedAt on their own single-item edits too (see each hook's own comment
+// on this) — previously only storage.js's own updateActivityRecord used it.
+// Without this, an edited inventory/today-task/category item's updatedAt
+// never changed at all, which both (a) made mergeCollectionById's "newer
+// updatedAt wins" JSON-import logic unable to recognize a locally-edited
+// record as newer than an older imported copy of the same id, and (b) left
+// remoteProvider.js's set() with no reliable per-item "did this row actually
+// change" signal, forcing it to re-upsert (and re-stamp updated_at on) every
+// row in the collection on every save — see OPTIMIZATIONS.md finding #3.
+export function stampUpdated(record) {
   return { ...record, updatedAt: new Date().toISOString() }
 }
 

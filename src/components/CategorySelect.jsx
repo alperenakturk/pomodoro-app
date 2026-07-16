@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
+import { Dot } from './CategoryTag'
 
 // A dropdown for picking a task's category, modeled after Select.jsx's
 // from-scratch pattern (native <option> popups ignore author background
@@ -14,14 +15,6 @@ import { useTranslation } from '../hooks/useTranslation'
 // RecordsLog's filter, `null` means "show only uncategorized records" while
 // "no filter" needs its own value, or picking "No category" there would be
 // indistinguishable from not having filtered at all.
-function Dot({ color }) {
-  return (
-    <span
-      className="w-2 h-2 rounded-full flex-shrink-0 border border-cream/20"
-      style={color ? { backgroundColor: color } : undefined}
-    />
-  )
-}
 
 function CategorySelect({
   id,

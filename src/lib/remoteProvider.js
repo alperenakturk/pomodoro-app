@@ -294,6 +294,10 @@ export function get(collection, fallback) {
 }
 
 export function set(collection, value) {
+  // Captured before cache[collection] is overwritten below — this is the
+  // "last known" snapshot the new value gets diffed against, so it has to be
+  // read first.
+  const previous = cache[collection]
   cache[collection] = value
   if (!activeUserId) return
 
@@ -302,7 +306,29 @@ export function set(collection, value) {
     const newIds = new Set(value.map((item) => item.id))
     const idsToDelete = [...(knownIds[collection] ?? [])].filter((id) => !newIds.has(id))
     knownIds[collection] = newIds
-    upsertArrayTable(table, activeUserId, value)
+
+    // Only upsert items whose updatedAt actually differs from what was
+    // cached for that same id (a brand-new id, absent from `previous`
+    // entirely, always counts as changed too) — every hook that owns one of
+    // these collections stamps updatedAt on the one item it actually edits
+    // and leaves every other item's object untouched (see e.g.
+    // useInventory.js's updateItem), so this is a reliable "did this
+    // specific row change" signal, not a guess. Previously this upserted
+    // *every* item in `value` on every save, and toRemoteRow() stamps a
+    // fresh updated_at on whatever it's given — so a one-field edit to a
+    // single task used to bump updated_at on every other unrelated row in
+    // the same collection too, and send their full contents over the wire
+    // for nothing. See OPTIMIZATIONS.md finding #3 for the full write-up.
+    // `?? null` on both sides treats a missing/undefined updatedAt the same
+    // as an explicit null, matching mergeCollectionById's own "no timestamp"
+    // convention in importData.js.
+    const previousById = new Map((previous ?? []).map((item) => [item.id, item]))
+    const changed = value.filter((item) => {
+      const prevItem = previousById.get(item.id)
+      return !prevItem || (prevItem.updatedAt ?? null) !== (item.updatedAt ?? null)
+    })
+
+    upsertArrayTable(table, activeUserId, changed)
       .then(() => deleteRows(table, activeUserId, idsToDelete))
       .catch((error) => console.error(`Failed to sync ${collection} to Supabase:`, error))
   } else if (SINGLETON_TABLES[collection]) {

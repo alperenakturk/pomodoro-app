@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadTodayTasks, saveTodayTasks, addActivityRecord } from '../lib/storage'
+import { loadTodayTasks, saveTodayTasks, addActivityRecord, stampUpdated } from '../lib/storage'
 import { playTaskCompleteChime } from '../lib/alert'
 
 function todayString() {
@@ -64,14 +64,19 @@ export function useTodayTasks() {
     setActiveTaskId(null)
   }, [])
 
+  // stampUpdated (only on the matched task — every other task passes through
+  // map() untouched) is what lets remoteProvider.js's set() tell this one row
+  // actually changed without having to re-upsert (and re-stamp updated_at on)
+  // the rest of the collection — see storage.js's stampUpdated comment and
+  // OPTIMIZATIONS.md finding #3.
   const incrementRealized = useCallback((id) => {
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, realized: t.realized + 1 } : t))
+      prev.map((t) => (t.id === id ? stampUpdated({ ...t, realized: t.realized + 1 }) : t))
     )
   }, [])
 
   const updateTask = useCallback((id, patch) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    setTasks((prev) => prev.map((t) => (t.id === id ? stampUpdated({ ...t, ...patch }) : t)))
   }, [])
 
   // Backs the "Check to bottom" setting (SettingsModal) — moves a task to the
@@ -105,7 +110,7 @@ export function useTodayTasks() {
       prev.map((t) => {
         if (t.id !== id) return t
         const slot = t.reestimate1 == null ? 'reestimate1' : 'reestimate2'
-        return { ...t, [slot]: value }
+        return stampUpdated({ ...t, [slot]: value })
       })
     )
     return true
@@ -116,7 +121,7 @@ export function useTodayTasks() {
       prev.map((t) => {
         if (t.id !== id) return t
         const key = kind === 'internal' ? 'internal' : 'external'
-        return { ...t, [key]: Math.max(0, t[key] + delta) }
+        return stampUpdated({ ...t, [key]: Math.max(0, t[key] + delta) })
       })
     )
   }, [])
@@ -155,7 +160,7 @@ export function useTodayTasks() {
       })
       playTaskCompleteChime()
     }
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, done: true } : t)))
+    setTasks((prev) => prev.map((t) => (t.id === id ? stampUpdated({ ...t, done: true }) : t)))
     setActiveTaskId((cur) => (cur === id ? null : cur))
   }, [tasks])
 

@@ -50,6 +50,26 @@ describe('useCategories', () => {
     act(() => result.current.removeCategory(id))
     expect(result.current.categories).toHaveLength(0)
   })
+
+  // OPTIMIZATIONS.md finding #3: updateCategory now stamps updatedAt only on
+  // the edited category, leaving a sibling category's object (and its own
+  // updatedAt) exactly as it was — see useInventory.test.js's identical
+  // describe block for the full rationale.
+  it('bumps updatedAt only on the edited category, leaving a sibling category untouched', () => {
+    const { result } = renderHook(() => useCategories())
+    act(() => {
+      result.current.addCategory('Coding', CATEGORY_COLORS[0].value)
+      result.current.addCategory('Writing', CATEGORY_COLORS[1].value)
+    })
+    const [coding, writing] = result.current.categories
+
+    act(() => result.current.updateCategory(coding.id, { name: 'Deep Work' }))
+
+    const [updatedCoding, untouchedWriting] = result.current.categories
+    expect(updatedCoding.updatedAt).toEqual(expect.any(String))
+    expect(untouchedWriting.updatedAt).toBe(writing.updatedAt)
+    expect(untouchedWriting.name).toBe('Writing')
+  })
 })
 
 describe('useCategories default seeding', () => {

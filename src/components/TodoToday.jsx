@@ -4,6 +4,13 @@ import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
 import UnplannedCapture from './UnplannedCapture'
 import CategoryTagPicker from './CategoryTagPicker'
+import { CategoryTags } from './CategoryTag'
+
+// This row's own category-tag styling (padding/margin/inline-flex) — passed
+// to the shared CategoryTags below so this list keeps rendering pixel-
+// identical tags to before CategoryTag.jsx existed. See CategoryTag.jsx's
+// own comment for why this isn't a shared default.
+const CATEGORY_TAG_CLASS = 'text-sage text-xs bg-cream/5 rounded px-1 ml-1 inline-flex items-center gap-1'
 
 // The three 40px columns hold the estimate/real/diff header labels and
 // values — sized for the Turkish header text ("Tahmin"/"Gerçek"/"Fark"),
@@ -19,30 +26,6 @@ const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_40px_40px_40px_16px_16px_16
 
 function diffOf(task) {
   return task.estimate != null ? task.realized - task.estimate : null
-}
-
-function CategoryTag({ category }) {
-  return (
-    <span className="text-sage text-xs bg-cream/5 rounded px-1 ml-1 inline-flex items-center gap-1">
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: category.color }}
-        aria-hidden="true"
-      />
-      {category.name}
-    </span>
-  )
-}
-
-function CategoryTags({ categoryIds, categories }) {
-  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
-  return (
-    <>
-      {resolved.map((category) => (
-        <CategoryTag key={category.id} category={category} />
-      ))}
-    </>
-  )
 }
 
 function TaskRow({
@@ -182,7 +165,7 @@ function TaskRow({
             U
           </span>
         )}
-        <CategoryTags categoryIds={task.categoryIds} categories={categories} />
+        <CategoryTags categoryIds={task.categoryIds} categories={categories} tagClassName={CATEGORY_TAG_CLASS} />
         {task.notes && (
           <button
             type="button"

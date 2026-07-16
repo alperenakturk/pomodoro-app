@@ -4,37 +4,17 @@ import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
 import CategoryTagPicker from './CategoryTagPicker'
 import CollapseToggle from './CollapseToggle'
+import { CategoryTags } from './CategoryTag'
+
+// This row's own category-tag styling — passed to the shared CategoryTags
+// below so this list keeps rendering pixel-identical tags to before
+// CategoryTag.jsx existed. See CategoryTag.jsx's own comment for why this
+// isn't a shared default.
+const CATEGORY_TAG_CLASS = 'text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 flex items-center gap-1'
 
 function isOverdue(deadline) {
   if (!deadline) return false
   return deadline < new Date().toISOString().slice(0, 10)
-}
-
-function CategoryTag({ category }) {
-  return (
-    <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 flex items-center gap-1">
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: category.color }}
-        aria-hidden="true"
-      />
-      {category.name}
-    </span>
-  )
-}
-
-function CategoryTags({ categoryIds, categories }) {
-  // Deleted/legacy ids just fail to resolve here — no cascading update
-  // needed, the task simply drops that tag from display.
-  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
-  if (resolved.length === 0) return null
-  return (
-    <>
-      {resolved.map((category) => (
-        <CategoryTag key={category.id} category={category} />
-      ))}
-    </>
-  )
 }
 
 function InventoryRow({
@@ -188,7 +168,7 @@ function InventoryRow({
             U
           </span>
         )}
-        <CategoryTags categoryIds={item.categoryIds} categories={categories} />
+        <CategoryTags categoryIds={item.categoryIds} categories={categories} tagClassName={CATEGORY_TAG_CLASS} />
         {item.notes && (
           <button
             type="button"

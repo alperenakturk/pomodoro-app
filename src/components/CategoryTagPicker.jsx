@@ -1,18 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
+import { Dot } from './CategoryTag'
 
 // Multi-select category picker (tags) for assigning categories to a task —
 // distinct from CategorySelect, which is a single-pick dropdown still used
 // for Records Log's category filter (filtering by one category at a time
 // stays simple; assigning multiple categories to a task does not).
-function Dot({ color }) {
-  return (
-    <span
-      className="w-2 h-2 rounded-full flex-shrink-0 border border-cream/20"
-      style={color ? { backgroundColor: color } : undefined}
-    />
-  )
-}
 
 function CategoryTagPicker({ id, categories, value, onChange, onAddCategory, className = '' }) {
   const [open, setOpen] = useState(false)

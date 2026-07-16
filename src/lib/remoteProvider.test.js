@@ -316,6 +316,85 @@ describe('get/set/remove after initializeRemoteData', () => {
     expect(deleteCall.args).toEqual(['id', ['i2']])
   })
 
+  // OPTIMIZATIONS.md finding #3: set() used to upsert every item in `value`
+  // on every save, and toRemoteRow() stamps a fresh updated_at on whatever
+  // it's given — so editing one row used to re-write (and re-stamp
+  // updated_at on) every other untouched row in the same collection too.
+  // set() now diffs against its own cache by updatedAt and only upserts rows
+  // that actually changed.
+  it("set() only upserts the item whose updatedAt actually changed, never touching a sibling row's payload", async () => {
+    const { initializeRemoteData, set } = await loadRemoteProviderWith({
+      inventory: {
+        arraySelect: {
+          data: [
+            { id: 'i1', text: 'A', user_id: 'user-1', updated_at: '2026-01-01T00:00:00.000Z' },
+            { id: 'i2', text: 'B', user_id: 'user-1', updated_at: '2026-01-01T00:00:00.000Z' },
+          ],
+          error: null,
+        },
+      },
+    })
+    await initializeRemoteData('user-1')
+    mockCalls.length = 0
+
+    // Mirrors what a real single-item edit looks like by the time it reaches
+    // here: i1's updatedAt genuinely changed (a hook's stampUpdated ran on
+    // it), i2 is passed through byte-identical to what was just fetched
+    // (every other hook update passes sibling items through map() untouched).
+    set('pomodoro_inventory', [
+      { id: 'i1', text: 'A renamed', updatedAt: '2026-01-02T00:00:00.000Z' },
+      { id: 'i2', text: 'B', updatedAt: '2026-01-01T00:00:00.000Z' },
+    ])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const upsertCall = mockCalls.find((c) => c.table === 'inventory' && c.method === 'upsert')
+    expect(upsertCall.args[0]).toHaveLength(1)
+    expect(upsertCall.args[0]).toMatchObject([{ id: 'i1', text: 'A renamed' }])
+    // The real point of this test: i2's row must never even appear in the
+    // upsert payload — that's what keeps Supabase from touching its
+    // updated_at (or any other column) at all.
+    expect(upsertCall.args[0].some((row) => row.id === 'i2')).toBe(false)
+  })
+
+  it('set() issues no upsert at all when nothing in the collection actually changed', async () => {
+    // Mirrors the mount-triggered save every collection hook's own useEffect
+    // fires right after loading — before this fix, that alone was enough to
+    // re-upload the entire collection with fresh updated_at stamps, even
+    // though nothing had actually changed since the fetch that just warmed
+    // the cache.
+    const { initializeRemoteData, get, set } = await loadRemoteProviderWith({
+      inventory: {
+        arraySelect: {
+          data: [{ id: 'i1', text: 'A', user_id: 'user-1', updated_at: '2026-01-01T00:00:00.000Z' }],
+          error: null,
+        },
+      },
+    })
+    await initializeRemoteData('user-1')
+    mockCalls.length = 0
+
+    set('pomodoro_inventory', get('pomodoro_inventory', []))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(mockCalls.some((c) => c.table === 'inventory' && c.method === 'upsert')).toBe(false)
+    // The unaffected id must also not be reported as removed.
+    expect(mockCalls.some((c) => c.table === 'inventory' && c.method === 'in')).toBe(false)
+  })
+
+  it('a brand-new item (no prior cache entry) is always upserted, even though it has no updatedAt to compare yet', async () => {
+    const { initializeRemoteData, set } = await loadRemoteProviderWith({
+      inventory: { arraySelect: { data: [], error: null } },
+    })
+    await initializeRemoteData('user-1')
+    mockCalls.length = 0
+
+    set('pomodoro_inventory', [{ id: 'new-1', text: 'Brand new item' }])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const upsertCall = mockCalls.find((c) => c.table === 'inventory' && c.method === 'upsert')
+    expect(upsertCall.args[0]).toMatchObject([{ id: 'new-1', text: 'Brand new item' }])
+  })
+
   // Regression test for a real bug: remove() used to fire the Supabase
   // delete and return immediately without awaiting it, so a caller that
   // reloads the page right after calling remove() (every Danger Zone

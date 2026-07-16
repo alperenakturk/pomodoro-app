@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { loadInventory, saveInventory } from '../lib/storage'
+import { loadInventory, saveInventory, stampUpdated } from '../lib/storage'
 
 export function useInventory() {
   const [items, setItems] = useState(() => loadInventory())
@@ -28,14 +28,20 @@ export function useInventory() {
     setItems((prev) => prev.filter((i) => i.id !== id))
   }, [])
 
+  // stampUpdated (only on the matched item — every other item in the array
+  // passes through map() untouched, same reference even) is what lets
+  // remoteProvider.js's set() tell this one row actually changed without
+  // having to re-upsert (and re-stamp updated_at on) the rest of the
+  // collection — see storage.js's stampUpdated comment and OPTIMIZATIONS.md
+  // finding #3.
   const toggleDone = useCallback((id) => {
     setItems((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, done: !i.done } : i))
+      prev.map((i) => (i.id === id ? stampUpdated({ ...i, done: !i.done }) : i))
     )
   }, [])
 
   const updateItem = useCallback((id, patch) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+    setItems((prev) => prev.map((i) => (i.id === id ? stampUpdated({ ...i, ...patch }) : i)))
   }, [])
 
   // Rule 5: tasks estimated at less than a full Pomodoro should be combined

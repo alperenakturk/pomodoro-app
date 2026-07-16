@@ -13,6 +13,13 @@ import { useTranslation } from '../hooks/useTranslation'
 import { formatDateLocalized } from '../lib/i18n'
 import CategorySelect from './CategorySelect'
 import CategoryTagPicker from './CategoryTagPicker'
+import { CategoryTag, CategoryTags } from './CategoryTag'
+
+// This list's own category-tag styling — passed to the shared CategoryTag/
+// CategoryTags below so this list keeps rendering pixel-identical tags to
+// before CategoryTag.jsx existed. See CategoryTag.jsx's own comment for why
+// this isn't a shared default.
+const CATEGORY_TAG_CLASS = 'text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2 inline-flex items-center gap-1'
 
 function recomputeDiff(estimate, real) {
   return estimate != null && estimate !== '' ? Number(real) - Number(estimate) : null
@@ -23,30 +30,6 @@ function formatElapsed(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-}
-
-function CategoryTag({ category }) {
-  return (
-    <span className="text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 ml-2 inline-flex items-center gap-1">
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: category.color }}
-        aria-hidden="true"
-      />
-      {category.name}
-    </span>
-  )
-}
-
-function CategoryTags({ categoryIds, categories }) {
-  const resolved = categoryIds.map((id) => categories.find((c) => c.id === id)).filter(Boolean)
-  return (
-    <>
-      {resolved.map((category) => (
-        <CategoryTag key={category.id} category={category} />
-      ))}
-    </>
-  )
 }
 
 function RecordRow({ record, categories, onDelete, onManageCategories }) {
@@ -146,7 +129,7 @@ function RecordRow({ record, categories, onDelete, onManageCategories }) {
       <div className="flex justify-between text-cream">
         <span>
           {record.activity}
-          <CategoryTags categoryIds={record.categoryIds} categories={categories} />
+          <CategoryTags categoryIds={record.categoryIds} categories={categories} tagClassName={CATEGORY_TAG_CLASS} />
           {record.notes && (
             <button
               type="button"
@@ -209,7 +192,7 @@ function VoidLogRow({ entry, categories, onDelete }) {
       <span className="flex-1">
         {t('recordsLog.voidedAt', { elapsed: formatElapsed(entry.elapsedSeconds), total: formatElapsed(WORK_SECONDS) })}
         {entry.activity && <>. {entry.activity}</>}
-        {category && <CategoryTag category={category} />}
+        {category && <CategoryTag category={category} className={CATEGORY_TAG_CLASS} />}
         {entry.reason && <> ({entry.reason})</>}
       </span>
       <button
