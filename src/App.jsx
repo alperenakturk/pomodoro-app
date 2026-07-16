@@ -697,32 +697,41 @@ function AppInner({ isNewAccount }) {
               onLearnMore={() => onLearnMoreCoachMark(planningCoachMark.id)}
             />
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-          {/* Today's Tasks is the dominant panel now (design-mockups/07) —
-              Inventory/Available Pomodoros/Timetable moved to a narrower,
-              compact secondary column alongside it, reversed from the old
-              Inventory-first layout. */}
-          <TodoToday
-            tasks={todayApi.tasks}
-            activeTaskId={todayApi.activeTaskId}
-            setActiveTaskId={todayApi.setActiveTaskId}
-            addTask={todayApi.addTask}
-            removeTask={todayApi.removeTask}
-            clearFinishedTasks={todayApi.clearFinishedTasks}
-            clearAllTasks={todayApi.clearAllTasks}
-            updateTask={todayApi.updateTask}
-            reestimateTask={todayApi.reestimateTask}
-            finishTask={handleFinishTask}
-            categories={categoriesApi.categories}
-            onManageCategories={openCategoryManager}
-          />
-
-          <div className="flex flex-col gap-4">
+          {/* Capacity/schedule strip (design-mockups/08): AvailablePomodoros and
+              Timetable are compact form+list widgets, not backlog-sized
+              content, so they get a horizontal row of their own above the
+              main lists rather than stacking inside a narrow sidebar column
+              — that old layout squeezed Inventory (which can grow just as
+              long as Today's Tasks) down to 320px and pushed it below both
+              widgets vertically. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={suggestedHours} />
             <Timetable
               blocks={timetableApi.blocks}
               addBlock={timetableApi.addBlock}
               removeBlock={timetableApi.removeBlock}
+            />
+          </div>
+
+          {/* Today's Tasks and Inventory are both task lists of comparable
+              weight — one is the backlog, the other the committed plan for
+              the day — so they now sit in equal-width columns instead of
+              Today's Tasks dominating a 1fr column with Inventory
+              squeezed into a fixed 320px one. */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <TodoToday
+              tasks={todayApi.tasks}
+              activeTaskId={todayApi.activeTaskId}
+              setActiveTaskId={todayApi.setActiveTaskId}
+              addTask={todayApi.addTask}
+              removeTask={todayApi.removeTask}
+              clearFinishedTasks={todayApi.clearFinishedTasks}
+              clearAllTasks={todayApi.clearAllTasks}
+              updateTask={todayApi.updateTask}
+              reestimateTask={todayApi.reestimateTask}
+              finishTask={handleFinishTask}
+              categories={categoriesApi.categories}
+              onManageCategories={openCategoryManager}
             />
             <Inventory
               items={inventoryApi.items}
@@ -735,7 +744,6 @@ function AppInner({ isNewAccount }) {
               categories={categoriesApi.categories}
               onManageCategories={openCategoryManager}
             />
-          </div>
           </div>
         </div>
 
