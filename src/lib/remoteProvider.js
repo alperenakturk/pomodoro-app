@@ -98,9 +98,15 @@ async function upsertArrayTable(table, userId, items) {
   if (error) throw error
 }
 
-async function deleteRows(table, ids) {
+async function deleteRows(table, userId, ids) {
   if (ids.length === 0) return
-  const { error } = await supabase.from(table).delete().in('id', ids)
+  // .eq('user_id', ...) alongside .in('id', ...) is defense-in-depth, not
+  // the actual boundary — RLS's own delete policy (user_id = auth.uid())
+  // already prevents this from ever touching another user's row even
+  // without it. Scoping the query itself means a future RLS
+  // misconfiguration wouldn't be the only thing standing between this call
+  // and a cross-user delete.
+  const { error } = await supabase.from(table).delete().eq('user_id', userId).in('id', ids)
   if (error) throw error
 }
 
@@ -272,7 +278,7 @@ export function set(collection, value) {
     const idsToDelete = [...(knownIds[collection] ?? [])].filter((id) => !newIds.has(id))
     knownIds[collection] = newIds
     upsertArrayTable(table, activeUserId, value)
-      .then(() => deleteRows(table, idsToDelete))
+      .then(() => deleteRows(table, activeUserId, idsToDelete))
       .catch((error) => console.error(`Failed to sync ${collection} to Supabase:`, error))
   } else if (SINGLETON_TABLES[collection]) {
     const table = SINGLETON_TABLES[collection]

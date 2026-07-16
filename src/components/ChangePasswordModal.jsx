@@ -98,7 +98,7 @@ function ChangePasswordModal({ onClose }) {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={inputClass}
@@ -125,7 +125,7 @@ function ChangePasswordModal({ onClose }) {
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
-                  minLength={6}
+                  minLength={8}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className={inputClass}

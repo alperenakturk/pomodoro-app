@@ -4,6 +4,32 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Defense-in-depth only — this app has no HTML injection sinks today (no
+      dangerouslySetInnerHTML, no innerHTML/eval usage, see AGENTS.md's
+      security notes), so this doesn't fix an active vulnerability. It's here
+      so that if one is ever introduced, script execution is still blocked.
+      style-src needs 'unsafe-inline': React sets dynamic styles via the
+      CSSOM (element.style.x = ...), which CSP never restricts either way,
+      but Vite's dev server injects CSS as literal <style> tags (HMR), and a
+      production build's Tailwind output is a same-origin <link>, not inline
+      — 'unsafe-inline' here only covers CSS, which can't execute script, so
+      it doesn't weaken the script-src protection below.
+      connect-src/img-src include https://*.supabase.co for the optional
+      Supabase backend (API calls + signed Storage URLs for the Fullscreen
+      Focus Mode background) — accounts are opt-in, so this is reachable but
+      does nothing when no .env is configured (see supabaseClient.js).
+      No frame-ancestors here deliberately: the CSP spec ignores that
+      directive entirely when delivered via <meta> (it only takes effect
+      from a real HTTP response header) — GitHub Pages serves static files
+      with no custom-header support, so it can't be set at all from this
+      repo. Clickjacking protection would need fronting this site with
+      something that can inject headers (e.g. Cloudflare).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.supabase.co; font-src 'self'; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'"
+    />
     <title>Pomodoro Technique</title>
   </head>
   <body>

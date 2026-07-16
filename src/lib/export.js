@@ -18,8 +18,16 @@ export const CSV_COLUMNS = [
   'notes',
 ]
 
+// Guards against CSV/formula injection: a field opened by Excel/Sheets/etc.
+// that starts with =, +, -, @, tab, or CR is interpreted as a formula, not
+// literal text — e.g. an `activity`/`notes` value of
+// `=HYPERLINK("https://evil.example","click")` would auto-execute for
+// whoever opens the exported file. Prefixing with `'` forces it back to a
+// literal string in every major spreadsheet app, same as Google Sheets'/
+// Excel's own recommended mitigation.
 function escapeCSVField(value) {
-  const s = value == null ? '' : String(value)
+  let s = value == null ? '' : String(value)
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
