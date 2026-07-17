@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import App from './App'
-import { saveInventory, setAuthHint, hasAuthHint } from './lib/storage'
+import {
+  saveInventory,
+  setAuthHint,
+  hasAuthHint,
+  markGuestOnboardingSeen,
+  hasSeenGuestOnboarding,
+  setPendingOnboardingTransfer,
+  resetAllData,
+  signOutFromRemote,
+} from './lib/storage'
 
 // App now instantiates its own LanguageProvider internally, keyed the same
 // as its per-account render tree (see App.jsx) — matches real usage
@@ -83,6 +92,20 @@ beforeEach(() => {
   mockIsNewAccount = false
   mockRemoteLanguage = null
   mockAuthValue = { user: null, loading: false }
+  // storage.js's activeProvider is module-level mutable state, outliving
+  // any one test — a prior test that signed in and never (via its own
+  // App-level flow) signed back out would otherwise leave it pointed at
+  // remoteProvider here, silently routing this test's own saveX() setup
+  // calls to the mocked remote cache instead of real localStorage.
+  signOutFromRemote()
+  // Every test in this file predates Guest Onboarding (AccountSetupFlow's
+  // 'guestIntro' variant, see App.jsx) and is about unrelated guest/sign-in
+  // regressions — a first-time guest's `pomodoro_guest_onboarding_seen`
+  // flag defaults to unset after localStorage.clear() above, which would
+  // otherwise put every one of these tests behind that new full-screen
+  // overlay too. Marking it seen keeps them decoupled; Guest Onboarding
+  // itself is covered by its own describe block below.
+  markGuestOnboardingSeen()
 })
 
 describe('App sign-out data-source switch', () => {
@@ -299,5 +322,168 @@ describe('App language re-sync on sign-in', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Planning' })).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: 'Planlama' })).not.toBeInTheDocument()
+  })
+})
+
+// Guest Onboarding (AccountSetupFlow's 'guestIntro' variant) — shown once to
+// a first-time guest, closing with a "Create free account" pitch. The outer
+// beforeEach above marks it seen (so every other describe block in this file
+// stays decoupled from it) — this local beforeEach re-clears localStorage
+// after that, undoing the mark, since "unseen" is the exact precondition
+// these tests need.
+describe('Guest Onboarding', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('shows to a first-time guest, and declining marks it seen so a later mount never shows it again', async () => {
+    expect(hasSeenGuestOnboarding()).toBe(false)
+    const { rerender: rerenderRaw } = renderApp()
+    const rerender = () => rerenderRaw(<App />)
+
+    await screen.findByText('Where should we start?')
+    screen.getByRole('button', { name: 'Skip setup entirely' }).click()
+
+    await waitFor(() => expect(screen.queryByText('Where should we start?')).not.toBeInTheDocument())
+    expect(hasSeenGuestOnboarding()).toBe(true)
+    await screen.findByText('Pomodoro Technique')
+
+    // A later mount (e.g. a reload) must not show it again.
+    rerender()
+    expect(screen.queryByText('Where should we start?')).not.toBeInTheDocument()
+  })
+
+  it('does not show once already marked seen (e.g. an existing guest before this feature shipped)', async () => {
+    markGuestOnboardingSeen()
+    renderApp()
+
+    await screen.findByText('Pomodoro Technique')
+    expect(screen.queryByText('Where should we start?')).not.toBeInTheDocument()
+  })
+
+  it('clicking "Create free account" on the closing step stores a pending transfer of the wizard\'s picks', async () => {
+    renderApp()
+    await screen.findByText('Where should we start?')
+
+    // Advance to the theme step and pick one, then continue to the closing
+    // pitch (welcome -> language -> name -> theme picked -> goal -> signup).
+    screen.getByRole('button', { name: 'Skip this step' }).click()
+    screen.getByRole('button', { name: 'Skip this step' }).click()
+    screen.getByRole('button', { name: 'Skip this step' }).click()
+    await screen.findByText('Pick a look')
+    screen.getByRole('button', { name: 'Light Sage' }).click()
+    screen.getByRole('button', { name: 'Skip this step' }).click()
+    screen.getByRole('button', { name: 'Skip this step' }).click()
+
+    await screen.findByText('Create a free account to unlock more')
+    screen.getByRole('button', { name: 'Create free account' }).click()
+
+    // AuthModal opens, landed on the sign-up tab.
+    await screen.findByText('Create an account')
+
+    const stored = JSON.parse(localStorage.getItem('pomodoro_pending_onboarding_transfer'))
+    expect(stored.snapshot.theme).toBe('light-sage')
+    expect(hasSeenGuestOnboarding()).toBe(true)
+  })
+
+  it('a new account signed up through the wizard gets the transferred settings and skips the post-signup wizard', async () => {
+    // Simulate having already gone through the wizard and clicked "Create
+    // free account" (see the test above) — a pending transfer is armed.
+    setPendingOnboardingTransfer({ theme: 'light-sand', displayName: 'Aylin', dailyPomodoroGoal: 6, language: 'en' })
+    markGuestOnboardingSeen()
+
+    mockIsNewAccount = true
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    renderApp()
+
+    await screen.findByText('Pomodoro Technique')
+    // The regular post-signup wizard must NOT show — the guestIntro wizard
+    // already covered the same ground right before sign-up.
+    expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument()
+
+    await waitFor(() => expect(remoteCache.pomodoro_settings).toMatchObject({ theme: 'light-sand', displayName: 'Aylin', dailyPomodoroGoal: 6 }))
+    // One-shot: the pending transfer must not still be sitting around to
+    // reapply to some later, unrelated sign-in.
+    expect(localStorage.getItem('pomodoro_pending_onboarding_transfer')).toBeNull()
+  })
+
+  // Danger Zone's "Reset to Factory Settings" calls resetAllData() then does
+  // a real window.location.reload() (see SettingsModal.jsx's
+  // handleFactoryReset) — a fresh render() here is the same simulated-reload
+  // technique the "App reload flicker prevention" describe block above uses,
+  // since jsdom has no real navigation to trigger.
+  it('a guest who factory-resets sees the wizard again on the next load, exactly like a first-ever visit', async () => {
+    markGuestOnboardingSeen()
+    expect(hasSeenGuestOnboarding()).toBe(true)
+
+    await resetAllData()
+    expect(hasSeenGuestOnboarding()).toBe(false)
+
+    renderApp() // simulates the reload after Factory Reset
+    await screen.findByText('Where should we start?')
+  })
+})
+
+// Combinations explicitly requested: local <-> signed-in transitions, and
+// each one crossed with Factory Reset, must all leave the app in a
+// consistent, non-broken state — no stuck loading screen, no wrong wizard,
+// no stale data bleeding across the boundary. Each test below is one named
+// combination.
+describe('Local/account transitions stay consistent across combinations', () => {
+  it('guest -> signs up directly via the header (not through Guest Onboarding) -> gets the plain post-signup wizard, no guest pitch, no transfer', async () => {
+    markGuestOnboardingSeen() // already past Guest Onboarding, same as most real accounts
+    mockIsNewAccount = true
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    renderApp()
+
+    // The 'account' variant (plain, no "create free account" pitch) — never
+    // the guestIntro one, since this sign-up didn't come through that flow.
+    await screen.findByText('Your account is ready')
+    expect(screen.queryByText('Create a free account to unlock more')).not.toBeInTheDocument()
+  })
+
+  it('signed in -> signs out -> lands back on this browser\'s own untouched guest data, no onboarding re-trigger', async () => {
+    markGuestOnboardingSeen()
+    saveInventory([
+      { id: 'guest-1', text: 'GUEST TASK', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false },
+    ])
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    const { rerender: rerenderRaw } = renderApp()
+    const rerender = () => rerenderRaw(<App />)
+    await screen.findByText('Pomodoro Technique')
+
+    mockAuthValue = { user: null, loading: false }
+    rerender()
+
+    await screen.findByText('Pomodoro Technique')
+    expect(screen.queryByText('Where should we start?')).not.toBeInTheDocument()
+    // Retried, same as the sign-out data-source test above — the Planning
+    // panel's own re-read of local storage lands a beat after the header
+    // text does.
+    await waitFor(() => {
+      screen.getByRole('button', { name: 'Planning' }).click()
+      expect(screen.getByText('GUEST TASK')).toBeInTheDocument()
+    })
+  })
+
+  it('signed in -> factory resets -> the settings row is gone, so the next load reports isNewAccount and shows the post-signup wizard again', async () => {
+    mockIsNewAccount = false
+    mockAuthValue = { user: { id: 'user-1' }, loading: false }
+    const { unmount } = renderApp()
+    await screen.findByText('Pomodoro Technique')
+    unmount() // a real Factory Reset ends in window.location.reload(), tearing down this whole tree
+
+    // Mirrors what a real factory reset does server-side: the settings row
+    // is deleted, so the very next initializeRemoteData() call has nothing
+    // to find — exactly the same signal a genuinely brand-new account gives
+    // (see remoteProvider.js/remoteProvider.test.js's own coverage of that
+    // detection). Simulated here via the same mockIsNewAccount switch the
+    // "first sign-in" regression test above already uses, rather than
+    // re-deriving it from remoteCache, since that detection logic itself is
+    // already covered elsewhere and isn't what this test is about.
+    mockIsNewAccount = true
+    renderApp() // simulates the reload after Factory Reset
+
+    await screen.findByText('Your account is ready')
   })
 })

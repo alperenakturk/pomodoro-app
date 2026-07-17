@@ -15,6 +15,10 @@ import {
   signOutFromRemote,
   hasSeenGuestSignupNudge,
   markGuestSignupNudgeSeen,
+  hasSeenGuestOnboarding,
+  markGuestOnboardingSeen,
+  setPendingOnboardingTransfer,
+  takePendingOnboardingTransfer,
   hasAuthHint,
   setAuthHint,
   clearAuthHint,
@@ -109,6 +113,13 @@ function App() {
   // (re)mounts for this sign-in — so it naturally fires once per real
   // sign-in and never again on a later reload/sign-in to the same account.
   const [isNewAccount, setIsNewAccount] = useState(false)
+  // True only for a new account whose settings were just filled in by
+  // storage.js's pending-onboarding-transfer mechanism (Guest Onboarding's
+  // "Create free account" CTA, see AppInner's guestIntro wiring) rather than
+  // left blank — read once by AppInner alongside isNewAccount to skip
+  // showing the post-signup AccountSetupFlow a second time for choices the
+  // user already just made in the guest-facing wizard.
+  const [hadOnboardingTransfer, setHadOnboardingTransfer] = useState(false)
   const prevUserIdRef = useRef(undefined)
 
   useEffect(() => {
@@ -126,6 +137,7 @@ function App() {
       // previous session's outcome as the new one's.
       setDataError(null)
       setIsNewAccount(false)
+      setHadOnboardingTransfer(false)
       // A genuinely signed-out browser should get the fast guest path on its
       // next reload too, not keep paying for the 'loading' gate.
       clearAuthHint()
@@ -144,7 +156,21 @@ function App() {
         setAppKey('guest')
         return
       }
+      // Only ever meaningful for a genuinely new account — a returning
+      // account's sign-in should never touch settings just because a stale
+      // pending-transfer snapshot happens to still be sitting in
+      // localStorage (e.g. from an abandoned guestIntro attempt on this
+      // same browser under a different account).
+      let transferred = false
+      if (result.isNewAccount) {
+        const pending = takePendingOnboardingTransfer()
+        if (pending) {
+          patchSettings(pending)
+          transferred = true
+        }
+      }
       setIsNewAccount(result.isNewAccount)
+      setHadOnboardingTransfer(transferred)
       setDataMode('remote')
       setAppKey(userId)
       // Marks this browser as "signed in as of last successful load" so the
@@ -171,7 +197,7 @@ function App() {
     // flicker above but with no visible flicker to notice it by.
     <LanguageProvider key={appKey}>
       {dataError && <ErrorBanner onDismiss={() => setDataError(null)} messageKey="account.loadErrorNotice" />}
-      <AppInner key={appKey} isNewAccount={isNewAccount} />
+      <AppInner key={appKey} isNewAccount={isNewAccount} hadOnboardingTransfer={hadOnboardingTransfer} />
     </LanguageProvider>
   )
 }
@@ -221,7 +247,7 @@ function ErrorBanner({ messageKey, onDismiss }) {
 // top-level export. Every hook here calls storage.js's loadX()/saveX()
 // exactly as before; which provider (localStorage vs Supabase) those hit is
 // entirely decided by App, before this component ever mounts.
-function AppInner({ isNewAccount }) {
+function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // Needed here (not just in the outer App()/SettingsModal/ProfileMenu,
   // which each already call it independently) for the guest sign-up nudge
   // below and for gating category creation — a Context hook, so calling it
@@ -232,7 +258,14 @@ function AppInner({ isNewAccount }) {
   // isNewAccount defers default-category seeding until AccountSetupFlow
   // finishes (see useCategories' own comment) — irrelevant for guests/
   // returning accounts, which are never isNewAccount and seed immediately.
-  const categoriesApi = useCategories(isNewAccount)
+  // A new account that arrived via Guest Onboarding's transfer already had
+  // its language settled (patchSettings, in App()'s sign-in effect) before
+  // this component ever mounted, so it doesn't need to wait for
+  // AccountSetupFlow's onFinish either — deferCategorySeeding treats it the
+  // same as a returning account (seed immediately, correct language already
+  // in place).
+  const deferCategorySeeding = isNewAccount && !hadOnboardingTransfer
+  const categoriesApi = useCategories(deferCategorySeeding)
   // Lifted up from TodoToday (design-mockups/07): AvailablePomodoros and
   // Timetable moved to Planning's secondary column, as Inventory's
   // neighbors rather than TodoToday's children, so the hook has to live
@@ -246,7 +279,7 @@ function AppInner({ isNewAccount }) {
   // instance would double-write unlock records and double-play the sound.
   const achievements = useAchievements()
   const [streakDetailsOpen, setStreakDetailsOpen] = useState(false)
-  const { t, localeTag } = useTranslation()
+  const { t, localeTag, language } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
 
   // Settings is a modal now (design-mockups/05's sidebar-categorized dialog),
@@ -351,15 +384,32 @@ function AppInner({ isNewAccount }) {
     patchSettings({ dailyPomodoroGoal: value })
   }
 
-  // First-time account setup wizard (see AccountSetupFlow.jsx) — seeded once
-  // from the `isNewAccount` prop (itself derived in remoteProvider.js's
-  // initializeRemoteData) via this lazy useState initializer, so it's true
-  // for exactly the one AppInner mount that follows a brand-new account's
-  // first-ever sign-in, and never again on a later reload/remount of an
-  // already-set-up account. Deliberately a *different* mechanism from the
-  // coach-mark system below — see coachMarksSuppressed, which keeps the two
-  // from ever showing at the same time.
-  const [showAccountSetup, setShowAccountSetup] = useState(() => isNewAccount)
+  // First-time account setup wizard (see AccountSetupFlow.jsx, 'account'
+  // variant) — seeded once from deferCategorySeeding via this lazy useState
+  // initializer, so it's true for exactly the one AppInner mount that
+  // follows a brand-new account's first-ever sign-in, and never again on a
+  // later reload/remount of an already-set-up account. Skipped specifically
+  // for a new account that just arrived via Guest Onboarding's transfer
+  // (hadOnboardingTransfer) — the guestIntro wizard already collected the
+  // same theme/name/goal/language choices right before sign-up, so showing
+  // this again would just be asking twice. Deliberately a *different*
+  // mechanism from the coach-mark system below — see coachMarksSuppressed,
+  // which keeps every full-screen wizard from ever overlapping.
+  const [showAccountSetup, setShowAccountSetup] = useState(() => deferCategorySeeding)
+
+  // Guest Onboarding (AccountSetupFlow's 'guestIntro' variant) — shown once
+  // to a first-time guest, before they've ever signed in, so the same
+  // theme/name/goal picks a signed-up user gets asked for are offered right
+  // away, closing with a "Create free account" pitch. `!user` keeps this
+  // mutually exclusive with showAccountSetup (which only ever fires right
+  // after a real sign-in) the same way GuestSignupNudge below is; tracked
+  // via its own dedicated localStorage flag for the same reason
+  // GUEST_SIGNUP_NUDGE_KEY is (guest-only concept, never part of a synced
+  // account's settings).
+  const [showGuestOnboarding, setShowGuestOnboarding] = useState(
+    () => !user && !hasSeenGuestOnboarding()
+  )
+  const [guestOnboardingAuthModalOpen, setGuestOnboardingAuthModalOpen] = useState(false)
 
   // GuestSignupNudge (see GuestSignupNudge.jsx) — a one-time product nudge,
   // deliberately a *different* mechanism from both AccountSetupFlow above
@@ -565,7 +615,7 @@ function AppInner({ isNewAccount }) {
   // immediately (e.g. 'timer-intro' shows right away), same as for anyone
   // else — nothing about a coach mark's own seen/trigger state is touched by
   // this, it's purely a "don't render" gate.
-  const coachMarksSuppressed = showAccountSetup
+  const coachMarksSuppressed = showAccountSetup || showGuestOnboarding
 
   // Planning's coach mark is computed here (rather than inside TodoToday/
   // Inventory) since App is the shared ancestor that already has
@@ -578,15 +628,6 @@ function AppInner({ isNewAccount }) {
 
   const rootThemeId = theme === 'custom' ? customThemeGeneral : theme
 
-  // Keeps App()'s LoadingAccountScreen's best-guess background current —
-  // see storage.js's setLastThemeHint. Runs for guests too (harmless,
-  // just keeps the guess fresh in case this browser signs in later); the
-  // real, authoritative theme always wins the instant it's actually known,
-  // this only affects what's painted for the brief window before that.
-  useEffect(() => {
-    setLastThemeHint(themeClassName(rootThemeId))
-  }, [rootThemeId])
-
   const timerThemeId =
     theme === 'custom'
       ? { work: customThemeFocus, shortBreak: customThemeShortBreak, longBreak: customThemeLongBreak }[
@@ -594,8 +635,31 @@ function AppInner({ isNewAccount }) {
         ]
       : theme
 
+  // While on the Timer tab, the whole screen (header included) switches to
+  // the current session's custom sub-theme instead of just the Timer panel
+  // — a header staying on General while ~80% of the screen below it shows a
+  // different custom color read as visually broken/inconsistent (two
+  // palettes on screen at once), even though the split was logically
+  // intentional (General is genuinely a distinct concept from Focus/Short
+  // Break/Long Break). Every other tab (Planning/Reports/Settings) is never
+  // session-specific, so they keep using General as before.
+  const displayThemeId = activeTab === 'timer' ? timerThemeId : rootThemeId
+
+  // Keeps App()'s LoadingAccountScreen's best-guess background current —
+  // see storage.js's setLastThemeHint. Tracks displayThemeId (not just
+  // rootThemeId) since a fresh mount always lands on the Timer tab
+  // (activeTab's own useState default), so the accurate guess for "what
+  // will this reload actually show" is the Timer-tab-aware value, not
+  // General alone. Runs for guests too (harmless, just keeps the guess
+  // fresh in case this browser signs in later); the real, authoritative
+  // theme always wins the instant it's actually known, this only affects
+  // what's painted for the brief window before that.
+  useEffect(() => {
+    setLastThemeHint(themeClassName(displayThemeId))
+  }, [displayThemeId])
+
   return (
-    <div className={`min-h-screen bg-pine ${themeClassName(rootThemeId)}`}>
+    <div className={`min-h-screen bg-pine ${themeClassName(displayThemeId)}`}>
       {/* Mobile: plain flex-wrap (logo+time / right cluster on row 1, nav
           pushed to row 2 via order-3). Desktop: an explicit 3-column grid,
           `1fr auto 1fr` — nav sits in the middle `auto` column (sized to its
@@ -684,19 +748,13 @@ function AppInner({ isNewAccount }) {
           every switch. "Not visible while working" only requires display:none,
           not unmounting. */}
       <main className="max-w-7xl mx-auto p-6">
-        {/* Themed + given a floor height here (not just inside Timer.jsx)
-            so that in Custom mode, when the active session's theme differs
-            from General, the colored area covers the whole tab instead of
-            just Timer's own tightly-fit content box — otherwise a short
-            Timer on a tall viewport would show a seam of the *General*
-            theme's background peeking through around it. */}
-        <div
-          className={
-            activeTab === 'timer'
-              ? `flex justify-center bg-pine min-h-[80vh] ${themeClassName(timerThemeId)}`
-              : 'hidden'
-          }
-        >
+        {/* Given a floor height here (not just inside Timer.jsx) so the
+            colored area covers the whole tab instead of just Timer's own
+            tightly-fit content box. No theme class of its own — the root
+            div above already carries timerThemeId while this tab is active
+            (see displayThemeId), so re-declaring it here would just be a
+            redundant no-op override, not a second color. */}
+        <div className={activeTab === 'timer' ? 'flex justify-center bg-pine min-h-[80vh]' : 'hidden'}>
           <Timer
             activeTask={activeTask}
             addTask={todayApi.addTask}
@@ -887,6 +945,51 @@ function AppInner({ isNewAccount }) {
           dailyPomodoroGoal={dailyPomodoroGoal}
           setDailyPomodoroGoal={setDailyPomodoroGoal}
         />
+      )}
+
+      {/* Guest Onboarding — hidden (not unmounted) while its own AuthModal
+          is open, rather than closed outright, so a user who backs out of
+          sign-up without completing it lands back on the wizard's closing
+          step instead of losing their place. */}
+      {showGuestOnboarding && !guestOnboardingAuthModalOpen && (
+        <AccountSetupFlow
+          variant="guestIntro"
+          onContinueAsGuest={() => {
+            markGuestOnboardingSeen()
+            setShowGuestOnboarding(false)
+          }}
+          onRequestSignUp={() => {
+            // Captured now, before signUpWithEmail/signInWithGoogle even
+            // runs — this is the guest's local state, still fully intact
+            // regardless of how long the actual account-creation flow takes
+            // (email confirmation can add an arbitrary delay; see
+            // storage.js's setPendingOnboardingTransfer). Consumed once by
+            // App()'s sign-in effect, the moment this account's first real
+            // session is confirmed.
+            setPendingOnboardingTransfer({
+              theme,
+              customThemeGeneral,
+              customThemeFocus,
+              customThemeShortBreak,
+              customThemeLongBreak,
+              displayName,
+              dailyPomodoroGoal,
+              language,
+            })
+            markGuestOnboardingSeen()
+            setShowGuestOnboarding(false)
+            setGuestOnboardingAuthModalOpen(true)
+          }}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          theme={theme}
+          onSelectTheme={selectTheme}
+          dailyPomodoroGoal={dailyPomodoroGoal}
+          setDailyPomodoroGoal={setDailyPomodoroGoal}
+        />
+      )}
+      {guestOnboardingAuthModalOpen && (
+        <AuthModal initialMode="signUp" onClose={() => setGuestOnboardingAuthModalOpen(false)} />
       )}
 
       {guideOpen && (

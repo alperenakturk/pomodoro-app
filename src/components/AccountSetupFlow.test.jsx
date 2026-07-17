@@ -139,3 +139,97 @@ describe('AccountSetupFlow', () => {
     expect(screen.getByText('Choose your language')).toBeInTheDocument()
   })
 })
+
+describe("AccountSetupFlow 'guestIntro' variant", () => {
+  function renderGuestIntro(props) {
+    return render(
+      <LanguageProvider>
+        <AccountSetupFlow
+          variant="guestIntro"
+          onContinueAsGuest={vi.fn()}
+          onRequestSignUp={vi.fn()}
+          displayName=""
+          setDisplayName={vi.fn()}
+          theme="dark"
+          onSelectTheme={vi.fn()}
+          dailyPomodoroGoal={null}
+          setDailyPomodoroGoal={vi.fn()}
+          {...props}
+        />
+      </LanguageProvider>
+    )
+  }
+
+  function goToSignupStep() {
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // welcome -> language
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> name
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> theme
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> goal
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> signup
+  }
+
+  it('starts on a welcome step with guest-appropriate copy, not "Your account is ready"', () => {
+    renderGuestIntro()
+    expect(screen.getByText('Where should we start?')).toBeInTheDocument()
+    expect(screen.queryByText('Your account is ready')).not.toBeInTheDocument()
+    // The "local data isn't moved automatically" note only makes sense once
+    // an account already exists — must not show here.
+    expect(screen.queryByText(/isn't moved into this account automatically/i)).not.toBeInTheDocument()
+  })
+
+  it('appends one more step (signup) after goal, reachable via the normal step flow', () => {
+    renderGuestIntro()
+    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
+    goToSignupStep()
+    expect(screen.getByText('Step 6 of 6')).toBeInTheDocument()
+    expect(screen.getByText('Create a free account to unlock more')).toBeInTheDocument()
+  })
+
+  it('the signup step has no generic Continue/Skip-this-step controls, only its own two buttons', () => {
+    renderGuestIntro()
+    goToSignupStep()
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Skip this step' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Skip setup entirely' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create free account' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue with local storage' })).toBeInTheDocument()
+  })
+
+  it('clicking "Create free account" calls onRequestSignUp, not onFinish/onContinueAsGuest', () => {
+    const onRequestSignUp = vi.fn()
+    const onContinueAsGuest = vi.fn()
+    renderGuestIntro({ onRequestSignUp, onContinueAsGuest })
+    goToSignupStep()
+    fireEvent.click(screen.getByRole('button', { name: 'Create free account' }))
+    expect(onRequestSignUp).toHaveBeenCalledTimes(1)
+    expect(onContinueAsGuest).not.toHaveBeenCalled()
+  })
+
+  it('clicking "Continue with local storage" calls onContinueAsGuest', () => {
+    const onContinueAsGuest = vi.fn()
+    renderGuestIntro({ onContinueAsGuest })
+    goToSignupStep()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with local storage' }))
+    expect(onContinueAsGuest).toHaveBeenCalledTimes(1)
+  })
+
+  it('"Skip setup entirely" from an earlier step also calls onContinueAsGuest, not onFinish', () => {
+    const onContinueAsGuest = vi.fn()
+    renderGuestIntro({ onContinueAsGuest })
+    fireEvent.click(screen.getByRole('button', { name: 'Skip setup entirely' }))
+    expect(onContinueAsGuest).toHaveBeenCalledTimes(1)
+  })
+
+  it('every earlier step still commits live via the same setters as the account variant', () => {
+    const setDisplayName = vi.fn()
+    const onSelectTheme = vi.fn()
+    renderGuestIntro({ setDisplayName, onSelectTheme })
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> language
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> name
+    fireEvent.change(screen.getByPlaceholderText('e.g. Alex'), { target: { value: 'Deniz' } })
+    expect(setDisplayName).toHaveBeenCalledWith('Deniz')
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // -> theme
+    fireEvent.click(screen.getByRole('button', { name: 'Light Sand' }))
+    expect(onSelectTheme).toHaveBeenCalledWith('light-sand')
+  })
+})

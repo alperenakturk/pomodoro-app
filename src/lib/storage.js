@@ -541,7 +541,13 @@ export async function clearVoidLog() {
 
 // Reset to Factory Settings: removes every key, including Settings — the one
 // case where settings themselves are wiped, returning the app to its
-// first-launch state.
+// first-launch state. "First-launch state" includes Guest Onboarding's own
+// seen flag — a guest who factory-resets should see the wizard again on the
+// reload that follows, same as a genuinely new visitor. (A signed-in
+// factory reset re-triggers the *other* wizard, AccountSetupFlow's
+// 'account' variant, for free: wiping the settings row here makes the very
+// next initializeRemoteData() see "no row" and report isNewAccount: true,
+// exactly like a brand-new account — no separate flag needed for that case.)
 export async function resetAllData() {
   await Promise.all([
     activeProvider.remove(INVENTORY_KEY),
@@ -556,6 +562,13 @@ export async function resetAllData() {
     activeProvider.remove(CARD_DRAWS_KEY),
     activeProvider.remove(ACHIEVEMENT_UNLOCKS_KEY),
   ])
+  localStorage.removeItem(GUEST_ONBOARDING_SEEN_KEY)
+  // Defensive: an unrelated, still-armed pending transfer (e.g. an
+  // abandoned guestIntro sign-up attempt from before this reset, still
+  // within its 24h TTL) must never silently apply to whatever account signs
+  // in next after a reset — that account didn't come from this browser's
+  // now-wiped wizard session.
+  localStorage.removeItem(PENDING_ONBOARDING_TRANSFER_KEY)
 }
 
 // Full backup of every storage key, for the export feature.
@@ -728,6 +741,54 @@ export function hasSeenGuestSignupNudge() {
 }
 export function markGuestSignupNudgeSeen() {
   localStorage.setItem(GUEST_SIGNUP_NUDGE_KEY, 'true')
+}
+
+// Guest Onboarding's one-time "seen" flag (AccountSetupFlow's 'guestIntro'
+// variant, shown to a first-time guest before AppInner's normal UI) — same
+// bypass-the-provider reasoning as GUEST_SIGNUP_NUDGE_KEY above: guest-only
+// by definition, never part of a synced account's settings.
+const GUEST_ONBOARDING_SEEN_KEY = 'pomodoro_guest_onboarding_seen'
+export function hasSeenGuestOnboarding() {
+  return localStorage.getItem(GUEST_ONBOARDING_SEEN_KEY) === 'true'
+}
+export function markGuestOnboardingSeen() {
+  localStorage.setItem(GUEST_ONBOARDING_SEEN_KEY, 'true')
+}
+
+// Guest Onboarding's account-creation handoff: the theme/name/goal/language
+// a guest picked in the wizard, captured the moment they click "Create free
+// account" (before signUpWithEmail/signInWithGoogle even runs) and consumed
+// once a real session for a genuinely new account is confirmed (App.jsx's
+// sign-in effect, after signInToRemote resolves isNewAccount: true) — at
+// that point it's applied via one patchSettings() call, "transferring" the
+// guest's choices onto the fresh account instead of leaving it on blank
+// defaults. Deliberately plain localStorage, not React state: e-mail/
+// password sign-up can require confirming the address before a session is
+// ever issued (see AuthModal's `!data.session` branch), so this has to
+// survive an arbitrary gap — possibly a page reload, possibly the browser
+// closing entirely — between "picked in the wizard" and "account actually
+// exists." `savedAt` bounds how long a never-completed sign-up can leave a
+// stale snapshot armed: past 24h, takePendingOnboardingTransfer() discards
+// it rather than risk silently applying a long-abandoned wizard session's
+// choices to some later, unrelated sign-up.
+const PENDING_ONBOARDING_TRANSFER_KEY = 'pomodoro_pending_onboarding_transfer'
+const PENDING_ONBOARDING_TRANSFER_TTL_MS = 24 * 60 * 60 * 1000
+export function setPendingOnboardingTransfer(snapshot) {
+  localStorage.setItem(PENDING_ONBOARDING_TRANSFER_KEY, JSON.stringify({ snapshot, savedAt: Date.now() }))
+}
+// Read-and-clear in one call — a one-shot consume, so a transfer is never
+// applied twice (e.g. across two separate later sign-ins).
+export function takePendingOnboardingTransfer() {
+  const raw = localStorage.getItem(PENDING_ONBOARDING_TRANSFER_KEY)
+  localStorage.removeItem(PENDING_ONBOARDING_TRANSFER_KEY)
+  if (!raw) return null
+  try {
+    const { snapshot, savedAt } = JSON.parse(raw)
+    if (typeof savedAt !== 'number' || Date.now() - savedAt > PENDING_ONBOARDING_TRANSFER_TTL_MS) return null
+    return snapshot
+  } catch {
+    return null
+  }
 }
 
 // --- Post-reload bootstrap hints --------------------------------------------

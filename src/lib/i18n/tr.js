@@ -1013,6 +1013,12 @@ export default {
       dataNote:
         'Misafir olarak gezinirken oluşan yerel veriler bu hesaba otomatik olarak taşınmaz. Aktarmak istersen, istediğin zaman Ayarlar > Veri bölümündeki Dışa/İçe Aktar özelliğini kullanabilirsin.',
     },
+    // Sadece 'guestIntro' modu — henüz hiçbir hesap yokken ilk kez gelen bir
+    // misafire gösterilir, o yüzden metin "hesabın" diye başlayamaz.
+    welcomeGuest: {
+      title: 'Nereden başlayalım?',
+      body: 'Hızlıca birkaç tercih ayarlayalım. Her adım isteğe bağlıdır ve bunların hepsini daha sonra Ayarlar\'dan değiştirebilirsin.',
+    },
     language: {
       title: 'Dilini seç',
     },
@@ -1026,6 +1032,14 @@ export default {
       title: 'Günlük Pomodoro hedefi belirle',
       body: 'Günde kaç Pomodoro hedefliyorsun? Bu tamamen isteğe bağlıdır ve sadece kendi referansın içindir.',
       placeholder: 'ör. 8',
+    },
+    // 'guestIntro' modunun kapanış adımı — hesap açma daveti ve iki sonuç
+    // (bkz. App.jsx'in onRequestSignUp/onContinueAsGuest'i).
+    signup: {
+      title: 'Daha fazlası için ücretsiz hesap aç',
+      body: 'Görevlerin için özel kategoriler, motivasyon kartları, başarılar ve seriler — hepsi bir hesapla ücretsiz. Burada seçtiğin her şey de seninle gelir.',
+      createAccountButton: 'Ücretsiz hesap aç',
+      continueLocallyButton: "Yerel depolamayla devam et",
     },
   },
 }

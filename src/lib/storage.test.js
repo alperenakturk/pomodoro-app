@@ -40,6 +40,10 @@ import {
   importActivityLogCSV,
   signInToRemote,
   signOutFromRemote,
+  hasSeenGuestOnboarding,
+  markGuestOnboardingSeen,
+  setPendingOnboardingTransfer,
+  takePendingOnboardingTransfer,
 } from './storage'
 
 // Only needed by the signInToRemote describe block below — every other test
@@ -461,6 +465,47 @@ describe('Achievement unlocks', () => {
   })
 })
 
+describe('Guest Onboarding flags', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('hasSeenGuestOnboarding defaults to false and flips once marked', () => {
+    expect(hasSeenGuestOnboarding()).toBe(false)
+    markGuestOnboardingSeen()
+    expect(hasSeenGuestOnboarding()).toBe(true)
+  })
+
+  it('takePendingOnboardingTransfer reads and clears in one call (one-shot consume)', () => {
+    setPendingOnboardingTransfer({ theme: 'light-sage', displayName: 'Aylin' })
+    expect(takePendingOnboardingTransfer()).toEqual({ theme: 'light-sage', displayName: 'Aylin' })
+    // Consumed — a second read finds nothing, even though nothing else wrote it.
+    expect(takePendingOnboardingTransfer()).toBeNull()
+  })
+
+  it('returns null when nothing was ever set', () => {
+    expect(takePendingOnboardingTransfer()).toBeNull()
+  })
+
+  it('discards a snapshot older than the 24h TTL instead of applying a long-abandoned wizard session', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    setPendingOnboardingTransfer({ theme: 'light-sand' })
+
+    vi.setSystemTime(new Date('2026-01-02T00:00:01.000Z')) // 24h + 1s later
+    expect(takePendingOnboardingTransfer()).toBeNull()
+  })
+
+  it('keeps a snapshot saved just under the 24h TTL', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    setPendingOnboardingTransfer({ theme: 'light-sand' })
+
+    vi.setSystemTime(new Date('2026-01-01T23:59:59.000Z')) // just under 24h later
+    expect(takePendingOnboardingTransfer()).toEqual({ theme: 'light-sand' })
+  })
+})
+
 describe('backend-readiness metadata (userId/createdAt/updatedAt)', () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -726,6 +771,23 @@ describe('Danger Zone: category clears', () => {
     // loadSettings() always merges defaults back in, so the honest check is
     // that the underlying key is gone, not that loadSettings() returns {}.
     expect(localStorage.getItem('pomodoro_settings')).toBeNull()
+  })
+
+  it('resetAllData also un-marks Guest Onboarding as seen, so it shows again like a first-ever visit', async () => {
+    markGuestOnboardingSeen()
+    expect(hasSeenGuestOnboarding()).toBe(true)
+
+    await resetAllData()
+
+    expect(hasSeenGuestOnboarding()).toBe(false)
+  })
+
+  it('resetAllData also discards any still-armed pending onboarding transfer', async () => {
+    setPendingOnboardingTransfer({ theme: 'light-sage' })
+
+    await resetAllData()
+
+    expect(takePendingOnboardingTransfer()).toBeNull()
   })
 })
 

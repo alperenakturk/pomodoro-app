@@ -1052,6 +1052,12 @@ export default {
       dataNote:
         "Any local data from browsing as a guest isn't moved into this account automatically. To bring it over, use Export/Import in Settings > Data anytime.",
     },
+    // 'guestIntro' variant only — shown to a first-time guest, before any
+    // account exists, so the copy can't reference "your account" yet.
+    welcomeGuest: {
+      title: 'Where should we start?',
+      body: "Let's quickly set a few preferences. Every step is optional, and you can change any of this later in Settings.",
+    },
     language: {
       title: 'Choose your language',
     },
@@ -1065,6 +1071,14 @@ export default {
       title: 'Set a daily Pomodoro goal',
       body: "How many Pomodoros are you aiming for per day? This is entirely optional and just for your own reference.",
       placeholder: 'e.g. 8',
+    },
+    // 'guestIntro' variant's closing step — the pitch to create an account,
+    // plus the two outcomes (see App.jsx's onRequestSignUp/onContinueAsGuest).
+    signup: {
+      title: 'Create a free account to unlock more',
+      body: 'Custom categories for your tasks, motivation cards, achievements, and streaks are all free with an account — and everything you just picked here comes with you.',
+      createAccountButton: 'Create free account',
+      continueLocallyButton: 'Continue with local storage',
     },
   },
 }
