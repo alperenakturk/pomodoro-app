@@ -54,7 +54,7 @@ function ProfileMenu() {
         <button
           type="button"
           onClick={() => setAuthModalOpen(true)}
-          className="text-tomato border border-tomato/40 rounded-full px-2 py-0.5 text-xs font-sans flex-shrink-0 transition-colors hover:bg-tomato/10 hover:border-tomato/60"
+          className="text-tomato border border-tomato/40 rounded-full px-4 py-1.5 text-sm font-sans font-semibold flex-shrink-0 transition-colors hover:bg-tomato/10 hover:border-tomato/60"
         >
           {t('auth.signInButton')}
         </button>
@@ -75,7 +75,7 @@ function ProfileMenu() {
         aria-expanded={menuOpen}
         aria-label={t('header.accountMenuAria')}
         title={user.email}
-        className="w-7 h-7 rounded-full bg-tomato/20 border border-tomato/40 text-tomato font-display text-xs flex items-center justify-center"
+        className="w-9 h-9 rounded-full bg-tomato/20 border border-tomato/40 text-tomato font-display text-sm flex items-center justify-center transition-colors hover:bg-tomato/30"
       >
         {initial}
       </button>

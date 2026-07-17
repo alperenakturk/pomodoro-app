@@ -45,9 +45,22 @@ export default {
     recentDayDone: '{{date}}: Pomodoro completed',
     recentDayFrozen: '{{date}}: covered by a Streak Freeze',
     recentDayMissed: '{{date}}: missed',
+    // StreakDetailsModal's color legend under the 14-day strip.
+    legendDone: 'Completed',
+    legendFrozen: 'Frozen',
+    legendMissed: 'Missed',
     celebrationIncrementAria: 'Streak increased to {{count}}',
     celebrationMilestoneTitle: '{{count}}-Day Streak!',
     celebrationMilestoneAria: 'Milestone reached: {{count}} day streak',
+    // StreakCelebrationScreen's full-screen takeover (see App.jsx) — plain
+    // increment reuses the same "{{count}}-Day Streak!" phrasing as the
+    // milestone title above, just with a lighter subtitle; the badge line
+    // is milestone-only.
+    celebrationIncrementTitle: '{{count}}-Day Streak!',
+    celebrationIncrementSubtitle: 'Keep the fire going.',
+    celebrationMilestoneSubtitle: "You've hit a new milestone!",
+    celebrationMilestoneBadge: 'Milestone',
+    celebrationContinueButton: 'Continue',
   },
 
   timer: {

@@ -776,3 +776,23 @@ create policy "achievement_unlocks_delete_own" on public.achievement_unlocks
 -- schema public" ran near the top of this file — needs its own explicit
 -- grant, same as card_draws above.
 grant select, insert, update, delete on public.achievement_unlocks to authenticated;
+
+-- ----------------------------------------------------------------------------
+-- theme column default (settings) — the CHECK constraint was widened from
+-- the original 2-value ('dark'/'light') set to the real 5-theme picker back
+-- when settings_theme_check above was added, but the column's own DEFAULT
+-- clause (set once, at CREATE TABLE time, and never revisited by that later
+-- ALTER) was left at 'dark'. DEFAULT_SETTINGS.theme on the client has been
+-- 'light-terracotta' this whole time, so the two silently disagreed: any
+-- brand-new blank settings row — a genuinely new account's first sign-in,
+-- or a signed-in Factory Reset re-creating the row from nothing (see
+-- storage.js's resetAllData) — never sends `theme` in its upsert payload at
+-- all (upsertSingletonAndFetch(table, userId, {})), so Postgres's own
+-- column default is what actually lands, not the client's. Result: a
+-- freshly (re)created account opened in Dark, while a fresh guest browser
+-- opened in Light Terracotta, for no product reason — just two defaults
+-- nobody kept in sync. Aligning the column default with the client's is the
+-- fix; no CHECK-constraint change needed, 'light-terracotta' was already a
+-- valid value.
+-- ----------------------------------------------------------------------------
+alter table public.settings alter column theme set default 'light-terracotta';

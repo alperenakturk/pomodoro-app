@@ -43,7 +43,7 @@ import MethodologyGuideModal from './components/MethodologyGuideModal'
 import AccountSetupFlow from './components/AccountSetupFlow'
 import GuestSignupNudge from './components/GuestSignupNudge'
 import AuthModal from './components/AuthModal'
-import StreakCelebration from './components/StreakCelebration'
+import StreakCelebrationScreen from './components/StreakCelebrationScreen'
 import StreakDetailsModal from './components/StreakDetailsModal'
 import AchievementToastStack from './components/achievements/AchievementToastStack'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
@@ -224,8 +224,9 @@ function GearIcon({ className }) {
 // (getLastThemeHint) though — a plain hardcoded background here would itself
 // be a visible flash-of-wrong-theme for any returning user whose real theme
 // isn't the default, on top of the swap to their actual theme a moment
-// later. Falls back to 'dark' (via themeClassName(null)) the first time
-// this browser has ever loaded, same as the app's overall default.
+// later. Falls back to 'light-terracotta' (via themeClassName(null)) the
+// first time this browser has ever loaded, same as the app's overall
+// default (DEFAULT_SETTINGS.theme).
 function LoadingAccountScreen() {
   return <div className={`min-h-screen bg-pine ${themeClassName(getLastThemeHint())}`} />
 }
@@ -701,29 +702,25 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           )}
           {/* Real streak counter (src/hooks/useStreak.js) — dim/sage-toned
               until today's Pomodoro is done (the "gray flame" convention),
-              tomato-bold once it is. Click opens StreakDetailsModal;
-              StreakCelebration overlays a one-shot animation on top when
+              tomato-bold once it is. Click opens StreakDetailsModal.
+              StreakCelebrationScreen (a full-screen takeover, not anchored
+              here) shows separately, at the root level below, when
               useStreak reports a fresh increment/milestone. */}
-          <div className="relative flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => setStreakDetailsOpen(true)}
-              aria-label={t('header.streakAria')}
-              title={t('header.streakAria')}
-              className={
-                'flex items-center gap-1 text-xs font-sans tabular-nums leading-none ' +
-                (streak.todayDone ? 'text-tomato' : 'text-sage')
-              }
-            >
-              <span>🍅</span>
-              <span>{streak.currentStreak}</span>
-            </button>
-            <StreakCelebration
-              celebration={streak.celebration}
-              streak={streak.currentStreak}
-              onDone={streak.clearCelebration}
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => setStreakDetailsOpen(true)}
+            aria-label={t('header.streakAria')}
+            title={t('header.streakAria')}
+            className={
+              'flex items-center gap-1.5 text-sm font-sans font-semibold tabular-nums leading-none flex-shrink-0 rounded-full border px-3 py-1.5 transition-colors ' +
+              (streak.todayDone
+                ? 'text-tomato border-tomato/40 bg-tomato/10 hover:bg-tomato/15'
+                : 'text-sage border-cream/15 hover:border-cream/30 hover:text-cream')
+            }
+          >
+            <span className="text-base leading-none">🍅</span>
+            <span>{streak.currentStreak}</span>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -732,9 +729,12 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
             }}
             aria-label={t('header.settingsAria')}
             title={t('header.settingsAria')}
-            className={'text-sage hover:text-cream flex-shrink-0 ' + (settingsOpen ? 'text-tomato' : '')}
+            className={
+              'p-2 rounded-full transition-colors flex-shrink-0 ' +
+              (settingsOpen ? 'text-tomato bg-tomato/10' : 'text-sage hover:text-cream hover:bg-cream/10')
+            }
           >
-            <GearIcon className="w-4 h-4" />
+            <GearIcon className="w-5 h-5" />
           </button>
           <ProfileMenu />
         </div>
@@ -860,6 +860,12 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           onClose={() => setStreakDetailsOpen(false)}
         />
       )}
+
+      <StreakCelebrationScreen
+        celebration={streak.celebration}
+        streak={streak.currentStreak}
+        onDone={streak.clearCelebration}
+      />
 
       <AchievementToastStack toastQueue={achievements.toastQueue} onDismiss={achievements.dismissToast} />
 

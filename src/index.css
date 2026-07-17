@@ -190,14 +190,19 @@ body {
   opacity: 1;
 }
 
-/* StreakCelebration's mascot pop/explode (src/components/StreakCelebration.jsx)
-   — purely decorative flourish layered on top of the streak number, which is
-   already visible and announced on its own, same reasoning as
-   animate-task-check above: default invisible under reduced motion rather
-   than a frozen mid-animation pose. */
-.animate-streak-pop,
+/* StreakCelebrationScreen's mascot/particle/glow/splat/drip/flash — belt-
+   and-suspenders alongside that component's own JS-level reduced-motion
+   check (which never applies these classes at all when reduce-motion is
+   on): if they somehow end up applied anyway, default invisible rather
+   than a frozen mid-animation pose, same reasoning as animate-task-check
+   above. */
 .animate-streak-explode,
-.animate-streak-particle {
+.animate-streak-particle,
+.animate-streak-glow-pulse,
+.animate-tomato-mascot-splat,
+.animate-tomato-splat-blob,
+.animate-tomato-drip,
+.animate-tomato-splat-flash {
   opacity: 0;
 }
 
@@ -350,35 +355,27 @@ body {
     animation: reveal-pop-rare 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  /* StreakCelebration's small daily bump — the tomato-man mascot does a
-     quick bounce next to the streak number every time it increments by one.
-     Same timing family as task-check-pop above (scale up then settle), just
-     shorter since this fires far more often. */
-  @keyframes streak-pop {
-    0% { opacity: 0; transform: scale(0.5) translateY(6px); }
-    40% { opacity: 1; transform: scale(1.15) translateY(-2px); }
-    60% { transform: scale(1) translateY(0); }
-    100% { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  .animate-streak-pop {
-    animation: streak-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-
-  /* StreakCelebration's milestone burst — the mascot grows and settles while
-     its seed-particle siblings (separate .animate-streak-particle spans,
-     each given its own --angle/--distance custom properties inline by the
-     component for a radial spread) fly outward and fade. */
+  /* StreakCelebrationScreen's plain-increment entrance (every regular day,
+     not just milestones) — the tomato-man mascot grows in with a bouncy
+     wobble and settles, backed by its sibling particle ring/glow below.
+     Ends at full opacity/scale (not fading back out) since the screen stays
+     open afterward waiting for the user to tap Continue — the mascot has to
+     still be there, not have faded away while they're looking at it. */
   @keyframes streak-explode {
     0% { opacity: 0; transform: scale(0.4) rotate(-6deg); }
     35% { opacity: 1; transform: scale(1.3) rotate(4deg); }
     55% { transform: scale(1.1) rotate(-2deg); }
     75% { opacity: 1; transform: scale(1.15) rotate(0deg); }
-    100% { opacity: 0; transform: scale(1.3) rotate(0deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
   }
   .animate-streak-explode {
     animation: streak-explode 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
+  /* StreakCelebrationScreen's increment-tier particle ring — each span is
+     given its own --angle/--distance custom properties inline by the
+     component for a radial spread. Fades out and stays gone (unlike the
+     mascot above) since particles dispersing away is the point. */
   @keyframes streak-particle {
     0% { opacity: 0; transform: rotate(var(--angle)) translateX(0) scale(0.6); }
     25% { opacity: 1; }
@@ -389,6 +386,80 @@ body {
   }
   .animate-streak-particle {
     animation: streak-particle 1.6s ease-out forwards;
+  }
+
+  /* StreakCelebrationScreen's increment-tier glow — a soft blurred ring
+     that pulses out from behind the mascot once, purely atmospheric
+     backing for the explode/particle animations above. Ends at opacity 0
+     (unlike the mascot) since it's just a passing flash. */
+  @keyframes streak-glow-pulse {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    40% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  }
+  .animate-streak-glow-pulse {
+    animation: streak-glow-pulse 1.8s ease-out forwards;
+  }
+
+  /* --- Milestone-only: the tomato "splats" -------------------------------
+     A genuinely bigger moment than a plain day's explode above: the mascot
+     squashes/stretches with anticipation, then rapidly shrinks away right
+     as a burst of "sauce" blobs (tomato-splat-blob) and a few slower drips
+     (tomato-drip) take over, plus one full-screen tomato-tinted flash
+     (tomato-splat-flash) at the moment of impact. All four are timed to
+     read as one continuous "the tomato explodes into sauce" beat, not four
+     separate effects. */
+
+  @keyframes tomato-mascot-splat {
+    0% { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+    28% { opacity: 1; transform: scale(1.25) rotate(5deg); }
+    42% { transform: scaleX(1.35) scaleY(0.62) rotate(0deg); }
+    56% { transform: scaleX(0.78) scaleY(1.22) rotate(0deg); }
+    68% { opacity: 1; transform: scale(1.05) rotate(0deg); }
+    85% { opacity: 0.6; transform: scale(0.5) rotate(6deg); }
+    100% { opacity: 0; transform: scale(0.05) rotate(10deg); }
+  }
+  .animate-tomato-mascot-splat {
+    animation: tomato-mascot-splat 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  /* Organic (non-circular) blob via asymmetric border-radius on the
+     component's own inline style, not here — this keyframe only handles
+     motion: fly out from the impact point along --angle/--distance (same
+     mechanic as streak-particle), tumbling via a trailing rotate() and
+     settling at --blob-scale instead of fading to nothing, so the screen
+     genuinely stays "splattered" until the user dismisses it. */
+  @keyframes tomato-splat-blob {
+    0% { opacity: 0; transform: rotate(var(--angle)) translateX(0) scale(0.3) rotate(0deg); }
+    100% {
+      opacity: 0.9;
+      transform: rotate(var(--angle)) translateX(var(--distance)) scale(var(--blob-scale, 1)) rotate(var(--spin, 160deg));
+    }
+  }
+  .animate-tomato-splat-blob {
+    animation: tomato-splat-blob 1s cubic-bezier(0.15, 0.85, 0.3, 1) forwards;
+  }
+
+  /* A handful of slower, straight-down drips layered under the main blob
+     burst — the "sauce is still running" follow-through beat. */
+  @keyframes tomato-drip {
+    0% { opacity: 0; transform: translateY(0) scaleY(0.4); }
+    25% { opacity: 1; transform: translateY(8px) scaleY(1); }
+    100% { opacity: 0.75; transform: translateY(150px) scaleY(1.5); }
+  }
+  .animate-tomato-drip {
+    animation: tomato-drip 1.7s cubic-bezier(0.3, 0.6, 0.4, 1) forwards;
+  }
+
+  /* The "screen becomes sauce" beat — one quick full-viewport tomato tint,
+     timed to the mascot's squash/vanish moment. */
+  @keyframes tomato-splat-flash {
+    0% { opacity: 0; }
+    12% { opacity: 0.35; }
+    100% { opacity: 0; }
+  }
+  .animate-tomato-splat-flash {
+    animation: tomato-splat-flash 0.7s ease-out forwards;
   }
 
   /* AchievementUnlockToast's entrance/exit — drops in from above the

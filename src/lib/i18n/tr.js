@@ -49,9 +49,22 @@ export default {
     recentDayDone: '{{date}}: Pomodoro tamamlandı',
     recentDayFrozen: '{{date}}: dondurma hakkıyla korundu',
     recentDayMissed: '{{date}}: kaçırıldı',
+    // StreakDetailsModal'ın 14 günlük şeridin altındaki renk açıklaması.
+    legendDone: 'Tamamlandı',
+    legendFrozen: 'Donduruldu',
+    legendMissed: 'Kaçırıldı',
     celebrationIncrementAria: 'Seri {{count}} güne çıktı',
     celebrationMilestoneTitle: '{{count}} Günlük Seri!',
     celebrationMilestoneAria: 'Kilometre taşına ulaşıldı: {{count}} günlük seri',
+    // StreakCelebrationScreen'in tam ekran gösterimi (bkz. App.jsx) — sıradan
+    // artış, yukarıdaki kilometre taşı başlığıyla aynı "{{count}} Günlük
+    // Seri!" ifadesini kullanır, sadece alt metni daha hafif; rozet satırı
+    // yalnızca kilometre taşında görünür.
+    celebrationIncrementTitle: '{{count}} Günlük Seri!',
+    celebrationIncrementSubtitle: 'Ateşi canlı tut.',
+    celebrationMilestoneSubtitle: 'Yeni bir kilometre taşına ulaştın!',
+    celebrationMilestoneBadge: 'Kilometre Taşı',
+    celebrationContinueButton: 'Devam et',
   },
 
   timer: {

@@ -17,7 +17,7 @@ function AchievementUnlockToast({ achievement, onDone }) {
   const { t } = useTranslation()
   const [leaving, setLeaving] = useState(false)
   const reduceMotion =
-    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    typeof window !== 'undefined' && Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)
 
   useEffect(() => {
     setLeaving(false)
