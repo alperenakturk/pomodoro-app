@@ -268,6 +268,22 @@ describe('initializeRemoteData', () => {
     consoleErrorSpy.mockRestore()
   })
 
+  it("a failing achievement_unlocks fetch doesn't abort other tables' loads", async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { initializeRemoteData, get } = await loadRemoteProviderWith({
+      achievement_unlocks: { arraySelect: { data: null, error: { message: 'network error' } } },
+      inventory: { arraySelect: { data: [{ id: 'i1', text: 'Remote task', user_id: 'user-1' }], error: null } },
+      settings: { singleSelect: { data: { theme: 'dark', cycle_length: 4, user_id: 'user-1' }, error: null } },
+    })
+
+    const result = await initializeRemoteData('user-1')
+
+    expect(result.error).toBeNull()
+    expect(get('pomodoro_achievement_unlocks', 'fallback')).toBe('fallback')
+    expect(get('pomodoro_inventory', null)).toMatchObject([{ id: 'i1', text: 'Remote task' }])
+    consoleErrorSpy.mockRestore()
+  })
+
   it('returns an error only when every single collection fails (a real total failure)', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const failure = { data: null, error: { message: 'network error' } }
@@ -280,6 +296,7 @@ describe('initializeRemoteData', () => {
       categories: { arraySelect: failure },
       void_log: { arraySelect: failure },
       card_draws: { arraySelect: failure },
+      achievement_unlocks: { arraySelect: failure },
       timer_state: { singleSelect: failure },
       settings: { singleSelect: failure },
     })

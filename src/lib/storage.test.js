@@ -31,6 +31,11 @@ import {
   addActivityRecord,
   updateActivityRecord,
   addTick,
+  loadAchievementUnlocks,
+  saveAchievementUnlocks,
+  addAchievementUnlocks,
+  clearAchievementUnlocks,
+  exportAllData,
   importBackup,
   importActivityLogCSV,
   signInToRemote,
@@ -397,6 +402,65 @@ describe('Void log', () => {
   })
 })
 
+describe('Achievement unlocks', () => {
+  it('addAchievementUnlocks adds a batch in one write and fires a single notifyChange', () => {
+    const callback = vi.fn()
+    const unsubscribe = subscribeToChanges(callback)
+
+    addAchievementUnlocks([
+      { id: 'u1', achievementId: 'dailyPomodoroCount-1', unlockedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'u2', achievementId: 'activeDaysLifetime-1', unlockedAt: '2026-01-01T00:00:00.000Z' },
+    ])
+
+    expect(loadAchievementUnlocks()).toMatchObject([
+      { id: 'u1', achievementId: 'dailyPomodoroCount-1' },
+      { id: 'u2', achievementId: 'activeDaysLifetime-1' },
+    ])
+    expect(callback).toHaveBeenCalledTimes(1)
+    unsubscribe()
+  })
+
+  it('normalizes a missing unlockedAt/userId instead of crashing', () => {
+    localStorage.setItem(
+      'pomodoro_achievement_unlocks',
+      JSON.stringify([{ id: 'u1', achievementId: 'dailyPomodoroCount-1' }])
+    )
+    expect(loadAchievementUnlocks()).toEqual([
+      {
+        id: 'u1',
+        achievementId: 'dailyPomodoroCount-1',
+        unlockedAt: null,
+        userId: 'local',
+        createdAt: null,
+        updatedAt: null,
+      },
+    ])
+  })
+
+  it('clearAchievementUnlocks removes only the unlock log', async () => {
+    addAchievementUnlocks([{ id: 'u1', achievementId: 'dailyPomodoroCount-1', unlockedAt: null }])
+    await clearAchievementUnlocks()
+    expect(loadAchievementUnlocks()).toEqual([])
+  })
+
+  it('round-trips through exportAllData / importBackup replace and merge', () => {
+    addAchievementUnlocks([{ id: 'u1', achievementId: 'dailyPomodoroCount-1', unlockedAt: null }])
+    const backup = exportAllData()
+    expect(backup.achievementUnlocks).toHaveLength(1)
+
+    saveAchievementUnlocks([])
+    importBackup(backup, 'replace')
+    expect(loadAchievementUnlocks()).toHaveLength(1)
+
+    saveAchievementUnlocks([])
+    importBackup(
+      { achievementUnlocks: [{ id: 'u2', achievementId: 'activeDaysLifetime-1', unlockedAt: null }] },
+      'merge'
+    )
+    expect(loadAchievementUnlocks().map((u) => u.id)).toEqual(['u2'])
+  })
+})
+
 describe('backend-readiness metadata (userId/createdAt/updatedAt)', () => {
   afterEach(() => {
     vi.useRealTimers()
@@ -544,6 +608,7 @@ describe('Danger Zone: category clears', () => {
     saveTimerState({ sessionType: 'work', secondsLeft: 100, isRunning: true })
     saveCategories([{ id: 'c1', name: 'Coding', color: '#4a8c82' }])
     addVoidLogEntry({ id: 'v1', date: '2026-01-01', elapsedSeconds: 10 })
+    addAchievementUnlocks([{ id: 'u1', achievementId: 'dailyPomodoroCount-1', unlockedAt: null }])
     patchSettings({ cycleLength: 6, theme: 'light', chimeStyle: 'soft' })
   }
 
@@ -657,6 +722,7 @@ describe('Danger Zone: category clears', () => {
     expect(loadTimerState()).toBeNull()
     expect(loadCategories()).toEqual([])
     expect(loadVoidLog()).toEqual([])
+    expect(loadAchievementUnlocks()).toEqual([])
     // loadSettings() always merges defaults back in, so the honest check is
     // that the underlying key is gone, not that loadSettings() returns {}.
     expect(localStorage.getItem('pomodoro_settings')).toBeNull()

@@ -5,6 +5,7 @@ import { usePomodoro } from './hooks/usePomodoro'
 import { useCategories } from './hooks/useCategories'
 import { useTimetable } from './hooks/useTimetable'
 import { useStreak } from './hooks/useStreak'
+import { useAchievements } from './hooks/useAchievements'
 import { useAuth } from './hooks/useAuth'
 import {
   loadSettings,
@@ -40,6 +41,7 @@ import GuestSignupNudge from './components/GuestSignupNudge'
 import AuthModal from './components/AuthModal'
 import StreakCelebration from './components/StreakCelebration'
 import StreakDetailsModal from './components/StreakDetailsModal'
+import AchievementToastStack from './components/achievements/AchievementToastStack'
 import { COACH_MARKS, pickCoachMark } from './lib/constants'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
@@ -238,6 +240,11 @@ function AppInner({ isNewAccount }) {
   // that shared ancestor, same reasoning as every other hook here.
   const timetableApi = useTimetable()
   const streak = useStreak()
+  // Instantiated once here (not inside SettingsModal) so an unlock is
+  // detected and toasted live regardless of which tab is open — see
+  // useAchievements.js's own comment on why a second, SettingsModal-local
+  // instance would double-write unlock records and double-play the sound.
+  const achievements = useAchievements()
   const [streakDetailsOpen, setStreakDetailsOpen] = useState(false)
   const { t, localeTag } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
@@ -796,6 +803,8 @@ function AppInner({ isNewAccount }) {
         />
       )}
 
+      <AchievementToastStack toastQueue={achievements.toastQueue} onDismiss={achievements.dismissToast} />
+
       {settingsOpen && (
         // fallback dims the screen immediately (matching SettingsModal's own
         // eventual bg-black/60 backdrop) instead of a blank gap while the
@@ -853,6 +862,8 @@ function AppInner({ isNewAccount }) {
           coachMarksSuppressed={coachMarksSuppressed}
           onOpenGuide={openGuide}
           onReplayCoachMarks={replayCoachMarks}
+          achievementUnlockedIds={achievements.unlockedIds}
+          getAchievementCategoryProgress={achievements.getCategoryProgress}
         />
         </Suspense>
       )}

@@ -390,4 +390,27 @@ body {
   .animate-streak-particle {
     animation: streak-particle 1.6s ease-out forwards;
   }
+
+  /* AchievementUnlockToast's entrance/exit — drops in from above the
+     viewport, exit noticeably shorter than enter (220ms vs 350ms) so
+     dismissal reads as responsive rather than lingering. Transform/opacity
+     only, same as every other animation in this file. Skipped entirely under
+     reduced motion (see the component's own reduceMotion check) — unlike the
+     purely decorative streak/card animations above, this toast still shows
+     its content either way, just without the slide. */
+  @keyframes achievement-toast-in {
+    0% { opacity: 0; transform: translate(-50%, -16px); }
+    100% { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .animate-achievement-toast-in {
+    animation: achievement-toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes achievement-toast-out {
+    0% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -10px); }
+  }
+  .animate-achievement-toast-out {
+    animation: achievement-toast-out 0.22s ease-in forwards;
+  }
 }

@@ -443,6 +443,38 @@ export async function clearCardDraws() {
   await activeProvider.remove(CARD_DRAWS_KEY)
 }
 
+// Achievement unlock history (src/lib/achievements.js) — one record per
+// achievement id the user has unlocked, written once by useAchievements.js
+// the moment evaluateAchievements() first reports it satisfied. `achievementId`
+// references an id in achievements.js's ACHIEVEMENT_DEFINITIONS
+// ('<categoryId>-<threshold>') but is intentionally just a string here, not a
+// foreign key — achievements.js is pure config with no storage.js dependency.
+// Plural add (unlike addCardDraw's singular) because a single trigger (e.g.
+// one Pomodoro completing) can satisfy several achievements at once and the
+// unlock toast queue needs them persisted as one batch, not N separate writes.
+const ACHIEVEMENT_UNLOCKS_KEY = 'pomodoro_achievement_unlocks'
+function normalizeAchievementUnlock(record) {
+  return {
+    id: record.id,
+    achievementId: record.achievementId,
+    unlockedAt: record.unlockedAt ?? null,
+    ...normalizeMeta(record),
+  }
+}
+export const loadAchievementUnlocks = () =>
+  loadJSON(ACHIEVEMENT_UNLOCKS_KEY, []).map(normalizeAchievementUnlock)
+export const saveAchievementUnlocks = (unlocks) => saveJSON(ACHIEVEMENT_UNLOCKS_KEY, unlocks)
+export function addAchievementUnlocks(newUnlocks) {
+  const unlocks = loadAchievementUnlocks()
+  unlocks.push(...newUnlocks.map(stampCreated))
+  saveAchievementUnlocks(unlocks)
+  notifyChange()
+  return unlocks
+}
+export async function clearAchievementUnlocks() {
+  await activeProvider.remove(ACHIEVEMENT_UNLOCKS_KEY)
+}
+
 // Timer state: sayfa yenilenince devam eden pomodoro'nun kaybolmaması için
 // sessionType/secondsLeft/isRunning'in anlık görüntüsü.
 const TIMER_STATE_KEY = 'pomodoro_timer_state'
@@ -522,6 +554,7 @@ export async function resetAllData() {
     activeProvider.remove(VOID_LOG_KEY),
     activeProvider.remove(SETTINGS_KEY),
     activeProvider.remove(CARD_DRAWS_KEY),
+    activeProvider.remove(ACHIEVEMENT_UNLOCKS_KEY),
   ])
 }
 
@@ -538,6 +571,7 @@ export function exportAllData() {
     categories: loadCategories(),
     voidLog: loadVoidLog(),
     cardDraws: loadCardDraws(),
+    achievementUnlocks: loadAchievementUnlocks(),
   }
 }
 
@@ -563,6 +597,7 @@ export function importBackup(data, mode) {
     if (Array.isArray(data.categories)) saveCategories(data.categories)
     if (Array.isArray(data.voidLog)) saveVoidLog(data.voidLog)
     if (Array.isArray(data.cardDraws)) saveCardDraws(data.cardDraws)
+    if (Array.isArray(data.achievementUnlocks)) saveAchievementUnlocks(data.achievementUnlocks)
     if (data.settings && typeof data.settings === 'object') saveSettings(data.settings)
   } else {
     if (Array.isArray(data.inventory)) saveInventory(mergeCollectionById(loadInventory(), data.inventory))
@@ -573,6 +608,9 @@ export function importBackup(data, mode) {
     if (Array.isArray(data.categories)) saveCategories(mergeCollectionById(loadCategories(), data.categories))
     if (Array.isArray(data.voidLog)) saveVoidLog(mergeCollectionById(loadVoidLog(), data.voidLog))
     if (Array.isArray(data.cardDraws)) saveCardDraws(mergeCollectionById(loadCardDraws(), data.cardDraws))
+    if (Array.isArray(data.achievementUnlocks)) {
+      saveAchievementUnlocks(mergeCollectionById(loadAchievementUnlocks(), data.achievementUnlocks))
+    }
   }
   notifyChange()
 }
@@ -761,6 +799,7 @@ const SYNCED_KEYS = [
   CATEGORIES_KEY,
   VOID_LOG_KEY,
   CARD_DRAWS_KEY,
+  ACHIEVEMENT_UNLOCKS_KEY,
 ]
 
 window.addEventListener('storage', (e) => {

@@ -15,6 +15,7 @@ const ARRAY_TABLES = {
   pomodoro_categories: 'categories',
   pomodoro_void_log: 'void_log',
   pomodoro_card_draws: 'card_draws',
+  pomodoro_achievement_unlocks: 'achievement_unlocks',
 }
 
 // Singletons (one row per user) — see supabase/schema.sql's file-header

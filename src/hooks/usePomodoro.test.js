@@ -99,6 +99,28 @@ describe('usePomodoro', () => {
     expect(loadTicks().filter((t) => t.type === 'pomodoro')).toHaveLength(1)
   })
 
+  it('ringing a short break records a break-short tick', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.switchSession('shortBreak'))
+    act(() => result.current.start())
+    tick(5 * 60)
+
+    expect(result.current.sessionType).toBe('work')
+    expect(loadTicks().filter((t) => t.type === 'break-short')).toHaveLength(1)
+    expect(loadTicks().filter((t) => t.type === 'break-long')).toHaveLength(0)
+  })
+
+  it('ringing a long break records a break-long tick', () => {
+    const { result } = renderHook(() => usePomodoro())
+    act(() => result.current.switchSession('longBreak'))
+    act(() => result.current.start())
+    tick(15 * 60)
+
+    expect(result.current.sessionType).toBe('work')
+    expect(loadTicks().filter((t) => t.type === 'break-long')).toHaveLength(1)
+    expect(loadTicks().filter((t) => t.type === 'break-short')).toHaveLength(0)
+  })
+
   // Pause is the deliberate Rule 2 deviation that replaced the old "Finish
   // Pomodoro" escape hatch — unlike finishing early (or void), it doesn't
   // complete or discard the session, just stops the countdown in place,

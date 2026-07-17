@@ -98,6 +98,37 @@ export function playTaskCompleteChime() {
   playTone(880, 0.56, 0.55, 0.15)
 }
 
+// Achievement unlock — a mid-weight "reward" moment, deliberately placed
+// between playTaskCompleteChime() (calmer, longer) and playCategoryReveal's
+// isRare shimmer (reserved for the single biggest payoff in the app, the
+// Rare card pull): a short, brighter, more percussive 4-note ascending
+// sequence, plus one quick triangle-oscillator sweep layered under the last
+// note for a timbre distinct from the sine-only chimes elsewhere. Fires once
+// per unlock *batch* (see useAchievements.js) — several achievements
+// unlocking from a single Pomodoro completing plays this once, not stacked.
+export function playAchievementUnlock() {
+  if (!audioCtx) return
+  playTone(587, 0, 0.14, 0.15)
+  playTone(740, 0.09, 0.14, 0.16)
+  playTone(880, 0.18, 0.16, 0.17)
+  playTone(1175, 0.3, 0.4, 0.18)
+
+  const now = audioCtx.currentTime
+  const osc = audioCtx.createOscillator()
+  const gain = audioCtx.createGain()
+  osc.type = 'triangle'
+  osc.frequency.setValueAtTime(880, now + 0.3)
+  osc.frequency.exponentialRampToValueAtTime(1760, now + 0.5)
+  const peak = Math.max(0.0001, 0.08 * effectsVolume)
+  gain.gain.setValueAtTime(0.0001, now + 0.3)
+  gain.gain.exponentialRampToValueAtTime(peak, now + 0.34)
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55)
+  osc.connect(gain)
+  gain.connect(audioCtx.destination)
+  osc.start(now + 0.3)
+  osc.stop(now + 0.57)
+}
+
 // --- MotivationOverlay sound effects ---------------------------------------
 // Same synthesized-tone approach as everything above (no audio files) for
 // the card-draw feature's shuffle/pick/reveal beats.

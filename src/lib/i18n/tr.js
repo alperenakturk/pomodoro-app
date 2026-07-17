@@ -264,7 +264,7 @@ export default {
     firstRareLabel: 'İlk Nadir kart',
     firstRareNone: 'Henüz bulunamadı',
     byCategoryTitle: 'Kategoriye göre',
-    achievementsFooter: 'Tam bir başarı sistemi gelecek bir güncelleme için planlanıyor.',
+    achievementsFooter: 'Daha fazla kart rozeti hemen aşağıda.',
   },
 
   streakMilestones: {
@@ -273,6 +273,171 @@ export default {
     milestoneLabel: '{{days}} günlük seri',
     reachedAria: 'Ulaşıldı',
     lockedAria: 'Henüz ulaşılmadı',
+  },
+
+  // Ayarlar > Başarılar — bunun render ettiği yapılandırma için
+  // src/lib/achievements.js'e (src/components/achievements/AchievementGrid.jsx),
+  // açılış bildirimi için AchievementUnlockToast.jsx'e bakın.
+  achievements: {
+    title: 'Başarılar',
+    summary: '{{unlocked}}/{{total}} açıldı',
+    categories: {
+      dailyPomodoroCount: {
+        label: 'Günlük Odak',
+        description: 'Tek bir günde birden fazla Pomodoro tamamla.',
+      },
+      cumulativeFocusHours: {
+        label: 'Toplam Odak Süresi',
+        description: 'Zaman içinde odaklanılmış çalışma saatleri biriktir.',
+      },
+      cumulativeBreakHours: {
+        label: 'Toplam Mola Süresi',
+        description: 'Pomodorolar arasında dinlenerek geçirilen süreyi biriktir.',
+      },
+      cumulativeTasksCompleted: {
+        label: 'Tamamlanan Görevler',
+        description: 'Tüm zamanlar boyunca görevleri tamamla.',
+      },
+      activeDaysLifetime: {
+        label: 'Aktif Günler',
+        description: 'Hangi sırayla olursa olsun, en az bir Pomodoro tamamladığın günler.',
+      },
+      motivationCardsDraws: {
+        label: 'Kart Çekilişleri',
+        description: 'Motivasyon destesinden kart çek.',
+      },
+      motivationCardsRare: {
+        label: 'Nadir Buluşlar',
+        description: 'Motivasyon destesinden Nadir kartlar çek.',
+      },
+      motivationCardsDiscovery: {
+        label: 'Tam Koleksiyon',
+        description: 'Her kart kategorisini keşfet.',
+      },
+      firsts: {
+        label: 'İlkler',
+        description: 'Sadece bir kez yaşadığın kilometre taşları.',
+      },
+      resilience: {
+        label: 'Dayanıklılık',
+        description: 'Bir kesintiyi görmezden gelmek yerine adını koy.',
+      },
+      categoryDiversity: {
+        label: 'Çok Yönlü',
+        description: 'Farklı kategorilerde görevler tamamla.',
+      },
+      earlyBird: {
+        label: 'Erken Kalkan',
+        description: 'Saat 08:00\'den önce bir Pomodoro tamamla.',
+      },
+      nightOwl: {
+        label: 'Gece Kuşu',
+        description: 'Saat 22:00 veya sonrasında bir Pomodoro tamamla.',
+      },
+      reflectivePause: {
+        label: 'Düşünceli Mola',
+        description: 'Bir Pomodoro planlandığı gibi gitmediğinde nedenini yaz.',
+      },
+    },
+    dailyPomodoroCount: {
+      tier1: { title: 'İlk Pomodoro', description: 'Gününün ilk Pomodorosunu tamamla.' },
+      tier2: { title: 'Isınma Turu', description: 'Tek bir günde 4 Pomodoro tamamla.' },
+      tier3: { title: 'Akışta', description: 'Tek bir günde 8 Pomodoro tamamla.' },
+      tier4: { title: 'Derin Odak', description: 'Tek bir günde 12 Pomodoro tamamla.' },
+      tier5: { title: 'Yılmaz', description: 'Tek bir günde 16 Pomodoro tamamla.' },
+      tier6: { title: 'Durdurulamaz', description: 'Tek bir günde 20 Pomodoro tamamla.' },
+      tier7: { title: 'Tam Gaz', description: 'Tek bir günde 24 Pomodoro tamamla.' },
+    },
+    cumulativeFocusHours: {
+      tier1: { title: '25 Saat Odaklanma', description: 'Toplamda 25 saat odaklanılmış çalışmaya ulaş.' },
+      tier2: { title: '50 Saat Odaklanma', description: 'Toplamda 50 saat odaklanılmış çalışmaya ulaş.' },
+      tier3: { title: '100 Saat Odaklanma', description: 'Toplamda 100 saat odaklanılmış çalışmaya ulaş.' },
+      tier4: { title: '250 Saat Odaklanma', description: 'Toplamda 250 saat odaklanılmış çalışmaya ulaş.' },
+      tier5: { title: '500 Saat Odaklanma', description: 'Toplamda 500 saat odaklanılmış çalışmaya ulaş.' },
+      tier6: { title: '1.000 Saat Odaklanma', description: 'Toplamda 1.000 saat odaklanılmış çalışmaya ulaş.' },
+    },
+    cumulativeBreakHours: {
+      tier1: { title: 'Rahatına Bak', description: 'Toplamda 5 saat mola süresine ulaş.' },
+      tier2: { title: 'İyi Dinlenmiş', description: 'Toplamda 15 saat mola süresine ulaş.' },
+      tier3: { title: 'Dengeyi Koru', description: 'Toplamda 30 saat mola süresine ulaş.' },
+      tier4: { title: 'Düzenli Şarj', description: 'Toplamda 75 saat mola süresine ulaş.' },
+      tier5: { title: 'Toparlanma Ustası', description: 'Toplamda 150 saat mola süresine ulaş.' },
+      tier6: { title: 'Dinlenme Efendisi', description: 'Toplamda 300 saat mola süresine ulaş.' },
+    },
+    cumulativeTasksCompleted: {
+      tier1: { title: 'İşleri Bitiriyor', description: '5 görev tamamla.' },
+      tier2: { title: 'İstikrarlı İlerleme', description: '25 görev tamamla.' },
+      tier3: { title: 'Görev Ezicisi', description: '50 görev tamamla.' },
+      tier4: { title: 'Momentum Yaratan', description: '150 görev tamamla.' },
+      tier5: { title: 'Üretken', description: '300 görev tamamla.' },
+      tier6: { title: 'Görev Efsanesi', description: '600 görev tamamla.' },
+    },
+    activeDaysLifetime: {
+      tier1: { title: 'İlk Gün', description: 'İlk aktif gününde bir Pomodoro tamamla.' },
+      tier2: { title: 'Bir Haftalık', description: '7 farklı günde aktif ol.' },
+      tier3: { title: 'Bir Aylık', description: '30 farklı günde aktif ol.' },
+      tier4: { title: 'Çeyrek Güç', description: '90 farklı günde aktif ol.' },
+      tier5: { title: 'Yarım Yıl', description: '180 farklı günde aktif ol.' },
+      tier6: { title: 'Tam Bir Yıl', description: '365 farklı günde aktif ol.' },
+      tier7: { title: 'İki Yıl Güçlü', description: '730 farklı günde aktif ol.' },
+    },
+    motivationCardsDraws: {
+      tier1: { title: 'İlk Çekiliş', description: 'İlk motivasyon kartını çek.' },
+    },
+    motivationCardsRare: {
+      tier1: { title: 'Nadir Bulgu', description: 'İlk Nadir kartını çek.' },
+      tier2: { title: 'Şanslı Seri', description: '5 Nadir kart çek.' },
+      tier3: { title: 'Nadir Koleksiyoncu', description: '10 Nadir kart çek.' },
+    },
+    motivationCardsDiscovery: {
+      tier1: { title: 'Kart Uzmanı', description: 'Her motivasyon kartı kategorisini keşfet.' },
+    },
+    firsts: {
+      task: { title: 'İlk Görev Tamamlandı', description: 'İlk görevini tamamla.' },
+      break: { title: 'İlk Mola Verildi', description: 'İlk molanı ver.' },
+    },
+    resilience: {
+      tier1: {
+        title: 'Adını Koyma',
+        description: 'Fark etmeden geçmesine izin vermek yerine ilk kesintini kaydet.',
+      },
+      tier2: { title: 'Farkındalığını Koru', description: '10 kesinti kaydet.' },
+      tier3: { title: 'Sağlam Duruş', description: '25 kesinti kaydet.' },
+      tier4: { title: 'Sarsılmaz', description: '50 kesinti kaydet.' },
+    },
+    categoryDiversity: {
+      tier1: { title: 'Ufkunu Genişlet', description: '2 farklı kategoride görev tamamla.' },
+      tier2: { title: 'Çok Yönlü', description: '4 farklı kategoride görev tamamla.' },
+      tier3: { title: 'Her Şeyden Biraz', description: '6 farklı kategoride görev tamamla.' },
+    },
+    earlyBird: {
+      tier1: { title: 'Erken Kalkan', description: "Saat 08:00'den önce bir Pomodoro tamamla." },
+    },
+    nightOwl: {
+      tier1: { title: 'Gece Kuşu', description: 'Saat 22:00 veya sonrasında bir Pomodoro tamamla.' },
+    },
+    reflectivePause: {
+      tier1: {
+        title: 'Düşünceli Mola',
+        description: 'Bir Pomodoro ilk kez planlandığı gibi gitmediğinde nedenini yaz.',
+      },
+    },
+    progress: {
+      countFormat: '{{value}}/{{threshold}}',
+      hoursFormat: '{{value}} sa / {{threshold}} sa',
+      daysFormat: '{{value}}/{{threshold}} gün',
+    },
+    toast: {
+      unlockedLabel: 'Başarı Açıldı',
+      dismissAria: 'Kapat',
+    },
+    grid: {
+      lockedAria: 'Kilitli',
+      unlockedAria: 'Açıldı',
+      allTiersDone: 'Tüm seviyeler tamamlandı',
+      cardBadgesTitle: 'Kart Rozetleri',
+      specialTitle: 'Özel',
+    },
   },
 
   notifications: {
@@ -757,8 +922,11 @@ export default {
     resetCardDrawsLabel: 'Kart koleksiyonu',
     resetCardDrawsConfirm:
       'Bu, Motivasyon Kartı çekiliş geçmişini (Başarılar istatistikleri) kalıcı olarak silecek. Bu geri alınamaz. Devam edilsin mi?',
+    resetAchievementsLabel: 'Başarılar',
+    resetAchievementsConfirm:
+      'Bu, açtığın Başarıları kalıcı olarak silecek. Hâlâ hak kazandığın herhangi biri bir sonraki değerlendirmede tekrar açılacak. Bu geri alınamaz. Devam edilsin mi?',
     factoryResetConfirm:
-      "Bu, HER ŞEYİ kalıcı olarak silecek: Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü, Kart koleksiyonun VE ayarların (döngü uzunluğu, ses, tema). Uygulama ilk açılış durumuna dönecek. Bu geri alınamaz. Devam edilsin mi?",
+      "Bu, HER ŞEYİ kalıcı olarak silecek: Görev Envanteri, Bugünün Görevleri, Kayıtlar, kesinti geçmişi, Kategoriler, İptal günlüğü, Kart koleksiyonun, açtığın Başarılar VE ayarların (döngü uzunluğu, ses, tema). Uygulama ilk açılış durumuna dönecek. Bu geri alınamaz. Devam edilsin mi?",
   },
 
   dataImport: {

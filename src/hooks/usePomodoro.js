@@ -325,6 +325,14 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     if (sessionType === 'longBreak') setCompletedPomodoros(0)
     setPauseCount(0)
     pausedRef.current = false
+    // Mirrors completeWork's addTick call — breaks previously wrote no tick
+    // at all, leaving cumulative break-time achievements with no data source.
+    addTick({
+      id: crypto.randomUUID(),
+      type: sessionType === 'longBreak' ? 'break-long' : 'break-short',
+      date: todayString(),
+      timestamp: new Date().toISOString(),
+    })
     notify(t('notifications.breakOverTitle'), t('notifications.backToWorkBody'))
     setSessionType('work')
     setSecondsLeft(workMinutes * 60)

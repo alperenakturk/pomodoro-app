@@ -717,3 +717,62 @@ alter table public.settings
   add column if not exists streak_freeze_granted_at date;
 alter table public.settings
   add column if not exists streak_freeze_used_dates jsonb not null default '[]'::jsonb;
+
+-- ----------------------------------------------------------------------------
+-- break-short / break-long tick types (usePomodoro.js's completeBreak) — a
+-- Pomodoro completing has always written a 'pomodoro' tick, but a break
+-- completing wrote nothing at all, so cumulative break-time achievements
+-- (src/lib/achievements.js) had no source data. Widening this CHECK instead
+-- of adding a new table keeps break time on the same append-only tick log
+-- everything else in Reports/achievements already reads.
+-- ----------------------------------------------------------------------------
+alter table public.ticks drop constraint if exists ticks_type_check;
+alter table public.ticks
+  add constraint ticks_type_check
+  check (type in ('pomodoro', 'interruption-internal', 'interruption-external', 'pause', 'break-short', 'break-long'));
+
+-- ----------------------------------------------------------------------------
+-- achievement_unlocks  (pomodoro_achievement_unlocks / normalizeAchievementUnlock)
+--
+-- One row per achievement id (src/lib/achievements.js's
+-- ACHIEVEMENT_DEFINITIONS) a user has unlocked. achievement_id is
+-- deliberately NOT a CHECK-constrained enum (unlike ticks.type/
+-- settings.theme above) — new achievement ids are added purely via
+-- config-file edits over time, and a CHECK constraint would force a schema
+-- migration for every new tier/category shipped. A plain index is enough
+-- since this column is only ever written by trusted app code, never
+-- user-supplied.
+-- ----------------------------------------------------------------------------
+create table public.achievement_unlocks (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  achievement_id text not null,
+  unlocked_at    timestamptz not null default now(),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now()
+);
+
+create index achievement_unlocks_user_id_idx on public.achievement_unlocks(user_id);
+create index achievement_unlocks_achievement_id_idx on public.achievement_unlocks(achievement_id);
+-- Defensive only, for the rare cross-tab/cross-device race where two
+-- sessions detect and persist the same new unlock at once — client-side
+-- diffing against the already-loaded unlock list already prevents this in
+-- the common single-session case.
+create unique index achievement_unlocks_user_achievement_uidx
+  on public.achievement_unlocks(user_id, achievement_id);
+
+alter table public.achievement_unlocks enable row level security;
+
+create policy "achievement_unlocks_select_own" on public.achievement_unlocks
+  for select using (user_id = auth.uid());
+create policy "achievement_unlocks_insert_own" on public.achievement_unlocks
+  for insert with check (user_id = auth.uid());
+create policy "achievement_unlocks_update_own" on public.achievement_unlocks
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "achievement_unlocks_delete_own" on public.achievement_unlocks
+  for delete using (user_id = auth.uid());
+
+-- This table did not exist when the blanket "grant ... on all tables in
+-- schema public" ran near the top of this file — needs its own explicit
+-- grant, same as card_draws above.
+grant select, insert, update, delete on public.achievement_unlocks to authenticated;

@@ -24,13 +24,13 @@ import {
   clearCategories,
   clearVoidLog,
   clearCardDraws,
+  clearAchievementUnlocks,
   resetAllData,
 } from '../lib/storage'
 import Select from './Select'
 import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
-import CardCollectionStats from './CardCollectionStats'
-import StreakMilestones from './StreakMilestones'
+import AchievementGrid from './achievements/AchievementGrid'
 import CoachMark from './CoachMark'
 import ThemePicker from './ThemePicker'
 import { THEMES } from '../lib/theme'
@@ -62,6 +62,11 @@ const RESET_CATEGORIES = [
   { labelKey: 'settings.resetCategoriesLabel', confirmKey: 'settings.resetCategoriesConfirm', action: clearCategories },
   { labelKey: 'settings.resetVoidLogLabel', confirmKey: 'settings.resetVoidLogConfirm', action: clearVoidLog },
   { labelKey: 'settings.resetCardDrawsLabel', confirmKey: 'settings.resetCardDrawsConfirm', action: clearCardDraws },
+  {
+    labelKey: 'settings.resetAchievementsLabel',
+    confirmKey: 'settings.resetAchievementsConfirm',
+    action: clearAchievementUnlocks,
+  },
 ]
 
 // Both await their storage.js action before reloading — for a signed-in
@@ -156,9 +161,10 @@ function DataIcon({ className }) {
   )
 }
 
-// Placeholder category (see CATEGORIES below) — no real achievement system
-// yet, just a "coming in the full version" message. A simple star/badge
-// glyph, same stroke-only style as the other sidebar icons.
+// Sidebar icon for the Achievements category (see CATEGORIES below, and
+// components/achievements/AchievementGrid.jsx for the tab's real content).
+// A simple star/badge glyph, same stroke-only style as the other sidebar
+// icons.
 function AchievementsIcon({ className }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -252,6 +258,8 @@ function SettingsModal({
   coachMarksSuppressed = false,
   onOpenGuide = () => {},
   onReplayCoachMarks = () => {},
+  achievementUnlockedIds = new Set(),
+  getAchievementCategoryProgress = () => ({ value: 0, currentTier: null, nextTier: null }),
 }) {
   const { t, language, setLanguage } = useTranslation()
   const { user, deleteAccount } = useAuth()
@@ -1025,10 +1033,10 @@ function SettingsModal({
           )}
 
           {activeCategory === 'achievements' && (
-            <div className="flex flex-col gap-4">
-              <StreakMilestones />
-              <CardCollectionStats />
-            </div>
+            <AchievementGrid
+              unlockedIds={achievementUnlockedIds}
+              getCategoryProgress={getAchievementCategoryProgress}
+            />
           )}
 
           {activeCategory === 'about' && (

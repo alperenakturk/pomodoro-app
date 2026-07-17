@@ -297,7 +297,7 @@ export default {
     firstRareLabel: 'First Rare card',
     firstRareNone: 'Not found yet',
     byCategoryTitle: 'By category',
-    achievementsFooter: 'A full achievements system is planned for a future update.',
+    achievementsFooter: 'More card badges are just below.',
   },
 
   streakMilestones: {
@@ -306,6 +306,171 @@ export default {
     milestoneLabel: '{{days}}-day streak',
     reachedAria: 'Reached',
     lockedAria: 'Not reached yet',
+  },
+
+  // Settings > Achievements — see src/lib/achievements.js for the config
+  // this renders (src/components/achievements/AchievementGrid.jsx) and
+  // AchievementUnlockToast.jsx for the unlock notification.
+  achievements: {
+    title: 'Achievements',
+    summary: '{{unlocked}}/{{total}} unlocked',
+    categories: {
+      dailyPomodoroCount: {
+        label: 'Daily Focus',
+        description: 'Complete multiple Pomodoros in a single day.',
+      },
+      cumulativeFocusHours: {
+        label: 'Total Focus Time',
+        description: 'Accumulate hours of focused work over time.',
+      },
+      cumulativeBreakHours: {
+        label: 'Total Break Time',
+        description: 'Accumulate time spent resting between Pomodoros.',
+      },
+      cumulativeTasksCompleted: {
+        label: 'Tasks Finished',
+        description: 'Complete tasks across all time.',
+      },
+      activeDaysLifetime: {
+        label: 'Days Active',
+        description: 'Show up for at least one Pomodoro, any day, in any order.',
+      },
+      motivationCardsDraws: {
+        label: 'Card Draws',
+        description: 'Draw cards from the motivation deck.',
+      },
+      motivationCardsRare: {
+        label: 'Rare Finds',
+        description: 'Draw Rare cards from the motivation deck.',
+      },
+      motivationCardsDiscovery: {
+        label: 'Full Collection',
+        description: 'Discover every card category.',
+      },
+      firsts: {
+        label: 'Firsts',
+        description: 'Milestones you only hit once.',
+      },
+      resilience: {
+        label: 'Resilience',
+        description: 'Name an interruption instead of letting it derail you.',
+      },
+      categoryDiversity: {
+        label: 'Well Rounded',
+        description: 'Finish tasks across different categories.',
+      },
+      earlyBird: {
+        label: 'Early Bird',
+        description: 'Complete a Pomodoro before 8 AM.',
+      },
+      nightOwl: {
+        label: 'Night Owl',
+        description: 'Complete a Pomodoro at 10 PM or later.',
+      },
+      reflectivePause: {
+        label: 'Reflective Pause',
+        description: "Write down why, when a Pomodoro doesn't go as planned.",
+      },
+    },
+    dailyPomodoroCount: {
+      tier1: { title: 'First Pomodoro', description: 'Complete your first Pomodoro of the day.' },
+      tier2: { title: 'Warming Up', description: 'Complete 4 Pomodoros in a single day.' },
+      tier3: { title: 'In the Zone', description: 'Complete 8 Pomodoros in a single day.' },
+      tier4: { title: 'Deep Focus', description: 'Complete 12 Pomodoros in a single day.' },
+      tier5: { title: 'Relentless', description: 'Complete 16 Pomodoros in a single day.' },
+      tier6: { title: 'Unstoppable', description: 'Complete 20 Pomodoros in a single day.' },
+      tier7: { title: 'Full Send', description: 'Complete 24 Pomodoros in a single day.' },
+    },
+    cumulativeFocusHours: {
+      tier1: { title: '25 Hours Focused', description: 'Reach 25 total hours of focused work.' },
+      tier2: { title: '50 Hours Focused', description: 'Reach 50 total hours of focused work.' },
+      tier3: { title: '100 Hours Focused', description: 'Reach 100 total hours of focused work.' },
+      tier4: { title: '250 Hours Focused', description: 'Reach 250 total hours of focused work.' },
+      tier5: { title: '500 Hours Focused', description: 'Reach 500 total hours of focused work.' },
+      tier6: { title: '1,000 Hours Focused', description: 'Reach 1,000 total hours of focused work.' },
+    },
+    cumulativeBreakHours: {
+      tier1: { title: 'Taking It Easy', description: 'Reach 5 total hours of break time.' },
+      tier2: { title: 'Well Rested', description: 'Reach 15 total hours of break time.' },
+      tier3: { title: 'Balance Kept', description: 'Reach 30 total hours of break time.' },
+      tier4: { title: 'Recharge Regular', description: 'Reach 75 total hours of break time.' },
+      tier5: { title: 'Recovery Pro', description: 'Reach 150 total hours of break time.' },
+      tier6: { title: 'Master of Rest', description: 'Reach 300 total hours of break time.' },
+    },
+    cumulativeTasksCompleted: {
+      tier1: { title: 'Getting Things Done', description: 'Finish 5 tasks.' },
+      tier2: { title: 'Steady Progress', description: 'Finish 25 tasks.' },
+      tier3: { title: 'Task Crusher', description: 'Finish 50 tasks.' },
+      tier4: { title: 'Momentum Builder', description: 'Finish 150 tasks.' },
+      tier5: { title: 'Prolific', description: 'Finish 300 tasks.' },
+      tier6: { title: 'Task Legend', description: 'Finish 600 tasks.' },
+    },
+    activeDaysLifetime: {
+      tier1: { title: 'Day One', description: 'Complete a Pomodoro on your first active day.' },
+      tier2: { title: "A Week's Worth", description: 'Be active on 7 different days.' },
+      tier3: { title: "A Month's Worth", description: 'Be active on 30 different days.' },
+      tier4: { title: 'Quarter Strong', description: 'Be active on 90 different days.' },
+      tier5: { title: 'Half a Year', description: 'Be active on 180 different days.' },
+      tier6: { title: 'A Full Year', description: 'Be active on 365 different days.' },
+      tier7: { title: 'Two Years Strong', description: 'Be active on 730 different days.' },
+    },
+    motivationCardsDraws: {
+      tier1: { title: 'First Draw', description: 'Draw your first motivation card.' },
+    },
+    motivationCardsRare: {
+      tier1: { title: 'Rare Find', description: 'Draw your first Rare card.' },
+      tier2: { title: 'Lucky Streak', description: 'Draw 5 Rare cards.' },
+      tier3: { title: 'Rare Collector', description: 'Draw 10 Rare cards.' },
+    },
+    motivationCardsDiscovery: {
+      tier1: { title: 'Card Connoisseur', description: 'Discover every motivation card category.' },
+    },
+    firsts: {
+      task: { title: 'First Task Finished', description: 'Complete your very first task.' },
+      break: { title: 'First Break Taken', description: 'Take your very first break.' },
+    },
+    resilience: {
+      tier1: {
+        title: 'Naming It',
+        description: 'Log your first interruption instead of letting it slide by unnoticed.',
+      },
+      tier2: { title: 'Staying Aware', description: 'Log 10 interruptions.' },
+      tier3: { title: 'Steady Hand', description: 'Log 25 interruptions.' },
+      tier4: { title: 'Unshaken', description: 'Log 50 interruptions.' },
+    },
+    categoryDiversity: {
+      tier1: { title: 'Branching Out', description: 'Finish tasks in 2 different categories.' },
+      tier2: { title: 'Well Rounded', description: 'Finish tasks in 4 different categories.' },
+      tier3: { title: 'All Over the Map', description: 'Finish tasks in 6 different categories.' },
+    },
+    earlyBird: {
+      tier1: { title: 'Early Bird', description: 'Complete a Pomodoro before 8 AM.' },
+    },
+    nightOwl: {
+      tier1: { title: 'Night Owl', description: 'Complete a Pomodoro at 10 PM or later.' },
+    },
+    reflectivePause: {
+      tier1: {
+        title: 'Reflective Pause',
+        description: "Write down why, the first time a Pomodoro doesn't go as planned.",
+      },
+    },
+    progress: {
+      countFormat: '{{value}}/{{threshold}}',
+      hoursFormat: '{{value}}h / {{threshold}}h',
+      daysFormat: '{{value}}/{{threshold}} days',
+    },
+    toast: {
+      unlockedLabel: 'Achievement Unlocked',
+      dismissAria: 'Dismiss',
+    },
+    grid: {
+      lockedAria: 'Locked',
+      unlockedAria: 'Unlocked',
+      allTiersDone: 'All tiers complete',
+      cardBadgesTitle: 'Card Badges',
+      specialTitle: 'Special',
+    },
   },
 
   notifications: {
@@ -795,8 +960,11 @@ export default {
     resetCardDrawsLabel: 'Card collection',
     resetCardDrawsConfirm:
       'This will permanently delete your Motivational Card draw history (Achievements stats). This cannot be undone. Continue?',
+    resetAchievementsLabel: 'Achievements',
+    resetAchievementsConfirm:
+      'This will permanently delete your unlocked Achievements. Anything you still qualify for will unlock again the next time it re-evaluates. This cannot be undone. Continue?',
     factoryResetConfirm:
-      "This will permanently delete EVERYTHING: Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, your Card collection, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?",
+      "This will permanently delete EVERYTHING: Activity Inventory, Today's Tasks, Records, interruption history, Categories, the Void log, your Card collection, your unlocked Achievements, AND your settings (cycle length, sound, theme). The app will return to its first-launch state. This cannot be undone. Continue?",
   },
 
   dataImport: {
