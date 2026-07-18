@@ -235,8 +235,6 @@ function SettingsModal({
   setDailyPomodoroGoal,
   theme,
   onSelectTheme,
-  rgbPartyMode,
-  setRgbPartyMode,
   customThemeGeneral,
   setCustomThemeGeneral,
   customThemeFocus,
@@ -415,7 +413,7 @@ function SettingsModal({
   // modal's backdrop too, closing both at once.
   return (
     <>
-    <div className="rgb-safe fixed inset-0 bg-black/60 flex items-center justify-center p-4 sm:p-6 z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 sm:p-6 z-50" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -603,39 +601,6 @@ function SettingsModal({
                     <p className="text-sage text-[10px] mt-1">{t('settings.customThemeHint')}</p>
                   </div>
                 )}
-              </div>
-
-              {/* Purely a joke — see index.css's .rgb-party-mode for the
-                  actual effect (an animated rainbow background + hue-rotate
-                  cycling everything else, with Settings itself exempted via
-                  .rgb-safe so the toggle stays reachable). Not persisted, no
-                  functional effect on the app; toggled off again just by
-                  clicking it a second time — stays on until then or a
-                  reload. rgbPartyModeWarning below is a genuine photo-
-                  sensitivity note (fast, repeating color/brightness
-                  changes), not part of the joke — shown unconditionally,
-                  not just once turned on, so it's read before opting in. */}
-              <div className="flex flex-col gap-1 text-sage text-xs font-sans py-3 border-b border-cream/10">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-cream flex items-center gap-1.5">
-                    <span aria-hidden="true">🌈</span>
-                    {t('settings.rgbPartyModeLabel')}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setRgbPartyMode((prev) => !prev)}
-                    aria-pressed={rgbPartyMode}
-                    className={
-                      'rounded-full px-4 py-1.5 text-sm font-sans font-semibold transition-colors ' +
-                      (rgbPartyMode
-                        ? 'bg-tomato text-on-tomato'
-                        : 'border border-cream/15 text-sage hover:text-cream')
-                    }
-                  >
-                    {rgbPartyMode ? t('settings.rgbPartyModeOn') : t('settings.rgbPartyModeOff')}
-                  </button>
-                </div>
-                <span className="text-sage text-[10px]">{t('settings.rgbPartyModeWarning')}</span>
               </div>
 
               {/* Always shown, even for guests — Fullscreen Focus Mode

@@ -1109,7 +1109,7 @@ function MotivationOverlay({
 
   return (
     <div
-      className="rgb-safe fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 p-6 overflow-y-auto"
       style={{ background: `linear-gradient(180deg, ${MYSTIC.bgFrom}, ${MYSTIC.bgVia} 55%, ${MYSTIC.bgTo})` }}
       role="dialog"
       aria-modal="true"

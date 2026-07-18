@@ -107,7 +107,6 @@ function Timer({
   activeTask,
   addTask,
   theme,
-  rgbPartyMode,
   onGoToPlanning,
   onNavigateTab,
   fullscreenBackgroundPath,
@@ -812,17 +811,9 @@ function Timer({
     <div
       ref={containerRef}
       className={
-        (isFullscreen
+        isFullscreen
           ? 'relative bg-pine w-full h-full flex items-center justify-center p-6'
-          : 'flex flex-col items-center gap-6 w-full') +
-        // Native Fullscreen API promotes this element to its own top-layer,
-        // which escapes the ancestor App root's .rgb-party-mode entirely
-        // (filter/background from an ancestor no longer reach a fullscreen
-        // element) — without its own copy of the class here, RGB Mode
-        // silently stopped applying the instant Fullscreen Focus Mode
-        // opened. Harmless to also add it outside fullscreen (the ancestor
-        // already has it there; this is just a redundant duplicate).
-        (rgbPartyMode ? ' rgb-party-mode' : '')
+          : 'flex flex-col items-center gap-6 w-full'
       }
       style={
         isFullscreen && backgroundUrl
@@ -922,7 +913,7 @@ function Timer({
       {pipWindow &&
         createPortal(
           <div
-            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${themeClassName(theme)} ${rgbPartyMode ? 'rgb-party-mode' : ''}`}
+            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${themeClassName(theme)}`}
           >
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
               {t(LABEL_KEYS[sessionType])}
