@@ -54,7 +54,7 @@ function ProfileMenu() {
         <button
           type="button"
           onClick={() => setAuthModalOpen(true)}
-          className="text-tomato border border-tomato/40 rounded-full px-4 py-1.5 text-sm font-sans font-semibold flex-shrink-0 transition-colors hover:bg-tomato/10 hover:border-tomato/60"
+          className="text-tomato-text border border-tomato/40 rounded-full px-4 py-1.5 text-sm font-sans font-semibold flex-shrink-0 transition-colors hover:bg-tomato/10 hover:border-tomato/60"
         >
           {t('auth.signInButton')}
         </button>

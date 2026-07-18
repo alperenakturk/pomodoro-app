@@ -8,7 +8,7 @@ export function diffLabel(diff) {
 
 export function diffClass(diff) {
   if (diff == null) return 'text-sage'
-  if (diff > 0) return 'text-tomato'
-  if (diff < 0) return 'text-amber'
+  if (diff > 0) return 'text-tomato-text'
+  if (diff < 0) return 'text-amber-text'
   return 'text-cream'
 }

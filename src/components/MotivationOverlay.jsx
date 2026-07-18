@@ -770,7 +770,7 @@ function GuessItReveal({ question, answer }) {
   const [answerShown, setAnswerShown] = useState(false)
   return (
     <div className="flex flex-col items-center gap-3">
-      <p className="font-display text-lg leading-snug text-center" style={{ color: MYSTIC.cream }}>
+      <p className="font-warm text-lg leading-snug text-center" style={{ color: MYSTIC.cream }}>
         {question}
       </p>
       {answerShown ? (
@@ -1109,7 +1109,7 @@ function MotivationOverlay({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 p-6 overflow-y-auto"
+      className="rgb-safe fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 p-6 overflow-y-auto"
       style={{ background: `linear-gradient(180deg, ${MYSTIC.bgFrom}, ${MYSTIC.bgVia} 55%, ${MYSTIC.bgTo})` }}
       role="dialog"
       aria-modal="true"
@@ -1165,14 +1165,14 @@ function MotivationOverlay({
             <button
               type="button"
               onClick={onSignUp}
-              className="font-sans text-sm font-semibold px-6 py-2.5 rounded-full bg-tomato text-cream"
+              className="font-sans text-sm font-semibold px-6 py-2.5 rounded-full bg-tomato text-on-tomato"
             >
               {t('auth.signUpButton')}
             </button>
           </div>
         ) : alreadyDrawn ? (
           <div className="text-center flex flex-col gap-1.5 max-w-xs mt-8">
-            <p className="font-display text-sm" style={{ color: MYSTIC.cream }}>
+            <p className="font-warm text-sm" style={{ color: MYSTIC.cream }}>
               {t('motivation.alreadyDrawnTitle')}
             </p>
             <p className="font-sans text-xs" style={{ color: `${MYSTIC.cream}aa` }}>

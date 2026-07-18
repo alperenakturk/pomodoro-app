@@ -108,7 +108,7 @@ function RecordRow({ record, categories, onDelete, onManageCategories }) {
           <button
             type="button"
             onClick={handleSave}
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream ml-auto"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato ml-auto"
           >
             {t('common.save')}
           </button>

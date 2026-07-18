@@ -81,7 +81,7 @@ function ChangePasswordModal({ onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="w-full font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream font-semibold mt-4"
+              className="w-full font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato font-semibold mt-4"
             >
               {t('common.close')}
             </button>
@@ -139,12 +139,12 @@ function ChangePasswordModal({ onClose }) {
               </div>
             </div>
 
-            {error && <p className="text-tomato text-xs font-sans">{error}</p>}
+            {error && <p className="text-tomato-text text-xs font-sans">{error}</p>}
 
             <button
               type="submit"
               disabled={submitting}
-              className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream font-semibold disabled:opacity-50"
+              className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato font-semibold disabled:opacity-50"
             >
               {t('settings.changePasswordButton')}
             </button>

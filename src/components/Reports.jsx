@@ -63,7 +63,7 @@ function TrendArrow({ direction, goodDirection }) {
       ? 'text-sage'
       : direction === goodDirection
         ? 'text-cream'
-        : 'text-tomato'
+        : 'text-tomato-text'
   return <span className={colorClass}>{glyph}</span>
 }
 
@@ -89,7 +89,7 @@ function Stat({ label, value, trend, caption, emphasize = false }) {
         {trend}
       </p>
       <p className="text-sage text-xs mt-1">{label}</p>
-      {caption && <p className="text-sage/60 text-[10px] mt-0.5">{caption}</p>}
+      {caption && <p className="text-sage text-[10px] mt-0.5">{caption}</p>}
     </div>
   )
 }
@@ -105,7 +105,7 @@ function EmptyChartState({ message }) {
   return (
     <div className="border border-dashed border-cream/15 rounded-xl px-6 py-10 flex flex-col items-center gap-1">
       <p className="text-sage text-xs font-sans font-semibold">{t('reports.noChartDataTitle')}</p>
-      <p className="text-sage/70 text-xs font-sans">{message}</p>
+      <p className="text-sage text-xs font-sans">{message}</p>
     </div>
   )
 }
@@ -146,7 +146,7 @@ function TodaySection({ ticks, activityLog, todayTasks, period, workMinutes, dai
           <span className="inline-flex items-center gap-1">
             {t('reports.totalFocusTime')}
             <span
-              className="text-sage/70 cursor-help"
+              className="text-sage cursor-help"
               title={t('reports.totalFocusTimeTooltip')}
               aria-label={t('reports.totalFocusTimeTooltip')}
             >
@@ -523,7 +523,7 @@ function Reports({
         <button
           type="button"
           onClick={() => setShowReview(true)}
-          className="text-tomato text-xs font-sans"
+          className="text-tomato-text text-xs font-sans"
         >
           {t('reports.reviewToday')}
         </button>
@@ -538,7 +538,7 @@ function Reports({
         // ever seen).
         <div className="border border-dashed border-cream/15 rounded-xl px-6 py-10 flex flex-col items-center gap-1">
           <p className="text-sage text-xs font-sans font-semibold">{t('reports.noChartDataTitle')}</p>
-          <p className="text-sage/70 text-xs font-sans text-center max-w-sm">{t('reports.noDataAtAll')}</p>
+          <p className="text-sage text-xs font-sans text-center max-w-sm">{t('reports.noDataAtAll')}</p>
         </div>
       ) : (
         <>
@@ -562,7 +562,7 @@ function Reports({
           </div>
 
           {selectedSection == null && hasNoHistoryYet(ticks, activityLog) && (
-            <p className="text-sage/60 text-[11px] font-sans italic text-center -mt-2 mb-6">
+            <p className="text-sage text-[11px] font-sans italic text-center -mt-2 mb-6">
               {t('reports.noHistoryHint')}
             </p>
           )}
@@ -585,7 +585,7 @@ function Reports({
                       {t(section.labelKey)}
                     </p>
                     <p className="font-display text-2xl text-cream tabular-nums">{teaser.value}</p>
-                    <p className="text-sage/60 text-[10px] font-sans mt-1">{teaser.caption}</p>
+                    <p className="text-sage text-[10px] font-sans mt-1">{teaser.caption}</p>
                   </button>
                 )
               })}
@@ -644,7 +644,7 @@ function Reports({
                 >
                   {t('reports.stepPrevious')}
                 </button>
-                <span className="text-sage/60 tabular-nums">
+                <span className="text-sage tabular-nums">
                   {t('reports.stepIndicator', { current: sectionIndex + 1, total: SECTIONS.length })}
                 </span>
                 <button

@@ -112,7 +112,7 @@ function CategoryTagPicker({ id, categories, value, onChange, onAddCategory, cla
               <button
                 type="button"
                 onClick={handleAddCategory}
-                className="w-full text-left px-2 py-1.5 text-xs whitespace-nowrap text-tomato hover:bg-cream/10"
+                className="w-full text-left px-2 py-1.5 text-xs whitespace-nowrap text-tomato-text hover:bg-cream/10"
               >
                 + {t('categoryPicker.addCategory')}
               </button>

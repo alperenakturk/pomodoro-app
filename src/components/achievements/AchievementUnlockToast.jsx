@@ -48,16 +48,16 @@ function AchievementUnlockToast({ achievement, onDone }) {
           <AchievementIcon icon={achievement.icon} className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-tomato text-[10px] font-sans tracking-widest uppercase">
+          <p className="text-tomato-text text-[10px] font-sans tracking-widest uppercase">
             {t('achievements.toast.unlockedLabel')}
           </p>
           <p className="text-cream text-sm font-sans font-semibold truncate">{t(achievement.titleKey)}</p>
-          <p className="text-sage/70 text-xs font-sans truncate">{t(achievement.descriptionKey)}</p>
+          <p className="text-sage text-xs font-sans truncate">{t(achievement.descriptionKey)}</p>
         </div>
         <button
           type="button"
           onClick={() => setLeaving(true)}
-          className="text-sage/50 hover:text-sage flex-shrink-0 p-1 -m-1"
+          className="text-sage hover:text-cream flex-shrink-0 p-1 -m-1"
           aria-label={t('achievements.toast.dismissAria')}
         >
           <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2">

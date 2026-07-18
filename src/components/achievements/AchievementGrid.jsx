@@ -40,7 +40,7 @@ function formatProgressValue(unit, value) {
 function ProgressLine({ category, progress, t }) {
   const { value, nextTier } = progress
   if (!nextTier) {
-    return <span className="text-tomato text-xs font-sans font-semibold">{t('achievements.grid.allTiersDone')}</span>
+    return <span className="text-tomato-text text-xs font-sans font-semibold">{t('achievements.grid.allTiersDone')}</span>
   }
   const formatKey =
     category.unit === 'hours'
@@ -49,7 +49,7 @@ function ProgressLine({ category, progress, t }) {
         ? 'achievements.progress.daysFormat'
         : 'achievements.progress.countFormat'
   return (
-    <span className="text-sage/70 text-xs font-sans">
+    <span className="text-sage text-xs font-sans">
       {t(formatKey, { value: formatProgressValue(category.unit, value), threshold: nextTier.threshold })}
     </span>
   )
@@ -142,7 +142,7 @@ function AchievementGrid({ unlockedIds, getCategoryProgress }) {
     <div className="flex flex-col gap-4">
       <div>
         <p className="text-cream text-sm font-sans font-semibold">{t('achievements.title')}</p>
-        <p className="text-sage/70 text-xs font-sans">
+        <p className="text-sage text-xs font-sans">
           {t('achievements.summary', { unlocked: unlockedCount, total: totalCount })}
         </p>
       </div>

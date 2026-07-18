@@ -40,7 +40,7 @@ function GuestSignupNudge({ onDismiss, onSignUp }) {
       <button
         type="button"
         onClick={onSignUp}
-        className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream mt-3"
+        className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-on-tomato mt-3"
       >
         {t('auth.signUpButton')}
       </button>

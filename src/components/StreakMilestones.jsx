@@ -17,7 +17,7 @@ function StreakMilestones() {
       <p className="text-sage text-[10px] font-sans tracking-widest uppercase mb-1">
         {t('streakMilestones.title')}
       </p>
-      <p className="text-sage/70 text-xs font-sans mb-3">
+      <p className="text-sage text-xs font-sans mb-3">
         {t('streakMilestones.summary', { current: currentStreak, longest: longestStreak })}
       </p>
       <div className="flex flex-wrap gap-2">

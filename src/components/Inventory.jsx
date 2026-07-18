@@ -119,7 +119,7 @@ function InventoryRow({
           <button
             type="button"
             onClick={handleSave}
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
           >
             {t('inventory.saveButton')}
           </button>
@@ -164,7 +164,7 @@ function InventoryRow({
           {item.text}
         </span>
         {item.unplanned && (
-          <span className="text-amber text-xs font-semibold" title={t('inventory.unplannedBadgeTitle')}>
+          <span className="text-amber-text text-xs font-semibold" title={t('inventory.unplannedBadgeTitle')}>
             U
           </span>
         )}
@@ -183,7 +183,7 @@ function InventoryRow({
         {item.deadline && (
           <span
             className={
-              isOverdue(item.deadline) ? 'text-tomato text-xs font-semibold' : 'text-sage text-xs'
+              isOverdue(item.deadline) ? 'text-tomato-text text-xs font-semibold' : 'text-sage text-xs'
             }
           >
             {formatDateLocalized(item.deadline, localeTag)}
@@ -193,7 +193,7 @@ function InventoryRow({
           <span
             className={
               item.estimate > MAX_RECOMMENDED_ESTIMATE
-                ? 'text-tomato text-xs font-semibold'
+                ? 'text-tomato-text text-xs font-semibold'
                 : 'text-sage text-xs'
             }
             title={
@@ -209,7 +209,7 @@ function InventoryRow({
         <button
           type="button"
           onClick={() => onSendToToday(item)}
-          className="text-tomato text-xs"
+          className="text-tomato-text text-xs"
         >
           {t('inventory.addToToday')}
         </button>
@@ -341,7 +341,7 @@ function Inventory({
         </div>
         <button
           type="submit"
-          className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream"
+          className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato"
         >
           {t('inventory.addButton')}
         </button>
@@ -390,7 +390,7 @@ function Inventory({
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
-        <p className="text-tomato text-xs font-sans mb-4 -mt-2">
+        <p className="text-tomato-text text-xs font-sans mb-4 -mt-2">
           {t('inventory.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
         </p>
       )}
@@ -403,7 +403,7 @@ function Inventory({
           <button
             type="button"
             onClick={handleCombine}
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
           >
             {t('inventory.combineButton')}
           </button>

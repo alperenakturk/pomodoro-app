@@ -116,7 +116,7 @@ function TaskRow({
           <button
             type="button"
             onClick={handleSave}
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream ml-auto"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato ml-auto"
           >
             {t('today.saveButton')}
           </button>
@@ -161,7 +161,7 @@ function TaskRow({
           {task.done && <span aria-hidden="true" className="task-strike" />}
         </span>
         {task.unplanned && (
-          <span className="text-amber text-xs font-semibold ml-1" title={t('today.unplannedBadgeTitle')}>
+          <span className="text-amber-text text-xs font-semibold ml-1" title={t('today.unplannedBadgeTitle')}>
             U
           </span>
         )}
@@ -179,7 +179,7 @@ function TaskRow({
         )}
         {task.estimate > MAX_RECOMMENDED_ESTIMATE && (
           <span
-            className="text-tomato ml-1"
+            className="text-tomato-text ml-1"
             title={t('today.moreThanWarningInline', { max: MAX_RECOMMENDED_ESTIMATE })}
           >
             ⚠
@@ -192,7 +192,7 @@ function TaskRow({
         <button
           type="button"
           onClick={openReestimate}
-          className="text-sage text-xs text-right hover:text-tomato"
+          className="text-sage text-xs text-right hover:text-tomato-text"
           aria-label={t('today.reestimateAria')}
           title={
             task.reestimate1 != null
@@ -205,7 +205,7 @@ function TaskRow({
           }
         >
           {task.estimate ?? '-'}
-          {task.reestimate1 != null && <span className="text-tomato">↻</span>}
+          {task.reestimate1 != null && <span className="text-tomato-text">↻</span>}
         </button>
       )}
       <span className="text-sage text-xs text-right">{task.realized}</span>
@@ -214,7 +214,7 @@ function TaskRow({
         <button
           type="button"
           onClick={() => onFinish(task.id)}
-          className="text-tomato text-xs leading-none"
+          className="text-tomato-text text-xs leading-none"
           title={t('today.finishTaskTitle')}
           aria-label={t('today.finishTaskAria')}
         >
@@ -222,7 +222,7 @@ function TaskRow({
         </button>
       )}
       {task.done && (
-        <span className="text-tomato text-xs leading-none animate-task-check" aria-hidden="true">
+        <span className="text-tomato-text text-xs leading-none animate-task-check" aria-hidden="true">
           ✓
         </span>
       )}
@@ -269,7 +269,7 @@ function TaskRow({
           />
           <button
             type="submit"
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
           >
             {t('today.saveButton')}
           </button>
@@ -359,7 +359,7 @@ function TaskListMenu({ hasFinished, hasAny, onClearFinished, onClearAll }) {
               role="menuitem"
               onClick={handleClearAll}
               disabled={!hasAny}
-              className="w-full text-left px-3 py-2 text-xs font-sans text-tomato hover:bg-tomato/10 whitespace-nowrap disabled:opacity-40 disabled:hover:bg-transparent"
+              className="w-full text-left px-3 py-2 text-xs font-sans text-tomato-text hover:bg-tomato/10 whitespace-nowrap disabled:opacity-40 disabled:hover:bg-transparent"
             >
               {t('today.clearAllLabel')}
             </button>
@@ -447,7 +447,7 @@ function TodoToday({
         </div>
         <button
           type="submit"
-          className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream"
+          className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato"
         >
           {t('today.addButton')}
         </button>
@@ -472,7 +472,7 @@ function TodoToday({
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
-        <p className="text-tomato text-xs font-sans mb-4 -mt-2">
+        <p className="text-tomato-text text-xs font-sans mb-4 -mt-2">
           {t('today.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
         </p>
       )}

@@ -94,7 +94,7 @@ function StreakDetailsModal({
             (isActive ? 'bg-tomato/10 border-tomato/40' : 'bg-cream/5 border-cream/10')
           }
         >
-          <p className={'font-display text-6xl font-extrabold tabular-nums ' + (isActive ? 'text-tomato' : 'text-cream')}>
+          <p className={'font-display text-6xl font-extrabold tabular-nums ' + (isActive ? 'text-tomato-text' : 'text-cream')}>
             {currentStreak}
           </p>
           <p className="text-sage text-xs font-sans mt-1">{t('streak.currentStreakLabel', { count: currentStreak })}</p>
@@ -108,17 +108,17 @@ function StreakDetailsModal({
           <div
             className={
               'rounded-xl px-3 py-3 text-center border ' +
-              (freezeAvailable ? 'bg-amber/10 border-amber/40' : 'bg-cream/5 border-cream/10')
+              (freezeAvailable ? 'bg-freeze/10 border-freeze/40' : 'bg-cream/5 border-cream/10')
             }
           >
-            <SnowflakeIcon className={'w-5 h-5 mx-auto mb-1 ' + (freezeAvailable ? 'text-amber' : 'text-sage/60')} />
-            <p className={'text-xs font-sans font-semibold ' + (freezeAvailable ? 'text-amber' : 'text-sage')}>
+            <SnowflakeIcon className={'w-5 h-5 mx-auto mb-1 ' + (freezeAvailable ? 'text-freeze' : 'text-sage/60')} />
+            <p className={'text-xs font-sans font-semibold ' + (freezeAvailable ? 'text-freeze-text' : 'text-sage')}>
               {freezeAvailable ? t('streak.freezeAvailableYes') : t('streak.freezeAvailableNo', { days: daysUntilNextFreeze })}
             </p>
           </div>
         </div>
 
-        <p className="text-sage/60 text-xs font-sans mb-4">{t('streak.freezeExplainer')}</p>
+        <p className="text-sage text-xs font-sans mb-4">{t('streak.freezeExplainer')}</p>
 
         <p className="font-sans text-sm text-cream mb-5">
           {nextMilestone != null
@@ -143,7 +143,7 @@ function StreakDetailsModal({
           })}
         </div>
 
-        <div className="flex items-center justify-center gap-4 font-sans text-[10px] text-sage/70">
+        <div className="flex items-center justify-center gap-4 font-sans text-[10px] text-sage">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-[3px] bg-tomato" aria-hidden="true" />
             {t('streak.legendDone')}

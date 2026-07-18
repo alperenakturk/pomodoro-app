@@ -796,3 +796,20 @@ grant select, insert, update, delete on public.achievement_unlocks to authentica
 -- valid value.
 -- ----------------------------------------------------------------------------
 alter table public.settings alter column theme set default 'light-terracotta';
+
+-- ----------------------------------------------------------------------------
+-- theme column CHECK widening — the "Color & Typography System Overhaul"
+-- added 5 new themes (2 dark, 3 light-vivid) alongside the existing 5,
+-- grouped into three picker tiers (see lib/theme.js's THEMES/THEME_TIERS).
+-- Same drop/re-add pattern as settings_theme_check above, appended rather
+-- than editing that earlier ALTER in place.
+-- ----------------------------------------------------------------------------
+alter table public.settings drop constraint if exists settings_theme_check;
+alter table public.settings
+  add constraint settings_theme_check
+  check (theme in (
+    'dark', 'dark-espresso', 'dark-slate',
+    'light-terracotta', 'light-sage', 'light-sand', 'light-dusty-blue',
+    'vivid-coral', 'vivid-citrus', 'vivid-mint',
+    'custom'
+  ));

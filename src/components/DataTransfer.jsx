@@ -102,8 +102,8 @@ function DataTransfer({ categories }) {
 
       <div className={rowClass}>
         <div>
-          <p>{t('dataImport.jsonExportLabel')}</p>
-          <p className="text-sage/60 text-[11px] mt-0.5">{t('dataImport.jsonExportDesc')}</p>
+          <p className="text-cream">{t('dataImport.jsonExportLabel')}</p>
+          <p className="text-sage text-[11px] mt-0.5">{t('dataImport.jsonExportDesc')}</p>
         </div>
         <button
           type="button"
@@ -116,8 +116,8 @@ function DataTransfer({ categories }) {
 
       <div className={rowClass}>
         <div>
-          <p>{t('dataImport.csvExportLabel')}</p>
-          <p className="text-sage/60 text-[11px] mt-0.5">{t('dataImport.csvExportDesc')}</p>
+          <p className="text-cream">{t('dataImport.csvExportLabel')}</p>
+          <p className="text-sage text-[11px] mt-0.5">{t('dataImport.csvExportDesc')}</p>
         </div>
         <button
           type="button"
@@ -130,8 +130,8 @@ function DataTransfer({ categories }) {
 
       <div className={rowClass}>
         <div>
-          <p>{t('dataImport.jsonImportLabel')}</p>
-          <p className="text-sage/60 text-[11px] mt-0.5">{t('dataImport.jsonImportDesc')}</p>
+          <p className="text-cream">{t('dataImport.jsonImportLabel')}</p>
+          <p className="text-sage text-[11px] mt-0.5">{t('dataImport.jsonImportDesc')}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <input
@@ -150,7 +150,7 @@ function DataTransfer({ categories }) {
           </button>
         </div>
       </div>
-      {jsonError && <p className="text-tomato text-[11px] font-sans -mt-1 mb-2">{jsonError}</p>}
+      {jsonError && <p className="text-tomato-text text-[11px] font-sans -mt-1 mb-2">{jsonError}</p>}
       {pendingJson && (
         <div className="flex flex-col gap-2 bg-tomato/5 border border-tomato/20 rounded-xl px-3 py-2 mb-2">
           <p className="text-sage text-xs font-sans">{t('dataImport.choosePrompt')}</p>
@@ -158,7 +158,7 @@ function DataTransfer({ categories }) {
             <button
               type="button"
               onClick={() => runJsonImport('replace')}
-              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
             >
               {t('dataImport.replaceButton')}
             </button>
@@ -182,8 +182,8 @@ function DataTransfer({ categories }) {
 
       <div className={rowClass}>
         <div>
-          <p>{t('dataImport.csvImportLabel')}</p>
-          <p className="text-sage/60 text-[11px] mt-0.5">{t('dataImport.csvImportDesc')}</p>
+          <p className="text-cream">{t('dataImport.csvImportLabel')}</p>
+          <p className="text-sage text-[11px] mt-0.5">{t('dataImport.csvImportDesc')}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <input
@@ -202,7 +202,7 @@ function DataTransfer({ categories }) {
           </button>
         </div>
       </div>
-      {csvError && <p className="text-tomato text-[11px] font-sans -mt-1 mb-2">{csvError}</p>}
+      {csvError && <p className="text-tomato-text text-[11px] font-sans -mt-1 mb-2">{csvError}</p>}
       {pendingCsv && (
         <div className="flex flex-col gap-2 bg-tomato/5 border border-tomato/20 rounded-xl px-3 py-2">
           <p className="text-sage text-xs font-sans">{t('dataImport.choosePrompt')}</p>
@@ -210,7 +210,7 @@ function DataTransfer({ categories }) {
             <button
               type="button"
               onClick={() => runCsvImport('replace')}
-              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
             >
               {t('dataImport.replaceButton')}
             </button>

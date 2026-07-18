@@ -44,7 +44,7 @@ function CardCollectionStats() {
 
       <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-3 flex items-center justify-between">
         <span className="text-sage text-xs font-sans">{t('motivationStats.firstRareLabel')}</span>
-        <span className={`text-xs font-sans font-semibold ${firstRareDate ? 'text-amber' : 'text-sage/60'}`}>
+        <span className={`text-xs font-sans font-semibold ${firstRareDate ? 'text-amber-text' : 'text-sage/60'}`}>
           {firstRareDate ? formatDateLocalized(firstRareDate, localeTag) : t('motivationStats.firstRareNone')}
         </span>
       </div>
@@ -58,7 +58,7 @@ function CardCollectionStats() {
             <div key={id} className="flex items-center gap-3">
               <CategoryIcon category={id} className="w-5 h-5 flex-shrink-0" />
               <span className="text-cream text-sm font-sans flex-1">{t(`motivation.categories.${id}.label`)}</span>
-              <span className={`text-sm font-sans font-semibold ${id === RARE_CATEGORY_ID ? 'text-amber' : 'text-sage'}`}>
+              <span className={`text-sm font-sans font-semibold ${id === RARE_CATEGORY_ID ? 'text-amber-text' : 'text-sage'}`}>
                 {summary.byCategory[id]}
               </span>
             </div>
@@ -66,7 +66,7 @@ function CardCollectionStats() {
         </div>
       </div>
 
-      <p className="text-sage/60 text-[11px] font-sans text-center italic">{t('motivationStats.achievementsFooter')}</p>
+      <p className="text-sage text-[11px] font-sans text-center italic">{t('motivationStats.achievementsFooter')}</p>
     </div>
   )
 }
@@ -74,7 +74,7 @@ function CardCollectionStats() {
 function StatBox({ label, value, accent = false }) {
   return (
     <div className="bg-pine-dark border border-cream/10 rounded-2xl px-3 py-3 flex flex-col items-center gap-1 text-center">
-      <span className={`font-display text-2xl font-bold ${accent ? 'text-amber' : 'text-cream'}`}>{value}</span>
+      <span className={`font-display text-2xl font-bold ${accent ? 'text-amber-text' : 'text-cream'}`}>{value}</span>
       <span className="text-sage text-[10px] font-sans leading-tight">{label}</span>
     </div>
   )

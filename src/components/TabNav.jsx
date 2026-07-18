@@ -17,10 +17,10 @@ function TabNav({ activeTab, onChange, className = '' }) {
           onClick={() => onChange(tab.id)}
           aria-current={activeTab === tab.id ? 'page' : undefined}
           className={
-            'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
+            'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border transition-colors ' +
             (activeTab === tab.id
-              ? 'bg-tomato/15 border-tomato/60 text-tomato'
-              : 'border-cream/15 text-sage hover:border-cream/30')
+              ? 'bg-tomato border-tomato text-on-tomato font-semibold shadow-sm'
+              : 'border-cream/15 text-sage hover:border-cream/30 hover:text-cream')
           }
         >
           {t(tab.labelKey)}

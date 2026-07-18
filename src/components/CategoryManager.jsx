@@ -54,7 +54,7 @@ function CategoryRow({ category, updateCategory, removeCategory }) {
           <button
             type="button"
             onClick={handleSave}
-            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
           >
             {t('categoryManager.saveButton')}
           </button>
@@ -151,7 +151,7 @@ function CategoryManager({
             <ColorSwatchPicker value={color} onChange={setColor} />
             <button
               type="submit"
-              className="font-sans text-xs px-4 py-2 rounded-xl bg-tomato text-cream flex-shrink-0"
+              className="font-sans text-xs px-4 py-2 rounded-xl bg-tomato text-on-tomato flex-shrink-0"
             >
               {t('categoryManager.addButton')}
             </button>
@@ -163,7 +163,7 @@ function CategoryManager({
           <button
             type="button"
             onClick={onRequireSignIn}
-            className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream self-start"
+            className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-on-tomato self-start"
           >
             {t('auth.signUpButton')}
           </button>

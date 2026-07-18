@@ -22,20 +22,20 @@ function CoachMark({ titleKey, bodyKey, onDismiss, onLearnMore, className = '' }
 
   return (
     <div className={`bg-pine-dark border border-tomato/25 rounded-2xl px-5 py-4 shadow-lg w-full ${className}`}>
-      <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1.5">{t(titleKey)}</p>
+      <p className="font-display text-tomato-text font-bold text-xs tracking-widest uppercase mb-1.5">{t(titleKey)}</p>
       <RichText text={t(bodyKey)} className="font-sans text-cream/90 text-sm leading-relaxed" />
       <div className="flex items-center gap-4 mt-3">
         <button
           type="button"
           onClick={onDismiss}
-          className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
+          className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-on-tomato"
         >
           {t('coachMarks.gotIt')}
         </button>
         <button
           type="button"
           onClick={onLearnMore}
-          className="font-sans text-xs text-tomato underline decoration-dotted"
+          className="font-sans text-xs text-tomato-text underline decoration-dotted"
         >
           {t('coachMarks.learnMore')}
         </button>

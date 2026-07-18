@@ -21,7 +21,7 @@ function AchievementBadge({ definition, unlocked, title, description }) {
     >
       <AchievementIcon icon={definition.icon} className="w-5 h-5" />
       <span
-        className="pointer-events-none absolute -bottom-1.5 -right-1.5 min-w-[16px] px-1 h-4 rounded-full bg-pine-dark border border-cream/15 text-[9px] font-sans font-semibold flex items-center justify-center text-sage/70"
+        className="pointer-events-none absolute -bottom-1.5 -right-1.5 min-w-[16px] px-1 h-4 rounded-full bg-pine-dark border border-cream/15 text-[9px] font-sans font-semibold flex items-center justify-center text-sage"
         aria-hidden="true"
       >
         {definition.tier}

@@ -76,7 +76,7 @@ function Timetable({ blocks, addBlock, removeBlock }) {
             />
             <button
               type="submit"
-              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-cream"
+              className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato"
             >
               {t('timetable.addButton')}
             </button>

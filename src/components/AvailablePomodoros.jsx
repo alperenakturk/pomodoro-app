@@ -61,7 +61,7 @@ function AvailablePomodoros({ plannedTotal, suggestedHours = 0 }) {
               <button
                 type="button"
                 onClick={() => setHours(String(roundedSuggestion))}
-                className="text-sage text-xs underline decoration-dotted hover:text-tomato"
+                className="text-sage text-xs underline decoration-dotted hover:text-tomato-text"
                 title={t('availablePomodoros.useTimetableTitle')}
               >
                 {t('availablePomodoros.useTimetableButton', { hours: roundedSuggestion })}
@@ -70,11 +70,11 @@ function AvailablePomodoros({ plannedTotal, suggestedHours = 0 }) {
           </div>
           {available != null && (
             <p className="text-xs mt-2">
-              <span className={overPlanned ? 'text-tomato font-semibold' : 'text-sage'}>
+              <span className={overPlanned ? 'text-tomato-text font-semibold' : 'text-sage'}>
                 {t('availablePomodoros.plannedLabel', { count: plannedTotal })}
               </span>
               {overPlanned && (
-                <span className="text-tomato">{t('availablePomodoros.overCapacity')}</span>
+                <span className="text-tomato-text">{t('availablePomodoros.overCapacity')}</span>
               )}
             </p>
           )}

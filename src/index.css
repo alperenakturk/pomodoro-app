@@ -6,9 +6,76 @@
   --color-pine-dark: #1f2a21;  /* daha koyu ton, vurgu için */
   --color-tomato: #c84b31;     /* ana aksan - domatesin kendisi */
   --color-tomato-dark: #a83a24;
+  /* Invariant (never redeclared per theme, like --color-tomato/--color-ink
+     below) — the label/icon color for anything sitting on a SOLID
+     `bg-tomato` fill (Start/primary CTA buttons, filled badges), not to be
+     confused with --color-tomato-text just below (which is for tomato-
+     colored text on the page's own bg-pine background, the opposite
+     pairing). `text-cream` was the original choice here, but cream flips
+     from near-white (dark theme) to near-black (light themes) — against
+     tomato specifically that measured as low as 2.83:1 on Light Sage and
+     2.97:1 on Light Sand, both under WCAG's 3:1 floor, on what's usually
+     the app's single most-used button (Start/Continue). Since --color-
+     tomato itself never changes per theme, the label color it's paired
+     with doesn't need to either — a single near-white value clears 4.5:1
+     against tomato in every theme by construction. */
+  --color-on-tomato: #ffffff;
+  /* Text-only variant of tomato — same hue/saturation family (H10 S61%),
+     lightness tuned per theme to clear WCAG AA's 4.5:1 against both pine
+     and pine-dark. --color-tomato itself measures only 2.58-3.71:1 against
+     pine depending on theme — fine for its actual job (backgrounds/borders/
+     large accents/pills, which only need the 3:1 UI-component floor, and
+     which the audit confirmed is where the vast majority of `text-tomato`
+     usage already safely lives), but not for the ~30 sites where it renders
+     as small plain running text (errors, inline links, warnings) directly
+     on a bare background. Using text-tomato-text at those specific sites
+     fixes legibility without touching --color-tomato itself (which must
+     stay fixed everywhere — diffHelpers.js's over/under-estimate coloring
+     and the Danger Zone's destructive-action styling depend on it never
+     varying by theme) and without resizing/re-pilling three dozen call
+     sites just to hit the "large text" 3:1 exemption instead. */
+  --color-tomato-text: #de8978;
   --color-amber: #e8a33d;      /* mola rengi - sıcak amber */
+  /* Text-only variant of amber, same reasoning as --color-tomato-text above.
+     Raw --color-amber measures 5.57:1 on dark (fine, left as-is below) but
+     only 1.4-1.8:1 on every light theme — nowhere close to even the 3:1
+     UI-component floor — because amber was tuned as a warm accent against a
+     dark background and never re-checked against light ones. ~10 sites
+     (CardCollectionStats, Inventory, StreakDetailsModal, StreakCelebration-
+     Screen, TodoToday, diffHelpers' under-estimate coloring) render it as
+     small plain text. Same hue/saturation family as amber (H36 S79%),
+     lightness tuned per theme to clear 4.5:1 against both pine/pine-dark. */
+  --color-amber-text: #e8a33d;
+  /* Ice-blue "streak freeze" indicator — previously just reused --color-
+     amber (freeze-ready badge looked identical to a break-related amber
+     accent, and on Vivid Coral specifically the resulting amber-on-coral
+     text was nearly unreadable, blending into the background). Freeze is
+     conceptually unrelated to amber/breaks, so it gets its own hue (icy
+     cyan-blue, H198) rather than sharing amber's. Like tomato, --color-
+     freeze itself isn't usable as light-theme text (fails badly — a light
+     icy blue against an already-light background), so --color-freeze-text
+     is the per-theme text-safe variant, same pattern as tomato-text. This
+     value (and freeze-text below) is the dark-theme-family pairing; light/
+     vivid theme blocks override both to a darker, more saturated blue that
+     still reads as "ice" while clearing contrast on a light background. */
+  --color-freeze: #47b3e1;
+  --color-freeze-text: #37acdf;
   --color-cream: #fbf8f1;      /* kadran yüzeyi - zamanlayıcının beyaz yüzü */
-  --color-sage: #8a9a8c;       /* ikincil/soluk metin */
+  /* ikincil/soluk metin. First pass here only adjusted lightness (keeping
+     the original #8a9a8c's hue/saturation, ~7% saturation — barely more
+     than literal gray) to clear WCAG's 4.5:1 floor, which fixed the
+     numeric contrast but not the actual complaint: at 7% saturation this
+     still visually reads as flat gray, not a color, especially next to the
+     new Vivid tier's 45-59%-saturation sage. This version boosts
+     saturation to 26% (same hue family, re-solved for lightness to keep
+     clearing 4.5:1 against both pine/pine-dark) — enough to read as an
+     actual muted color instead of gray, without becoming as loud as the
+     Vivid tier's sage (which is meant to be bolder by design). This token
+     is the default color for the large majority of labels/captions/
+     secondary buttons app-wide (~226 `text-sage` usages vs. ~182
+     `text-cream`), so a flat value here reads as "everything feels dull,"
+     not just one spot. See scripts/check-contrast.mjs. */
+  --color-sage: #75ae79;
   --color-ink: #1f2a21;        /* ana metin rengi */
 
   /* Timer session-type indicators only (ring/label/pill) — deliberately
@@ -28,8 +95,33 @@
   --color-focus: #c84b31;
   --color-short-break: #e8a33d;
   --color-long-break: #3fc9be;
+  /* Label color for the SOLID active-session-pill fill (Timer's Focus/Short
+     Break/Long Break switcher, TabNav's active tab) — same reasoning as
+     --color-on-tomato above, but short-break/long-break aren't invariant
+     like tomato: they're light/medium-toned on dark themes (amber, teal)
+     and deliberately much darker on light/vivid themes (brown, navy), so
+     one shared text color can't serve both groups. Two fixed values instead
+     of a per-theme one: near-black here (dark-theme group, ~8:1 against
+     both amber and teal) and pure white in every light/pastel/vivid theme
+     block below (~6.6:1 against both) — matching short-break/long-break's
+     own existing "two shared values, not ten bespoke ones" pattern. */
+  --color-on-short-break: #000000;
+  --color-on-long-break: #000000;
 
+  /* --font-display (JetBrains Mono) is scoped narrowly: the countdown's
+     tabular-figure digits (its one real functional justification — a
+     monospace face is what keeps them from reflowing width as they tick
+     down) and short, uppercase, tracking-widest data labels/badges (section
+     captions, tier chips). --font-warm (Calistoga) carries everything else
+     that's meant to read as a warm, friendly voice rather than a precise
+     one: page/section headings, the onboarding wizard's conversational
+     copy, achievement titles, the streak-celebration screen's headline,
+     modal titles. This is the "SaaS Mobile Boutique" tri-stack pattern
+     (Calistoga + Inter + JetBrains Mono) — Calistoga only ships weight 400
+     upstream, no italic (skip italic use entirely, not just by convention).
+     --font-sans (Inter) is unchanged, the body/UI workhorse throughout. */
   --font-display: "JetBrains Mono", ui-monospace, monospace;
+  --font-warm: "Calistoga", Georgia, serif;
   --font-sans: "Inter", system-ui, sans-serif;
 }
 
@@ -44,12 +136,18 @@
   --color-pine-dark: #1f2a21;
   --color-tomato: #c84b31;
   --color-tomato-dark: #a83a24;
+  --color-tomato-text: #de8978;
   --color-amber: #e8a33d;
+  --color-amber-text: #e8a33d;
+  --color-freeze: #47b3e1;
+  --color-freeze-text: #37acdf;
   --color-cream: #fbf8f1;
-  --color-sage: #8a9a8c;
+  --color-sage: #75ae79;
   --color-focus: #c84b31;
   --color-short-break: #e8a33d;
   --color-long-break: #3fc9be;
+  --color-on-short-break: #000000;
+  --color-on-long-break: #000000;
   color-scheme: dark;
 }
 
@@ -105,10 +203,16 @@
   --color-pine: #e7cdc4;
   --color-pine-dark: #f1ddd4;
   --color-cream: #3a241d;
-  --color-sage: #8a6a5d;
+  --color-sage: #745144;
+  --color-tomato-text: #9c3a26;
+  --color-amber-text: #774c0e;
+  --color-freeze: #136386;
+  --color-freeze-text: #155f7f;
   --color-focus: #c84b31;
-  --color-short-break: #7a5518;
+  --color-short-break: #196640;
   --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
   color-scheme: light;
 }
 
@@ -116,10 +220,16 @@
   --color-pine: #dbe5d2;
   --color-pine-dark: #e7efdf;
   --color-cream: #2a3322;
-  --color-sage: #6f8461;
+  --color-sage: #506a3e;
+  --color-tomato-text: #ac412a;
+  --color-amber-text: #845510;
+  --color-freeze: #136386;
+  --color-freeze-text: #17698c;
   --color-focus: #c84b31;
-  --color-short-break: #7a5518;
+  --color-short-break: #196640;
   --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
   color-scheme: light;
 }
 
@@ -127,10 +237,16 @@
   --color-pine: #e9dfc4;
   --color-pine-dark: #f2ead4;
   --color-cream: #332c1a;
-  --color-sage: #8a7943;
+  --color-sage: #6c613f;
+  --color-tomato-text: #aa402a;
+  --color-amber-text: #82540f;
+  --color-freeze: #136386;
+  --color-freeze-text: #16678a;
   --color-focus: #c84b31;
-  --color-short-break: #7a5518;
+  --color-short-break: #196640;
   --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
   color-scheme: light;
 }
 
@@ -140,10 +256,132 @@
   --color-pine: #d8e0e4;
   --color-pine-dark: #e6ebed;
   --color-cream: #20272c;
-  --color-sage: #657883;
+  --color-sage: #466577;
+  --color-tomato-text: #a83f29;
+  --color-amber-text: #82540f;
+  --color-freeze: #136386;
+  --color-freeze-text: #16678a;
   --color-focus: #c84b31;
-  --color-short-break: #7a5518;
+  --color-short-break: #196640;
   --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
+  color-scheme: light;
+}
+
+/* --- Tier: Dark (secondary variants) ---
+   Same structure as .dark above (full redeclare, incl. tomato/amber, so the
+   Settings swatch preview can force this palette regardless of the ambient
+   theme) — only pine/pine-dark/cream/sage shift to a different dark mood.
+   short-break/long-break reuse .dark's values unchanged (verified via
+   scripts/check-contrast.mjs against both new pines — comfortably >3:1,
+   the actual floor for these two isn't hue-sensitive here). */
+.dark-espresso {
+  --color-pine: #2a211c;
+  --color-pine-dark: #1e1712;
+  --color-tomato: #c84b31;
+  --color-tomato-dark: #a83a24;
+  --color-tomato-text: #d66f59;
+  --color-amber: #e8a33d;
+  --color-amber-text: #cd8418;
+  --color-freeze: #47b3e1;
+  --color-freeze-text: #2197ca;
+  --color-cream: #f7ede2;
+  --color-sage: #a58666;
+  --color-focus: #c84b31;
+  --color-short-break: #e8a33d;
+  --color-long-break: #3fc9be;
+  --color-on-short-break: #000000;
+  --color-on-long-break: #000000;
+  color-scheme: dark;
+}
+
+.dark-slate {
+  --color-pine: #1e2530;
+  --color-pine-dark: #161b23;
+  --color-tomato: #c84b31;
+  --color-tomato-dark: #a83a24;
+  --color-tomato-text: #d7705b;
+  --color-amber: #e8a33d;
+  --color-amber-text: #cd8418;
+  --color-freeze: #47b3e1;
+  --color-freeze-text: #2197ca;
+  --color-cream: #eef2f6;
+  --color-sage: #7390ad;
+  --color-focus: #c84b31;
+  --color-short-break: #e8a33d;
+  --color-long-break: #3fc9be;
+  --color-on-short-break: #000000;
+  --color-on-long-break: #000000;
+  color-scheme: dark;
+}
+
+/* --- Tier: Light Vivid (new tier) ---
+   Bolder/more saturated than the pastel Light tier above, not just
+   brighter — same role split as the pastel light themes (pine-dark lighter
+   than pine, cards read lighter than the page). short-break/long-break
+   reuse the pastel tier's shared pair (#7a5518/#3a5f8a) — verified via
+   scripts/check-contrast.mjs to still clear 3:1 against all three of these
+   more-saturated pines, so no bespoke pair was needed. */
+.vivid-coral {
+  /* First cut of this theme (pine #fbe0d3) was too close to Light
+     Terracotta's own pale peachy-tan — same hue family at ~83% saturation
+     but 90.6% lightness, which reads as washed-out rather than vivid at
+     that lightness. This version drops lightness substantially (into
+     genuinely "bold coral" territory, not pastel) and pushes saturation to
+     92%. Trade-off: tomato-on-pine drops to 2.47:1 (below the 3:1 UI-
+     component floor) — same category of accepted gap as the original Dark
+     theme's 2.58:1 (tomato is invariant by hard rule; a background this
+     saturated in nearly the same hue family will always compress contrast
+     against it). Every other token here still clears its floor with a
+     comfortable margin — see scripts/check-contrast.mjs. */
+  --color-pine: #fba893;
+  --color-pine-dark: #f8cabf;
+  --color-cream: #521c0f;
+  --color-sage: #7e3320;
+  --color-tomato-text: #813020;
+  --color-amber-text: #67420c;
+  --color-freeze: #136386;
+  --color-freeze-text: #11506b;
+  --color-focus: #c84b31;
+  --color-short-break: #196640;
+  --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
+  color-scheme: light;
+}
+
+.vivid-citrus {
+  --color-pine: #f7dfa0;
+  --color-pine-dark: #fbe9bc;
+  --color-cream: #2e2205;
+  --color-sage: #775422;
+  --color-tomato-text: #a83f29;
+  --color-amber-text: #875710;
+  --color-freeze: #136386;
+  --color-freeze-text: #17698c;
+  --color-focus: #c84b31;
+  --color-short-break: #196640;
+  --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
+  color-scheme: light;
+}
+
+.vivid-mint {
+  --color-pine: #a9e6d1;
+  --color-pine-dark: #c8f1e2;
+  --color-cream: #07281f;
+  --color-sage: #246054;
+  --color-tomato-text: #a03c27;
+  --color-amber-text: #80520f;
+  --color-freeze: #136386;
+  --color-freeze-text: #166486;
+  --color-focus: #c84b31;
+  --color-short-break: #196640;
+  --color-long-break: #3a5f8a;
+  --color-on-short-break: #ffffff;
+  --color-on-long-break: #ffffff;
   color-scheme: light;
 }
 
@@ -483,5 +721,58 @@ body {
   }
   .animate-achievement-toast-out {
     animation: achievement-toast-out 0.22s ease-in forwards;
+  }
+
+  /* Joke "RGB Mode" — explicitly non-functional, pure fun toggle (Settings
+     > General, near the theme picker). First cut only animated a hue-rotate
+     filter plus a glow around the screen edges — feedback was that it read
+     as a thin overlay effect, not "the whole theme turns RGB." This version
+     replaces the flat bg-pine page background with a moving multi-color
+     gradient (the actual "lights moving" effect, not a static hue shift)
+     covering the entire screen, layered with the hue-rotate filter so every
+     *other* already-rendered color (buttons, panels, text) keeps cycling
+     too — between the two, the whole visible page participates, not just
+     the backdrop. `background` (unlayered, plain CSS) overrides the
+     Tailwind `bg-pine` utility's `background-color` here purely via CSS
+     cascade-layer precedence (Tailwind's utilities live in a lower-priority
+     `@layer`) — no `!important` needed. Gated the same as every other
+     animation here: no-preference only, so reduced-motion users just get
+     the toggle as a no-op. */
+  @keyframes rgb-party-bg {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes rgb-party-hue {
+    0%, 100% { filter: hue-rotate(0deg) saturate(1.3); }
+    50% { filter: hue-rotate(180deg) saturate(1.6); }
+  }
+  .rgb-party-mode {
+    background: linear-gradient(115deg, #ff0057, #ff8a00, #ffee00, #00ff85, #00d4ff, #7b2fff, #ff0057);
+    background-size: 400% 400%;
+    animation:
+      rgb-party-bg 8s ease-in-out infinite,
+      rgb-party-hue 6s linear infinite;
+  }
+  /* Feedback was that the gradient only showed on the bare page — every
+     card/panel/modal (bg-pine-dark, bg-cream/5, the modal backdrop's
+     bg-black/60, etc.) still painted its own solid fill on top, hiding it
+     again a layer up. Per "katmanların arkası da rgb olsun ayrı bir
+     katmanda gözükseler bile" — strip every descendant's own background so
+     the root's animated gradient shows through everywhere at once; borders/
+     shadows/text are untouched, so panels still read as distinct layers,
+     just with the rainbow visible through all of them. This is the one
+     spot in the app that reaches for `*` + `!important`, and it's
+     deliberate: a joke toggle explicitly opting into "most things won't
+     read well" (direct user feedback), not a pattern to reuse elsewhere.
+
+     `:not(.rgb-safe, .rgb-safe *)` carves out one exception: the toggle
+     lives inside SettingsModal (marked `.rgb-safe`), and a user who just
+     turned this on needs to be able to find their way back to turn it back
+     off — if Settings itself dissolved into the same illegible rainbow
+     wash, that'd be a one-way door. Nothing else opts out. */
+  .rgb-party-mode *:not(.rgb-safe, .rgb-safe *) {
+    background-color: transparent !important;
+    background-image: none !important;
   }
 }

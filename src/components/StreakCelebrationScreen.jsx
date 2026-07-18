@@ -200,7 +200,7 @@ function StreakCelebrationScreen({ celebration, streak, onDone }) {
         )}
 
         {isMilestone && (
-          <p className="font-sans text-amber text-xs font-bold tracking-widest uppercase mb-2 relative">
+          <p className="font-sans text-amber-text text-xs font-bold tracking-widest uppercase mb-2 relative">
             {t('streak.celebrationMilestoneBadge')}
           </p>
         )}
@@ -212,7 +212,7 @@ function StreakCelebrationScreen({ celebration, streak, onDone }) {
           }
         />
 
-        <p className="font-display text-cream font-extrabold text-3xl sm:text-4xl tabular-nums mt-4 relative">
+        <p className="font-warm text-cream font-extrabold text-3xl sm:text-4xl tabular-nums mt-4 relative">
           {t(titleKey, { count: streak })}
         </p>
         <p className="font-sans text-sage text-sm sm:text-base mt-1 mb-6 relative">{t(subtitleKey)}</p>
@@ -221,7 +221,7 @@ function StreakCelebrationScreen({ celebration, streak, onDone }) {
           ref={continueButtonRef}
           type="button"
           onClick={onDone}
-          className="font-sans text-sm px-8 py-2.5 rounded-xl bg-tomato text-cream font-semibold relative"
+          className="font-sans text-sm px-8 py-2.5 rounded-xl bg-tomato text-on-tomato font-semibold relative"
         >
           {t('streak.celebrationContinueButton')}
         </button>

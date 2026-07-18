@@ -82,7 +82,7 @@ function AccountSetupFlow({
                 the dataNote below (about local data NOT moving into an
                 account automatically) is the opposite of guestIntro's whole
                 point, so it's skipped there entirely rather than reworded. */}
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t(variant === 'guestIntro' ? 'accountSetup.welcomeGuest.title' : 'accountSetup.welcome.title')}
             </h1>
             <p className="font-sans text-sage text-sm leading-relaxed max-w-sm">
@@ -91,7 +91,7 @@ function AccountSetupFlow({
             {variant !== 'guestIntro' && (
               // A brief, calm note, not a warning callout — no border/background
               // box, just a smaller/muted line under the main body copy.
-              <p className="font-sans text-sage/60 text-xs leading-relaxed max-w-sm">
+              <p className="font-sans text-sage text-xs leading-relaxed max-w-sm">
                 {t('accountSetup.welcome.dataNote')}
               </p>
             )}
@@ -100,7 +100,7 @@ function AccountSetupFlow({
 
         {step === 'language' && (
           <div className="flex flex-col items-center gap-3 w-full">
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t('accountSetup.language.title')}
             </h1>
             <div className="flex flex-wrap justify-center gap-2">
@@ -126,7 +126,7 @@ function AccountSetupFlow({
 
         {step === 'name' && (
           <div className="flex flex-col items-center gap-3 w-full">
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t('accountSetup.name.title')}
             </h1>
             <input
@@ -143,7 +143,7 @@ function AccountSetupFlow({
 
         {step === 'theme' && (
           <div className="flex flex-col items-center gap-3 w-full">
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t('accountSetup.theme.title')}
             </h1>
             <div className="flex flex-wrap justify-center gap-2">
@@ -154,7 +154,7 @@ function AccountSetupFlow({
 
         {step === 'goal' && (
           <div className="flex flex-col items-center gap-3 w-full">
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t('accountSetup.goal.title')}
             </h1>
             <p className="font-sans text-sage text-sm leading-relaxed max-w-sm">{t('accountSetup.goal.body')}</p>
@@ -179,7 +179,7 @@ function AccountSetupFlow({
             account once it actually exists. */}
         {isSignupStep && (
           <div className="flex flex-col items-center gap-3 w-full">
-            <h1 className="font-display text-cream font-bold text-lg tracking-wide">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
               {t('accountSetup.signup.title')}
             </h1>
             <p className="font-sans text-sage text-sm leading-relaxed max-w-sm">{t('accountSetup.signup.body')}</p>
@@ -187,7 +187,7 @@ function AccountSetupFlow({
               <button
                 type="button"
                 onClick={onRequestSignUp}
-                className="font-sans text-sm px-6 py-2 rounded-xl bg-tomato text-cream font-semibold"
+                className="font-sans text-sm px-6 py-2 rounded-xl bg-tomato text-on-tomato font-semibold"
               >
                 {t('accountSetup.signup.createAccountButton')}
               </button>
@@ -232,7 +232,7 @@ function AccountSetupFlow({
               <button
                 type="button"
                 onClick={goNext}
-                className="font-sans text-sm px-6 py-2 rounded-xl bg-tomato text-cream font-semibold"
+                className="font-sans text-sm px-6 py-2 rounded-xl bg-tomato text-on-tomato font-semibold"
               >
                 {isLastStep ? t('accountSetup.finishButton') : t('accountSetup.continueButton')}
               </button>
@@ -243,7 +243,7 @@ function AccountSetupFlow({
             <button
               type="button"
               onClick={handleSkipEntirely}
-              className="font-sans text-[11px] text-sage/50 hover:text-cream underline decoration-dotted mt-1"
+              className="font-sans text-[11px] text-sage hover:text-cream underline decoration-dotted mt-1"
             >
               {t('accountSetup.skipButton')}
             </button>

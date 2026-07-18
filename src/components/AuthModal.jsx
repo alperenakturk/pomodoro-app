@@ -192,13 +192,13 @@ function AuthModal({ onClose, initialMode = 'signIn' }) {
             </div>
           )}
 
-          {error && <p className="text-tomato text-xs font-sans">{error}</p>}
+          {error && <p className="text-tomato-text text-xs font-sans">{error}</p>}
           {info && <p className="text-sage text-xs font-sans">{info}</p>}
 
           <button
             type="submit"
             disabled={submitting}
-            className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream font-semibold disabled:opacity-50"
+            className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato font-semibold disabled:opacity-50"
           >
             {mode === 'signIn' ? t('auth.signInButton') : t('auth.signUpButton')}
           </button>

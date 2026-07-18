@@ -235,6 +235,8 @@ function SettingsModal({
   setDailyPomodoroGoal,
   theme,
   onSelectTheme,
+  rgbPartyMode,
+  setRgbPartyMode,
   customThemeGeneral,
   setCustomThemeGeneral,
   customThemeFocus,
@@ -413,7 +415,7 @@ function SettingsModal({
   // modal's backdrop too, closing both at once.
   return (
     <>
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 sm:p-6 z-50" onClick={onClose}>
+    <div className="rgb-safe fixed inset-0 bg-black/60 flex items-center justify-center p-4 sm:p-6 z-50" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -491,8 +493,8 @@ function SettingsModal({
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="display-name">{t('settings.displayNameLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.displayNameHint')}</span>
+                  <label htmlFor="display-name" className="text-cream">{t('settings.displayNameLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.displayNameHint')}</span>
                 </div>
                 <input
                   id="display-name"
@@ -507,8 +509,8 @@ function SettingsModal({
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="daily-pomodoro-goal">{t('settings.dailyGoalLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.dailyGoalHint')}</span>
+                  <label htmlFor="daily-pomodoro-goal" className="text-cream">{t('settings.dailyGoalLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.dailyGoalHint')}</span>
                 </div>
                 <input
                   id="daily-pomodoro-goal"
@@ -523,7 +525,7 @@ function SettingsModal({
               </div>
 
               <div className={rowClass}>
-                <label htmlFor="language-select">{t('settings.languageLabel')}</label>
+                <label htmlFor="language-select" className="text-cream">{t('settings.languageLabel')}</label>
                 <Select
                   id="language-select"
                   value={language}
@@ -534,7 +536,7 @@ function SettingsModal({
               </div>
 
               <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
-                <span>{t('settings.themeLabel')}</span>
+                <span className="text-cream">{t('settings.themeLabel')}</span>
                 <div className="flex flex-wrap gap-2">
                   <ThemePicker value={theme} onSelect={onSelectTheme} />
 
@@ -559,7 +561,7 @@ function SettingsModal({
                 {theme === 'custom' && (
                   <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-cream/10">
                     <div className="flex items-center justify-between gap-3">
-                      <label htmlFor="custom-theme-general">{t('settings.customThemeGeneralLabel')}</label>
+                      <label htmlFor="custom-theme-general" className="text-cream">{t('settings.customThemeGeneralLabel')}</label>
                       <Select
                         id="custom-theme-general"
                         value={customThemeGeneral}
@@ -569,7 +571,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <label htmlFor="custom-theme-focus">{t('settings.customThemeFocusLabel')}</label>
+                      <label htmlFor="custom-theme-focus" className="text-cream">{t('settings.customThemeFocusLabel')}</label>
                       <Select
                         id="custom-theme-focus"
                         value={customThemeFocus}
@@ -579,7 +581,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <label htmlFor="custom-theme-short-break">{t('settings.customThemeShortBreakLabel')}</label>
+                      <label htmlFor="custom-theme-short-break" className="text-cream">{t('settings.customThemeShortBreakLabel')}</label>
                       <Select
                         id="custom-theme-short-break"
                         value={customThemeShortBreak}
@@ -589,7 +591,7 @@ function SettingsModal({
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <label htmlFor="custom-theme-long-break">{t('settings.customThemeLongBreakLabel')}</label>
+                      <label htmlFor="custom-theme-long-break" className="text-cream">{t('settings.customThemeLongBreakLabel')}</label>
                       <Select
                         id="custom-theme-long-break"
                         value={customThemeLongBreak}
@@ -598,9 +600,42 @@ function SettingsModal({
                         onChange={setCustomThemeLongBreak}
                       />
                     </div>
-                    <p className="text-sage/40 text-[10px] mt-1">{t('settings.customThemeHint')}</p>
+                    <p className="text-sage text-[10px] mt-1">{t('settings.customThemeHint')}</p>
                   </div>
                 )}
+              </div>
+
+              {/* Purely a joke — see index.css's .rgb-party-mode for the
+                  actual effect (an animated rainbow background + hue-rotate
+                  cycling everything else, with Settings itself exempted via
+                  .rgb-safe so the toggle stays reachable). Not persisted, no
+                  functional effect on the app; toggled off again just by
+                  clicking it a second time — stays on until then or a
+                  reload. rgbPartyModeWarning below is a genuine photo-
+                  sensitivity note (fast, repeating color/brightness
+                  changes), not part of the joke — shown unconditionally,
+                  not just once turned on, so it's read before opting in. */}
+              <div className="flex flex-col gap-1 text-sage text-xs font-sans py-3 border-b border-cream/10">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-cream flex items-center gap-1.5">
+                    <span aria-hidden="true">🌈</span>
+                    {t('settings.rgbPartyModeLabel')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRgbPartyMode((prev) => !prev)}
+                    aria-pressed={rgbPartyMode}
+                    className={
+                      'rounded-full px-4 py-1.5 text-sm font-sans font-semibold transition-colors ' +
+                      (rgbPartyMode
+                        ? 'bg-tomato text-on-tomato'
+                        : 'border border-cream/15 text-sage hover:text-cream')
+                    }
+                  >
+                    {rgbPartyMode ? t('settings.rgbPartyModeOn') : t('settings.rgbPartyModeOff')}
+                  </button>
+                </div>
+                <span className="text-sage text-[10px]">{t('settings.rgbPartyModeWarning')}</span>
               </div>
 
               {/* Always shown, even for guests — Fullscreen Focus Mode
@@ -613,13 +648,13 @@ function SettingsModal({
               <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col gap-0.5">
-                    <span>{t('settings.backgroundLabel')}</span>
-                    <span className="text-sage/40 text-[10px]">{t('settings.backgroundHint')}</span>
+                    <span className="text-cream">{t('settings.backgroundLabel')}</span>
+                    <span className="text-sage text-[10px]">{t('settings.backgroundHint')}</span>
                     {!user && (
                       <button
                         type="button"
                         onClick={() => openAuthModal()}
-                        className="text-tomato text-[10px] text-left underline decoration-dotted mt-0.5"
+                        className="text-tomato-text text-[10px] text-left underline decoration-dotted mt-0.5"
                       >
                         {t('settings.backgroundSignInHint')}
                       </button>
@@ -649,7 +684,7 @@ function SettingsModal({
                         type="button"
                         onClick={handleRemoveBackground}
                         disabled={backgroundBusy}
-                        className="text-tomato border border-tomato/40 rounded-full px-3 py-1 disabled:opacity-50"
+                        className="text-tomato-text border border-tomato/40 rounded-full px-3 py-1 disabled:opacity-50"
                       >
                         {t('settings.backgroundRemoveButton')}
                       </button>
@@ -658,7 +693,7 @@ function SettingsModal({
                 </div>
 
                 {user && backgroundError && (
-                  <p className="text-tomato text-[10px]">
+                  <p className="text-tomato-text text-[10px]">
                     {t(
                       backgroundError === 'size'
                         ? 'settings.backgroundErrorSize'
@@ -673,13 +708,13 @@ function SettingsModal({
                 {/* Not built yet — see chat/CLAUDE.md: a curated preset
                     gallery (no upload needed) is planned for a future
                     iteration, this upload flow is the first one. */}
-                <p className="text-sage/40 text-[10px] italic">{t('settings.backgroundPresetGalleryHint')}</p>
+                <p className="text-sage text-[10px] italic">{t('settings.backgroundPresetGalleryHint')}</p>
               </div>
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="check-to-bottom">{t('settings.checkToBottomLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.checkToBottomHint')}</span>
+                  <label htmlFor="check-to-bottom" className="text-cream">{t('settings.checkToBottomLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.checkToBottomHint')}</span>
                 </div>
                 <input
                   id="check-to-bottom"
@@ -711,8 +746,8 @@ function SettingsModal({
               <div className="border-b border-cream/10 py-3">
                 <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
                   <div className="flex flex-col gap-0.5">
-                    <label htmlFor="work-minutes">{t('settings.workDurationLabel')}</label>
-                    <span className="text-sage/40 text-[10px]">
+                    <label htmlFor="work-minutes" className="text-cream">{t('settings.workDurationLabel')}</label>
+                    <span className="text-sage text-[10px]">
                       {t('settings.minutesRangeHint', { min: WORK_MIN, max: WORK_MAX })}
                     </span>
                   </div>
@@ -730,14 +765,14 @@ function SettingsModal({
                   </div>
                 </div>
                 {workMinutes !== DEFAULT_WORK_MINUTES && (
-                  <p className="text-sage/60 text-[10px] font-sans mt-1">
+                  <p className="text-sage text-[10px] font-sans mt-1">
                     {t('settings.workDurationDeviationNote')}
                   </p>
                 )}
               </div>
 
               <div className={rowClass}>
-                <label htmlFor="cycle-length">{t('settings.longBreakEvery')}</label>
+                <label htmlFor="cycle-length" className="text-cream">{t('settings.longBreakEvery')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     id="cycle-length"
@@ -765,8 +800,8 @@ function SettingsModal({
               <div className="border-b border-cream/10 py-3">
                 <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
                   <div className="flex flex-col gap-0.5">
-                    <label htmlFor="short-break-minutes">{t('settings.shortBreakLabel')}</label>
-                    <span className="text-sage/40 text-[10px]">
+                    <label htmlFor="short-break-minutes" className="text-cream">{t('settings.shortBreakLabel')}</label>
+                    <span className="text-sage text-[10px]">
                       {t('settings.minutesRangeHint', { min: SHORT_BREAK_MIN, max: SHORT_BREAK_MAX })}
                     </span>
                   </div>
@@ -784,7 +819,7 @@ function SettingsModal({
                   </div>
                 </div>
                 {shortBreakMinutes > SHORT_BREAK_RECOMMENDED_MAX && (
-                  <p className="text-sage/60 text-[10px] font-sans mt-1">
+                  <p className="text-sage text-[10px] font-sans mt-1">
                     {t('settings.shortBreakRecommendedHint')}
                   </p>
                 )}
@@ -793,8 +828,8 @@ function SettingsModal({
               <div className="border-b border-cream/10 py-3">
                 <div className="flex items-center justify-between gap-3 text-sage text-xs font-sans">
                   <div className="flex flex-col gap-0.5">
-                    <label htmlFor="long-break-minutes">{t('settings.longBreakLabel')}</label>
-                    <span className="text-sage/40 text-[10px]">
+                    <label htmlFor="long-break-minutes" className="text-cream">{t('settings.longBreakLabel')}</label>
+                    <span className="text-sage text-[10px]">
                       {t('settings.minutesRangeHint', { min: LONG_BREAK_MIN, max: LONG_BREAK_MAX })}
                     </span>
                   </div>
@@ -812,7 +847,7 @@ function SettingsModal({
                   </div>
                 </div>
                 {longBreakMinutes > LONG_BREAK_RECOMMENDED_MAX && (
-                  <p className="text-sage/60 text-[10px] font-sans mt-1">
+                  <p className="text-sage text-[10px] font-sans mt-1">
                     {t('settings.longBreakRecommendedHint')}
                   </p>
                 )}
@@ -820,8 +855,8 @@ function SettingsModal({
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="auto-start-breaks">{t('settings.autoStartBreaksLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.autoStartBreaksHint')}</span>
+                  <label htmlFor="auto-start-breaks" className="text-cream">{t('settings.autoStartBreaksLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.autoStartBreaksHint')}</span>
                 </div>
                 <input
                   id="auto-start-breaks"
@@ -834,8 +869,8 @@ function SettingsModal({
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="auto-start-pomodoros">{t('settings.autoStartPomodorosLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.autoStartPomodorosHint')}</span>
+                  <label htmlFor="auto-start-pomodoros" className="text-cream">{t('settings.autoStartPomodorosLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.autoStartPomodorosHint')}</span>
                 </div>
                 <input
                   id="auto-start-pomodoros"
@@ -851,7 +886,7 @@ function SettingsModal({
           {activeCategory === 'sound' && (
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
               <div className={rowClass}>
-                <label htmlFor="chime-style">{t('settings.soundLabel')}</label>
+                <label htmlFor="chime-style" className="text-cream">{t('settings.soundLabel')}</label>
                 <div className="flex items-center gap-2">
                   <Select
                     id="chime-style"
@@ -874,7 +909,7 @@ function SettingsModal({
               </div>
 
               <div className={rowClass}>
-                <label htmlFor="sound-volume">{t('settings.effectsVolumeLabel')}</label>
+                <label htmlFor="sound-volume" className="text-cream">{t('settings.effectsVolumeLabel')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     id="sound-volume"
@@ -891,8 +926,8 @@ function SettingsModal({
 
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
-                  <label htmlFor="ambient-sound">{t('settings.ambientSoundLabel')}</label>
-                  <span className="text-sage/40 text-[10px]">{t('settings.ambientSoundHint')}</span>
+                  <label htmlFor="ambient-sound" className="text-cream">{t('settings.ambientSoundLabel')}</label>
+                  <span className="text-sage text-[10px]">{t('settings.ambientSoundHint')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Select
@@ -914,7 +949,7 @@ function SettingsModal({
               </div>
 
               <div className={rowClass}>
-                <label htmlFor="ambient-volume">{t('settings.ambientVolumeLabel')}</label>
+                <label htmlFor="ambient-volume" className="text-cream">{t('settings.ambientVolumeLabel')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     id="ambient-volume"
@@ -939,11 +974,11 @@ function SettingsModal({
                 </p>
                 {!user && (
                   <div className={rowClass}>
-                    <span>{t('settings.signInPromptLabel')}</span>
+                    <span className="text-cream">{t('settings.signInPromptLabel')}</span>
                     <button
                       type="button"
                       onClick={() => openAuthModal()}
-                      className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
+                      className="text-tomato-text border border-tomato/40 rounded-full px-3 py-1"
                     >
                       {t('auth.signInButton')}
                     </button>
@@ -952,7 +987,7 @@ function SettingsModal({
 
                 {user && hasPasswordProvider(user) && (
                   <div className={rowClass}>
-                    <span>{t('settings.changePasswordLabel')}</span>
+                    <span className="text-cream">{t('settings.changePasswordLabel')}</span>
                     <button
                       type="button"
                       onClick={() => setChangePasswordOpen(true)}
@@ -966,17 +1001,17 @@ function SettingsModal({
 
               {user && (
                 <div className="bg-pine-dark border border-tomato/30 rounded-2xl px-4 py-4">
-                  <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-2">
+                  <p className="font-display text-tomato-text font-bold text-xs tracking-widest uppercase mb-2">
                     {t('settings.dangerZoneTitle')}
                   </p>
                   <button
                     type="button"
                     onClick={() => handleDeleteAccount(t, deleteAccount)}
-                    className="w-full font-sans text-sm px-4 py-2 rounded-xl border border-tomato text-tomato font-semibold"
+                    className="w-full font-sans text-sm px-4 py-2 rounded-xl border border-tomato text-tomato-text font-semibold"
                   >
                     {t('settings.deleteAccountButton')}
                   </button>
-                  <p className="text-sage/60 text-[10px] font-sans mt-2 text-center">
+                  <p className="text-sage text-[10px] font-sans mt-2 text-center">
                     {t('settings.deleteAccountHint')}
                   </p>
                 </div>
@@ -998,18 +1033,18 @@ function SettingsModal({
               <DataTransfer categories={categories} />
 
               <div className="bg-pine-dark border border-tomato/30 rounded-2xl px-4 py-4">
-                <p className="font-display text-tomato font-bold text-xs tracking-widest uppercase mb-1">
+                <p className="font-display text-tomato-text font-bold text-xs tracking-widest uppercase mb-1">
                   {t('settings.dangerZoneTitle')}
                 </p>
                 <p className="text-sage text-[11px] font-sans mb-2">{t('settings.dangerZoneWarning')}</p>
 
                 {RESET_CATEGORIES.map((category) => (
                   <div key={category.labelKey} className={dangerRowClass}>
-                    <span>{t(category.labelKey)}</span>
+                    <span className="text-cream">{t(category.labelKey)}</span>
                     <button
                       type="button"
                       onClick={() => handleCategoryDelete(category, t)}
-                      className="text-tomato border border-tomato/40 rounded-full px-3 py-1"
+                      className="text-tomato-text border border-tomato/40 rounded-full px-3 py-1"
                     >
                       {t('settings.deleteButton')}
                     </button>
@@ -1020,11 +1055,11 @@ function SettingsModal({
                   <button
                     type="button"
                     onClick={() => handleFactoryReset(t)}
-                    className="w-full font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-cream font-semibold"
+                    className="w-full font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato font-semibold"
                   >
                     {t('settings.resetFactoryButton')}
                   </button>
-                  <p className="text-sage/60 text-[10px] font-sans mt-2 text-center">
+                  <p className="text-sage text-[10px] font-sans mt-2 text-center">
                     {t('settings.resetFactoryHint')}
                   </p>
                 </div>
@@ -1046,25 +1081,25 @@ function SettingsModal({
 
               <div className="pt-3 border-t border-cream/10 flex flex-col gap-1.5">
                 <p>
-                  <span className="text-sage/60">{t('settings.aboutContactLabel')}: </span>
-                  <a href="mailto:ahmetalperenakturk@gmail.com" className="text-tomato hover:underline">
+                  <span className="text-sage">{t('settings.aboutContactLabel')}: </span>
+                  <a href="mailto:ahmetalperenakturk@gmail.com" className="text-tomato-text hover:underline">
                     ahmetalperenakturk@gmail.com
                   </a>
                 </p>
                 <p>
-                  <span className="text-sage/60">{t('settings.aboutSourceLabel')}: </span>
+                  <span className="text-sage">{t('settings.aboutSourceLabel')}: </span>
                   <a
                     href="https://github.com/alperenakturk/pomodoro-app"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-tomato hover:underline"
+                    className="text-tomato-text hover:underline"
                   >
                     github.com/alperenakturk/pomodoro-app
                   </a>
                 </p>
               </div>
 
-              <p className="text-sage/60 text-[11px] pt-3 border-t border-cream/10">
+              <p className="text-sage text-[11px] pt-3 border-t border-cream/10">
                 {t('settings.aboutAttribution')}
               </p>
 

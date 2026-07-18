@@ -45,19 +45,19 @@ const SESSION_COLORS = {
     accent: 'text-focus',
     ring: 'stroke-focus',
     dot: 'fill-focus',
-    pillActive: 'bg-focus/15 border-focus/60 text-focus',
+    pillActive: 'bg-focus border-focus text-on-tomato font-semibold shadow-sm',
   },
   shortBreak: {
     accent: 'text-short-break',
     ring: 'stroke-short-break',
     dot: 'fill-short-break',
-    pillActive: 'bg-short-break/15 border-short-break/60 text-short-break',
+    pillActive: 'bg-short-break border-short-break text-on-short-break font-semibold shadow-sm',
   },
   longBreak: {
     accent: 'text-long-break',
     ring: 'stroke-long-break',
     dot: 'fill-long-break',
-    pillActive: 'bg-long-break/15 border-long-break/60 text-long-break',
+    pillActive: 'bg-long-break border-long-break text-on-long-break font-semibold shadow-sm',
   },
 }
 
@@ -107,6 +107,7 @@ function Timer({
   activeTask,
   addTask,
   theme,
+  rgbPartyMode,
   onGoToPlanning,
   onNavigateTab,
   fullscreenBackgroundPath,
@@ -521,10 +522,10 @@ function Timer({
               onClick={() => handleSwitch(type)}
               title={sessionType === type ? undefined : t('timer.switchTo', { label: t(LABEL_KEYS[type]) })}
               className={
-                'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border ' +
+                'font-display text-[11px] tracking-widest uppercase px-4 py-2 rounded-full border transition-colors ' +
                 (sessionType === type
                   ? SESSION_COLORS[type].pillActive
-                  : 'border-cream/15 text-sage hover:border-cream/30')
+                  : 'border-cream/15 text-sage hover:border-cream/30 hover:text-cream')
               }
             >
               {t(LABEL_KEYS[type])}
@@ -603,7 +604,7 @@ function Timer({
                 <button
                   type="button"
                   onClick={onGoToPlanning}
-                  className="font-sans text-tomato text-xs underline decoration-dotted mt-1"
+                  className="font-sans text-tomato-text text-xs underline decoration-dotted mt-1"
                 >
                   {t('timer.goToPlanningButton')}
                 </button>
@@ -631,7 +632,7 @@ function Timer({
             <button
               type="button"
               onClick={start}
-              className="font-sans px-10 py-4 rounded-full bg-tomato text-cream font-semibold text-base tracking-wide"
+              className="font-sans px-10 py-4 rounded-full bg-tomato text-on-tomato font-semibold text-base tracking-wide"
             >
               {isPaused ? t('timer.resume') : t('timer.start')}
             </button>
@@ -685,7 +686,7 @@ function Timer({
           <button
             type="button"
             onClick={openVoidPrompt}
-            className="font-sans text-xs text-sage hover:text-tomato underline decoration-dotted underline-offset-4 transition-colors"
+            className="font-sans text-xs text-sage hover:text-tomato-text underline decoration-dotted underline-offset-4 transition-colors"
           >
             {t('timer.voidPomodoro')}
           </button>
@@ -716,7 +717,7 @@ function Timer({
           <div className="flex gap-2 justify-end">
             <button
               type="submit"
-              className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-cream"
+              className="font-sans text-xs px-3 py-1.5 rounded-lg bg-tomato text-on-tomato"
             >
               {t('timer.voidPomodoro')}
             </button>
@@ -811,9 +812,17 @@ function Timer({
     <div
       ref={containerRef}
       className={
-        isFullscreen
+        (isFullscreen
           ? 'relative bg-pine w-full h-full flex items-center justify-center p-6'
-          : 'flex flex-col items-center gap-6 w-full'
+          : 'flex flex-col items-center gap-6 w-full') +
+        // Native Fullscreen API promotes this element to its own top-layer,
+        // which escapes the ancestor App root's .rgb-party-mode entirely
+        // (filter/background from an ancestor no longer reach a fullscreen
+        // element) — without its own copy of the class here, RGB Mode
+        // silently stopped applying the instant Fullscreen Focus Mode
+        // opened. Harmless to also add it outside fullscreen (the ancestor
+        // already has it there; this is just a redundant duplicate).
+        (rgbPartyMode ? ' rgb-party-mode' : '')
       }
       style={
         isFullscreen && backgroundUrl
@@ -913,7 +922,7 @@ function Timer({
       {pipWindow &&
         createPortal(
           <div
-            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${themeClassName(theme)}`}
+            className={`w-full h-full flex flex-col items-center justify-center gap-2 bg-pine ${themeClassName(theme)} ${rgbPartyMode ? 'rgb-party-mode' : ''}`}
           >
             <p className={`font-display text-xs tracking-widest uppercase ${accentClass}`}>
               {t(LABEL_KEYS[sessionType])}

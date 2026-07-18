@@ -283,6 +283,11 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   const { t, localeTag, language } = useTranslation()
   const [activeTab, setActiveTab] = useState('timer')
 
+  // Joke "RGB Mode" (Settings > General) — deliberately not persisted via
+  // storage.js; it's a pure-fun visual toggle, not real user data, so it
+  // just resets to off on reload like any other ephemeral UI state.
+  const [rgbPartyMode, setRgbPartyMode] = useState(false)
+
   // Settings is a modal now (design-mockups/05's sidebar-categorized dialog),
   // not a fourth tab — it no longer occupies an activeTab value at all.
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -660,7 +665,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   }, [displayThemeId])
 
   return (
-    <div className={`min-h-screen bg-pine ${themeClassName(displayThemeId)}`}>
+    <div className={`min-h-screen bg-pine ${themeClassName(displayThemeId)} ${rgbPartyMode ? 'rgb-party-mode' : ''}`}>
       {/* Mobile: plain flex-wrap (logo+time / right cluster on row 1, nav
           pushed to row 2 via order-3). Desktop: an explicit 3-column grid,
           `1fr auto 1fr` — nav sits in the middle `auto` column (sized to its
@@ -759,6 +764,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
             activeTask={activeTask}
             addTask={todayApi.addTask}
             theme={timerThemeId}
+            rgbPartyMode={rgbPartyMode}
             onGoToPlanning={() => setActiveTab('planning')}
             onNavigateTab={setActiveTab}
             fullscreenBackgroundPath={fullscreenBackgroundPath}
@@ -910,6 +916,8 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           setDailyPomodoroGoal={setDailyPomodoroGoal}
           theme={theme}
           onSelectTheme={selectTheme}
+          rgbPartyMode={rgbPartyMode}
+          setRgbPartyMode={setRgbPartyMode}
           customThemeGeneral={customThemeGeneral}
           setCustomThemeGeneral={setCustomThemeGeneral}
           customThemeFocus={customThemeFocus}
