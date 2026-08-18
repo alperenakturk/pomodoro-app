@@ -12,7 +12,7 @@ Ongoing source of truth for where this project stands. Update incrementally as w
 - [x] Reports tab — sidebar+stepper navigation across **6** sections (Today's Summary, Estimation Accuracy, Interruption Trends, Pause Trends, Pomodoros by Category, Long-Term Heatmap), plus Records Log and per-day Review
 - [x] Dual-provider storage architecture — guest/localStorage and signed-in/Supabase, single access point (`storage.js`), swappable `activeProvider`
 - [x] Full i18n — Turkish/English, `en.js`/`tr.js` dictionaries
-- [x] Theme system — Dark + 4 light variants (Terracotta, Sage, Sand, Dusty Blue) + Custom (independent per-session-type colors)
+- [x] Theme system — 10 themes across 3 tiers (Dark: Dark/Espresso/Slate; Light Pastel: Terracotta/Sage/Sand/Dusty Blue; Light Vivid: Coral/Citrus/Mint) + Custom (independent per-session-type colors); WCAG-contrast-verified across all themes
 - [x] Ambient sounds — Web Audio API, fully synthesized (no audio files), available with no account requirement
 - [x] Auth — Google OAuth + email/password; automatic local-to-cloud sync deliberately removed in favor of manual JSON/CSV export-import (Settings > Data)
 - [x] Account setup wizard — 5-step skippable flow (welcome, language, name, theme, goal), shown only on a true first-ever sign-up
@@ -23,13 +23,13 @@ Ongoing source of truth for where this project stands. Update incrementally as w
 - [x] AGENTS.md as primary signal-dense context file
 - [x] Security hardening pass — CSV/formula-injection fix, password `minLength` raised to 8, CSP added to `index.html`, defense-in-depth query scoping (`remoteProvider.js` deletes)
 - [x] Performance optimization pass — parallelized sign-in table fetches, `React.memo` on non-ticking panels, lazy-loaded `SettingsModal`/`MotivationOverlay`, per-item collection writes (`stampUpdated` + diffed upserts instead of rewriting whole collections), deduplicated `CategoryTag`/`Dot` components
+- [x] Real streak system — freeze/grace mechanic, milestone celebrations, full-screen splat animation, streak details modal (commit `ce5df86`, refined in `8b9484c`); replaced the old `alert('coming soon')` header stub entirely
+- [x] Full Achievements system — real badge/achievement logic tied to actual usage (streak milestones, category totals, resilience, etc.), unlock toasts, Supabase sync (commit `c236dec`)
 
 ---
 
 ## Short-term (next up — no strict priority order, any sequence or in parallel)
 
-- [ ] Full Achievements system: real badge/achievement logic (not just draw statistics) — a meaningful set tied to actual usage (e.g. first Rare card, category collector, streak milestones, total Pomodoros)
-- [ ] Real streak system: freeze/grace mechanic, milestone-only celebrations (7/30/100 days), streak animations — replacing the current `alert('coming soon')` stub in the header
 - [ ] Fully integrate and finish the motivation card feature end-to-end: replace all placeholder content with real, finished copy; confirm all 6 categories (including Personal Stat Card's real-data templates and the Rare card) are complete and polished
 - [ ] Reports tab: deeper, more detailed, visually improved — open-ended redesign/expansion, specifics TBD
 - [ ] Planning tab: usability/design improvements — open-ended redesign, specifics TBD
