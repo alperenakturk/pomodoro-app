@@ -79,7 +79,7 @@ describe('useAuth', () => {
     expect(mockSignInWithPassword).toHaveBeenCalledWith({ email: 'a@b.com', password: 'secret123' })
   })
 
-  it('signUpWithEmail delegates to supabase.auth.signUp', async () => {
+  it('signUpWithEmail delegates to supabase.auth.signUp with an emailRedirectTo built from the current origin + BASE_URL', async () => {
     mockSignUp.mockResolvedValue({ data: {}, error: null })
     const { result } = renderWithProvider()
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -88,7 +88,11 @@ describe('useAuth', () => {
       await result.current.signUpWithEmail('a@b.com', 'secret123')
     })
 
-    expect(mockSignUp).toHaveBeenCalledWith({ email: 'a@b.com', password: 'secret123' })
+    expect(mockSignUp).toHaveBeenCalledWith({
+      email: 'a@b.com',
+      password: 'secret123',
+      options: { emailRedirectTo: expect.stringContaining(window.location.origin) },
+    })
   })
 
   it('signOut delegates to supabase.auth.signOut', async () => {

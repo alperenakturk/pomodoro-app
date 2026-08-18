@@ -4,6 +4,19 @@ import { AuthContext } from './context'
 
 const NOT_CONFIGURED_ERROR = { message: 'Sign-in is not available right now.' }
 
+// Must match a URL registered in the Supabase project's Auth > URL
+// Configuration (Site URL / Additional Redirect URLs) — see CLAUDE.md. Built
+// from Vite's own BASE_URL rather than hardcoded, so it resolves correctly
+// both at localhost:5173/ (dev, no subpath) and
+// https://<user>.github.io/pomodoro-app/ (GitHub Pages production, a project
+// site under a subpath — window.location.origin alone drops that subpath,
+// which previously sent email-confirmation links to the bare Pages root
+// instead of the app). Shared by every Supabase call that needs a redirect,
+// so there's exactly one place to get this right.
+function getAuthRedirectUrl() {
+  return window.location.origin + import.meta.env.BASE_URL
+}
+
 // Mirrors lib/i18n/LanguageContext.jsx's pattern — a Context because auth
 // state (are we signed in, as whom) is needed from deeply nested places
 // (Settings' account row, a future storage.js provider swap) without prop-
@@ -44,13 +57,7 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) return { error: NOT_CONFIGURED_ERROR }
-    // Must match a URL registered in the Supabase project's Auth > URL
-    // Configuration (Site URL / Additional Redirect URLs) — see CLAUDE.md.
-    // Built from Vite's own BASE_URL rather than hardcoded, so it resolves
-    // correctly both at localhost:5173/ (dev) and
-    // https://<user>.github.io/pomodoro-app/ (GitHub Pages production).
-    const redirectTo = window.location.origin + import.meta.env.BASE_URL
-    return supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+    return supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: getAuthRedirectUrl() } })
   }, [])
 
   const signInWithEmail = useCallback(async (email, password) => {
@@ -58,9 +65,14 @@ export function AuthProvider({ children }) {
     return supabase.auth.signInWithPassword({ email, password })
   }, [])
 
+  // emailRedirectTo controls where the confirmation email's link sends the
+  // user — omitting it (as this used to) falls back to the Supabase
+  // project's dashboard-configured Site URL, which is the bare Pages root
+  // (see getAuthRedirectUrl's comment), not this app's actual subpath. Same
+  // fix as signInWithGoogle above, for the same underlying reason.
   const signUpWithEmail = useCallback(async (email, password) => {
     if (!supabase) return { error: NOT_CONFIGURED_ERROR }
-    return supabase.auth.signUp({ email, password })
+    return supabase.auth.signUp({ email, password, options: { emailRedirectTo: getAuthRedirectUrl() } })
   }, [])
 
   const signOut = useCallback(async () => {
