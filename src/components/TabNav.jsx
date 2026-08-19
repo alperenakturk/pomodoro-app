@@ -1,16 +1,18 @@
 import { useTranslation } from '../hooks/useTranslation'
+import { isFeatureVisible } from '../lib/experienceMode'
 
 const TABS = [
   { id: 'timer', labelKey: 'tabs.timer' },
   { id: 'planning', labelKey: 'tabs.planning' },
-  { id: 'reports', labelKey: 'tabs.reports' },
+  { id: 'reports', labelKey: 'tabs.reports', featureId: 'reportsTab' },
 ]
 
-function TabNav({ activeTab, onChange, className = '' }) {
+function TabNav({ activeTab, onChange, mode, className = '' }) {
   const { t } = useTranslation()
+  const tabs = TABS.filter((tab) => !tab.featureId || isFeatureVisible(mode, tab.featureId))
   return (
     <nav className={`flex gap-2 justify-center flex-wrap ${className}`}>
-      {TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"

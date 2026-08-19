@@ -24,14 +24,17 @@ import {
   clearAuthHint,
   getLastThemeHint,
   setLastThemeHint,
+  markExperienceModeNudgeSeen,
 } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import { LanguageProvider } from './lib/i18n/LanguageContext'
 import { themeClassName } from './lib/theme'
+import { resolveExperienceMode, canUseFullMode } from './lib/experienceMode'
 import { totalTimetableHours } from './lib/timetable'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
 import TodoToday from './components/TodoToday'
+import PlanningSimple from './components/PlanningSimple'
 import AvailablePomodoros from './components/AvailablePomodoros'
 import Timetable from './components/Timetable'
 import RecordsLog from './components/RecordsLog'
@@ -42,11 +45,14 @@ import CoachMark from './components/CoachMark'
 import MethodologyGuideModal from './components/MethodologyGuideModal'
 import AccountSetupFlow from './components/AccountSetupFlow'
 import GuestSignupNudge from './components/GuestSignupNudge'
+import ExperienceModeToggle from './components/ExperienceModeToggle'
+import ExperienceModeNudge from './components/ExperienceModeNudge'
+import ExperienceModeTransition from './components/ExperienceModeTransition'
 import AuthModal from './components/AuthModal'
 import StreakCelebrationScreen from './components/StreakCelebrationScreen'
 import StreakDetailsModal from './components/StreakDetailsModal'
 import AchievementToastStack from './components/achievements/AchievementToastStack'
-import { COACH_MARKS, pickCoachMark } from './lib/constants'
+import { COACH_MARKS, pickCoachMark, resolveCoachMarkCopy } from './lib/constants'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
 // `settingsOpen` is true (see its conditional render below), and never
@@ -273,6 +279,22 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // somewhere both TodoToday and the secondary column can reach — App is
   // that shared ancestor, same reasoning as every other hook here.
   const timetableApi = useTimetable()
+
+  // Backs the "used Inventory or Timetable" Full-mode-only achievement
+  // (lib/achievements.js) — a monotonic, set-once flag rather than reading
+  // these collections' live length at evaluation time, since both shrink
+  // during normal use (items are removed on task completion, Timetable
+  // gets wiped by clearTodayTasks()) and would let an already-unlocked-
+  // looking badge flicker back to locked mid-session.
+  useEffect(() => {
+    if (
+      (inventoryApi.items.length > 0 || timetableApi.blocks.length > 0) &&
+      !loadSettings().usedInventoryOrTimetable
+    ) {
+      patchSettings({ usedInventoryOrTimetable: true })
+    }
+  }, [inventoryApi.items.length, timetableApi.blocks.length])
+
   const streak = useStreak()
   // Instantiated once here (not inside SettingsModal) so an unlock is
   // detected and toasted live regardless of which tab is open — see
@@ -311,6 +333,47 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
     setTheme(next)
     patchSettings({ theme: next })
   }
+
+  // The raw stored value; `experienceMode` below (what every other
+  // component actually reads) additionally forces guests to 'simple'
+  // regardless of what's stored here — see lib/experienceMode.js's
+  // resolveExperienceMode for why that indirection exists.
+  const [experienceModeSetting, setExperienceModeSetting] = useState(() => loadSettings().experienceMode)
+
+  function selectExperienceMode(next) {
+    setExperienceModeSetting(next)
+    patchSettings({ experienceMode: next })
+  }
+
+  const experienceMode = resolveExperienceMode({ experienceMode: experienceModeSetting }, user)
+
+  // The "tomato man drives across" transition (see
+  // ExperienceModeTransition.jsx) only plays for an actual user-initiated
+  // switch via the toggle, in either direction — never during
+  // AccountSetupFlow's own experienceMode step (nothing is visibly
+  // "changing" there, it's an initial pick with no prior UI to transition
+  // from), so that flow keeps calling selectExperienceMode directly
+  // instead of this wrapper. null means no transition is playing;
+  // 'toFull'/'toSimple' pick which direction ExperienceModeTransition
+  // drives in.
+  const [modeTransitionDirection, setModeTransitionDirection] = useState(null)
+  function handleToggleExperienceMode(next) {
+    const switchingToFull = next === 'full' && experienceMode !== 'full'
+    const switchingToSimple = next === 'simple' && experienceMode !== 'simple'
+    selectExperienceMode(next)
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (switchingToFull) setModeTransitionDirection('toFull')
+      else if (switchingToSimple) setModeTransitionDirection('toSimple')
+    }
+  }
+
+  // Reports isn't in TabNav's tab list at all in simple mode (see
+  // TabNav.jsx), so a user already sitting on it who then switches to
+  // simple (or a guest whose account-based resolution flips mid-session)
+  // would otherwise be stranded on a tab with no button to leave it from.
+  useEffect(() => {
+    if (experienceMode === 'simple' && activeTab === 'reports') setActiveTab('timer')
+  }, [experienceMode, activeTab])
 
   // Only meaningful when theme === 'custom': General covers every screen
   // except the Timer, which instead picks Focus/Short Break/Long Break by
@@ -398,6 +461,19 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // which keeps every full-screen wizard from ever overlapping.
   const [showAccountSetup, setShowAccountSetup] = useState(() => deferCategorySeeding)
 
+  // A genuinely new account that arrived via Guest Onboarding's transfer
+  // (hadOnboardingTransfer) skips the full wizard above for the reason in
+  // its own comment — but that means it would otherwise never be asked the
+  // new experienceMode question at all, since guestIntro's own steps
+  // deliberately exclude it (see AccountSetupFlow.jsx's ACCOUNT_STEPS
+  // comment: the choice has no live effect to preview while still a guest).
+  // This renders AccountSetupFlow with a single-step override instead of
+  // the full flow — same lazy-seeded-once pattern as showAccountSetup, just
+  // the complementary condition (hadOnboardingTransfer instead of !hadOnboardingTransfer).
+  const [showExperienceModeOnly, setShowExperienceModeOnly] = useState(
+    () => isNewAccount && hadOnboardingTransfer
+  )
+
   // Guest Onboarding (AccountSetupFlow's 'guestIntro' variant) — shown once
   // to a first-time guest, before they've ever signed in, so the same
   // theme/name/goal picks a signed-up user gets asked for are offered right
@@ -427,6 +503,18 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   function dismissGuestNudge() {
     setGuestNudgeSeenState(true)
     markGuestSignupNudgeSeen()
+  }
+
+  // ExperienceModeToggle's guest-locked upsell (see ExperienceModeNudge.jsx)
+  // — click-triggered (not automatic like GuestSignupNudge above), so it's
+  // always shown fresh on click rather than gated by its "seen" flag; the
+  // flag just records the dismissal, same colocated pattern as every other
+  // one-time flag in storage.js.
+  const [experienceModeNudgeOpen, setExperienceModeNudgeOpen] = useState(false)
+  const [experienceModeNudgeAuthModalOpen, setExperienceModeNudgeAuthModalOpen] = useState(false)
+  function dismissExperienceModeNudge() {
+    setExperienceModeNudgeOpen(false)
+    markExperienceModeNudgeSeen()
   }
 
   // Contextual onboarding coach marks (see constants.js's COACH_MARKS/
@@ -552,6 +640,16 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   const pomodoro = usePomodoro({
     onWorkComplete: () => {
       if (todayApi.activeTaskId) todayApi.incrementRealized(todayApi.activeTaskId)
+      // Backs the "completed a Pomodoro with a custom theme" Full-mode-only
+      // achievement (lib/achievements.js) — a monotonic, set-once flag
+      // rather than reading `theme` live at evaluation time, since
+      // achievements must derive from persisted data. Guarded against
+      // `loadSettings()` so a 'custom'-theme user isn't re-patching this
+      // (and re-upserting their whole settings row, if signed in) on every
+      // single completion after the first.
+      if (theme === 'custom' && !loadSettings().customThemePomodoroCompleted) {
+        patchSettings({ customThemePomodoroCompleted: true })
+      }
     },
     onInterruption: (kind, delta) => {
       if (todayApi.activeTaskId) todayApi.addInterruption(todayApi.activeTaskId, kind, delta)
@@ -616,7 +714,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // immediately (e.g. 'timer-intro' shows right away), same as for anyone
   // else — nothing about a coach mark's own seen/trigger state is touched by
   // this, it's purely a "don't render" gate.
-  const coachMarksSuppressed = showAccountSetup || showGuestOnboarding
+  const coachMarksSuppressed = showAccountSetup || showExperienceModeOnly || showGuestOnboarding
 
   // Planning's coach mark is computed here (rather than inside TodoToday/
   // Inventory) since App is the shared ancestor that already has
@@ -692,7 +790,12 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           </p>
         </div>
 
-        <TabNav activeTab={activeTab} onChange={setActiveTab} className="order-3 w-full sm:order-none sm:w-auto" />
+        <TabNav
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          mode={experienceMode}
+          className="order-3 w-full sm:order-none sm:w-auto"
+        />
 
         <div className="flex items-center gap-3 ml-auto flex-shrink-0 sm:justify-self-end">
           {displayName.trim() && (
@@ -700,6 +803,19 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
               {t('header.greeting', { name: displayName.trim() })}
             </p>
           )}
+          {/* Header instance of the Simple/Full toggle — a duplicate also
+              lives in Settings > General for discoverability. Hidden below
+              `sm` alongside the greeting above; the header's mobile row is
+              already tight, and Settings remains reachable there. */}
+          <div className="hidden sm:block">
+            <ExperienceModeToggle
+              mode={experienceMode}
+              onChange={handleToggleExperienceMode}
+              locked={!canUseFullMode(user)}
+              onRequestUpgrade={() => setExperienceModeNudgeOpen(true)}
+              compact
+            />
+          </div>
           {/* Real streak counter (src/hooks/useStreak.js) — dim/sage-toned
               until today's Pomodoro is done (the "gray flame" convention),
               tomato-bold once it is. Click opens StreakDetailsModal.
@@ -759,6 +875,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
             activeTask={activeTask}
             addTask={todayApi.addTask}
             theme={timerThemeId}
+            experienceMode={experienceMode}
             onGoToPlanning={() => setActiveTab('planning')}
             onNavigateTab={setActiveTab}
             fullscreenBackgroundPath={fullscreenBackgroundPath}
@@ -775,35 +892,14 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
         >
           {planningCoachMark && (
             <CoachMark
-              titleKey={planningCoachMark.titleKey}
-              bodyKey={planningCoachMark.bodyKey}
+              titleKey={resolveCoachMarkCopy(planningCoachMark, experienceMode).titleKey}
+              bodyKey={resolveCoachMarkCopy(planningCoachMark, experienceMode).bodyKey}
               onDismiss={() => markCoachMarkSeen(planningCoachMark.id)}
               onLearnMore={() => onLearnMoreCoachMark(planningCoachMark.id)}
             />
           )}
-          {/* Capacity/schedule strip (design-mockups/08): AvailablePomodoros and
-              Timetable are compact form+list widgets, not backlog-sized
-              content, so they get a horizontal row of their own above the
-              main lists rather than stacking inside a narrow sidebar column
-              — that old layout squeezed Inventory (which can grow just as
-              long as Today's Tasks) down to 320px and pushed it below both
-              widgets vertically. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={suggestedHours} />
-            <Timetable
-              blocks={timetableApi.blocks}
-              addBlock={timetableApi.addBlock}
-              removeBlock={timetableApi.removeBlock}
-            />
-          </div>
-
-          {/* Today's Tasks and Inventory are both task lists of comparable
-              weight — one is the backlog, the other the committed plan for
-              the day — so they now sit in equal-width columns instead of
-              Today's Tasks dominating a 1fr column with Inventory
-              squeezed into a fixed 320px one. */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <TodoToday
+          {experienceMode === 'simple' ? (
+            <PlanningSimple
               tasks={todayApi.tasks}
               activeTaskId={todayApi.activeTaskId}
               setActiveTaskId={todayApi.setActiveTaskId}
@@ -817,18 +913,58 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
               categories={categoriesApi.categories}
               onManageCategories={openCategoryManager}
             />
-            <Inventory
-              items={inventoryApi.items}
-              addItem={inventoryApi.addItem}
-              removeItem={inventoryApi.removeItem}
-              toggleDone={inventoryApi.toggleDone}
-              updateItem={inventoryApi.updateItem}
-              combineItems={inventoryApi.combineItems}
-              onSendToToday={handleSendToToday}
-              categories={categoriesApi.categories}
-              onManageCategories={openCategoryManager}
-            />
-          </div>
+          ) : (
+            <>
+              {/* Capacity/schedule strip (design-mockups/08): AvailablePomodoros and
+                  Timetable are compact form+list widgets, not backlog-sized
+                  content, so they get a horizontal row of their own above the
+                  main lists rather than stacking inside a narrow sidebar column
+                  — that old layout squeezed Inventory (which can grow just as
+                  long as Today's Tasks) down to 320px and pushed it below both
+                  widgets vertically. */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <AvailablePomodoros plannedTotal={plannedTotal} suggestedHours={suggestedHours} />
+                <Timetable
+                  blocks={timetableApi.blocks}
+                  addBlock={timetableApi.addBlock}
+                  removeBlock={timetableApi.removeBlock}
+                />
+              </div>
+
+              {/* Today's Tasks and Inventory are both task lists of comparable
+                  weight — one is the backlog, the other the committed plan for
+                  the day — so they now sit in equal-width columns instead of
+                  Today's Tasks dominating a 1fr column with Inventory
+                  squeezed into a fixed 320px one. */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <TodoToday
+                  tasks={todayApi.tasks}
+                  activeTaskId={todayApi.activeTaskId}
+                  setActiveTaskId={todayApi.setActiveTaskId}
+                  addTask={todayApi.addTask}
+                  removeTask={todayApi.removeTask}
+                  clearFinishedTasks={todayApi.clearFinishedTasks}
+                  clearAllTasks={todayApi.clearAllTasks}
+                  updateTask={todayApi.updateTask}
+                  reestimateTask={todayApi.reestimateTask}
+                  finishTask={handleFinishTask}
+                  categories={categoriesApi.categories}
+                  onManageCategories={openCategoryManager}
+                />
+                <Inventory
+                  items={inventoryApi.items}
+                  addItem={inventoryApi.addItem}
+                  removeItem={inventoryApi.removeItem}
+                  toggleDone={inventoryApi.toggleDone}
+                  updateItem={inventoryApi.updateItem}
+                  combineItems={inventoryApi.combineItems}
+                  onSendToToday={handleSendToToday}
+                  categories={categoriesApi.categories}
+                  onManageCategories={openCategoryManager}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <div
@@ -910,6 +1046,10 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           setDailyPomodoroGoal={setDailyPomodoroGoal}
           theme={theme}
           onSelectTheme={selectTheme}
+          experienceMode={experienceMode}
+          canUseFullMode={canUseFullMode(user)}
+          onSelectExperienceMode={handleToggleExperienceMode}
+          onRequestExperienceModeUpgrade={() => setExperienceModeNudgeOpen(true)}
           customThemeGeneral={customThemeGeneral}
           setCustomThemeGeneral={setCustomThemeGeneral}
           customThemeFocus={customThemeFocus}
@@ -948,8 +1088,22 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           setDisplayName={setDisplayName}
           theme={theme}
           onSelectTheme={selectTheme}
+          experienceMode={experienceModeSetting}
+          onSelectExperienceMode={selectExperienceMode}
           dailyPomodoroGoal={dailyPomodoroGoal}
           setDailyPomodoroGoal={setDailyPomodoroGoal}
+        />
+      )}
+
+      {/* The guestIntro-then-signup complement to showAccountSetup above —
+          see that state's own comment. A true single-step flow: no Back
+          button (stepIndex never leaves 0), step indicator reads "1 / 1". */}
+      {showExperienceModeOnly && (
+        <AccountSetupFlow
+          steps={['experienceMode']}
+          onFinish={() => setShowExperienceModeOnly(false)}
+          experienceMode={experienceModeSetting}
+          onSelectExperienceMode={selectExperienceMode}
         />
       )}
 
@@ -1016,6 +1170,26 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
       )}
       {guestNudgeAuthModalOpen && (
         <AuthModal initialMode="signUp" onClose={() => setGuestNudgeAuthModalOpen(false)} />
+      )}
+
+      {experienceModeNudgeOpen && (
+        <ExperienceModeNudge
+          onDismiss={dismissExperienceModeNudge}
+          onSignUp={() => {
+            dismissExperienceModeNudge()
+            setExperienceModeNudgeAuthModalOpen(true)
+          }}
+        />
+      )}
+      {experienceModeNudgeAuthModalOpen && (
+        <AuthModal initialMode="signUp" onClose={() => setExperienceModeNudgeAuthModalOpen(false)} />
+      )}
+
+      {modeTransitionDirection && (
+        <ExperienceModeTransition
+          direction={modeTransitionDirection}
+          onDone={() => setModeTransitionDirection(null)}
+        />
       )}
     </div>
   )

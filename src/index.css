@@ -444,6 +444,15 @@ body {
   opacity: 0;
 }
 
+/* ExperienceModeTransition — belt-and-suspenders alongside App.jsx's own
+   reduced-motion check (which never mounts the overlay at all under
+   reduced motion): if it somehow renders anyway, default invisible rather
+   than a frozen mid-drive pose. */
+.animate-tomato-car-drive-by,
+.animate-tomato-car-drive-by-reverse {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes ring-pulse {
     0% {
@@ -721,5 +730,55 @@ body {
   }
   .animate-achievement-toast-out {
     animation: achievement-toast-out 0.22s ease-in forwards;
+  }
+
+  /* ExperienceModeTransition: the tomato man drives across the whole
+     screen when switching modes — left-to-right for Simple -> Full,
+     right-to-left for Full -> Simple (two separate keyframes/classes, not
+     one mirrored via scaleX(-1): flipping the whole assembly would flip
+     TomatoMan's artwork too, which is exactly the "ters duruyor" look this
+     was built to avoid — reversing which edge it starts/ends at is enough,
+     the car has no directional front/back detail to look wrong either
+     way). Horizontal travel and vertical bounce are two SEPARATE animations
+     on two nested elements (X on the outer positioned wrapper, Y-wobble on
+     an inner one) rather than one keyframe list mixing both — a single
+     list with waypoints at uneven percentages (15/30/50/70/85%) made the
+     horizontal speed itself lurch between stops, which read as choppy/
+     stuttery rather than smooth. Splitting them means the X glide is just
+     two keyframe stops eased by one continuous cubic-bezier (genuinely
+     smooth, no steps), while the bounce loops independently on top without
+     touching horizontal timing at all. */
+  @keyframes tomato-car-drive-by {
+    0% { opacity: 1; transform: translateX(-220px); }
+    100% { opacity: 1; transform: translateX(calc(100vw + 220px)); }
+  }
+  .animate-tomato-car-drive-by {
+    animation: tomato-car-drive-by 2.6s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  }
+
+  @keyframes tomato-car-drive-by-reverse {
+    0% { opacity: 1; transform: translateX(calc(100vw + 220px)); }
+    100% { opacity: 1; transform: translateX(-220px); }
+  }
+  .animate-tomato-car-drive-by-reverse {
+    animation: tomato-car-drive-by-reverse 2.6s cubic-bezier(0.45, 0, 0.55, 1) forwards;
+  }
+
+  @keyframes tomato-car-bounce {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-5px); }
+    50% { transform: translateY(0); }
+    75% { transform: translateY(-4px); }
+  }
+  .animate-tomato-car-bounce {
+    animation: tomato-car-bounce 0.6s ease-in-out infinite;
+  }
+
+  @keyframes tomato-car-wheel-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(1560deg); }
+  }
+  .animate-tomato-car-wheel-spin {
+    animation: tomato-car-wheel-spin 2.6s linear forwards;
   }
 }

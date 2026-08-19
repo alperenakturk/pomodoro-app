@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import App from './App'
 import {
   saveInventory,
+  saveTodayTasks,
   setAuthHint,
   hasAuthHint,
   markGuestOnboardingSeen,
@@ -110,10 +111,11 @@ beforeEach(() => {
 
 describe('App sign-out data-source switch', () => {
   it('shows real local/guest data (not stale remote data) immediately after signing out', async () => {
-    // Seed distinguishable guest data before any sign-in happens.
-    saveInventory([
-      { id: 'guest-1', text: 'GUEST TASK', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false },
-    ])
+    // Seed distinguishable guest data before any sign-in happens. Today's
+    // task list, not Inventory — guests are always in Simple mode (see
+    // experienceMode.js's resolveExperienceMode), where Planning only shows
+    // Today's tasks, not Inventory.
+    saveTodayTasks([{ id: 'guest-1', text: 'GUEST TASK' }])
 
     // Sign in — App's own effect calls (faked) signInToRemote, which warms
     // remoteCache with REMOTE TASK instead of GUEST TASK.
@@ -250,9 +252,8 @@ describe('App reload flicker prevention', () => {
 
   it('still mounts guest mode immediately when this browser has never signed in', async () => {
     expect(hasAuthHint()).toBe(false)
-    saveInventory([
-      { id: 'guest-1', text: 'GUEST TASK', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false },
-    ])
+    // Today's task list, not Inventory — guests are always Simple mode.
+    saveTodayTasks([{ id: 'guest-1', text: 'GUEST TASK' }])
     mockAuthValue = { user: null, loading: true }
     renderApp()
 
@@ -444,9 +445,8 @@ describe('Local/account transitions stay consistent across combinations', () => 
 
   it('signed in -> signs out -> lands back on this browser\'s own untouched guest data, no onboarding re-trigger', async () => {
     markGuestOnboardingSeen()
-    saveInventory([
-      { id: 'guest-1', text: 'GUEST TASK', estimate: null, categoryIds: [], notes: '', unplanned: false, done: false },
-    ])
+    // Today's task list, not Inventory — guests are always Simple mode.
+    saveTodayTasks([{ id: 'guest-1', text: 'GUEST TASK' }])
     mockAuthValue = { user: { id: 'user-1' }, loading: false }
     const { rerender: rerenderRaw } = renderApp()
     const rerender = () => rerenderRaw(<App />)

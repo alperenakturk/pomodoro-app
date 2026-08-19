@@ -113,6 +113,30 @@ function reflectivePauseCount(snapshot) {
   return snapshot.voidLog.filter((entry) => entry.reason.trim().length > 0).length
 }
 
+// --- Full-mode-adjacent category metrics --------------------------------
+// customThemeUsage/inventoryOrTimetableUsage back the two categories still
+// gated behind Full mode (see each category's own requiresMode field
+// below, and lib/experienceMode.js for the UI-visibility side of the same
+// feature) — triedAmbientSoundsCount no longer is, since the ambient sound
+// picker itself is available in both modes. Each reads a monotonic
+// (set-once, never-unset) flag from settings, written by App.jsx/
+// usePomodoro.js at the moment the underlying action happens — deliberately
+// not derived live from Inventory/Timetable state (both shrink during
+// normal use) or threaded through usePomodoro as a new param, since
+// evaluateAchievements()'s `value >= threshold` check assumes a
+// never-decreasing metric.
+function customThemeUsage(snapshot) {
+  return snapshot.settings.customThemePomodoroCompleted ? 1 : 0
+}
+
+function inventoryOrTimetableUsage(snapshot) {
+  return snapshot.settings.usedInventoryOrTimetable ? 1 : 0
+}
+
+function triedAmbientSoundsCount(snapshot) {
+  return snapshot.settings.triedAmbientSounds.length
+}
+
 export const ACHIEVEMENT_CATEGORIES = [
   {
     id: 'dailyPomodoroCount',
@@ -215,6 +239,40 @@ export const ACHIEVEMENT_CATEGORIES = [
     unit: 'count',
     metricFn: reflectivePauseCount,
   },
+  // requiresMode: 'full' — the one field that doesn't exist on any category
+  // above. Read by AchievementGrid.jsx to render these as visibly locked
+  // with a "switch to Full mode" hint (distinct from an ordinary "not
+  // reached yet" locked tile) whenever the current session isn't in Full
+  // mode, regardless of whether the underlying metric is already
+  // satisfied — see lib/experienceMode.js, which owns UI-surface
+  // visibility; this field is the one place achievement-specific gating
+  // lives, kept out of that file on purpose.
+  {
+    id: 'customThemeUsage',
+    labelKey: 'achievements.categories.customThemeUsage.label',
+    icon: 'sparkle',
+    unit: 'count',
+    metricFn: customThemeUsage,
+    requiresMode: 'full',
+  },
+  {
+    id: 'inventoryOrTimetableUsage',
+    labelKey: 'achievements.categories.inventoryOrTimetableUsage.label',
+    icon: 'layers',
+    unit: 'count',
+    metricFn: inventoryOrTimetableUsage,
+    requiresMode: 'full',
+  },
+  // Not requiresMode: 'full' — ambient sound is available in both modes
+  // (see lib/experienceMode.js), so this one is reachable from Simple too,
+  // unlike its two siblings above.
+  {
+    id: 'triedAmbientSounds',
+    labelKey: 'achievements.categories.triedAmbientSounds.label',
+    icon: 'mug',
+    unit: 'count',
+    metricFn: triedAmbientSoundsCount,
+  },
 ]
 
 // 'firsts' is the one category whose two definitions each need their own
@@ -271,9 +329,23 @@ export const ACHIEVEMENT_DEFINITIONS = [
   ...tierDefs('earlyBird', 'sunrise', [1]),
   ...tierDefs('nightOwl', 'moon', [1]),
   ...tierDefs('reflectivePause', 'feather', [1]),
+  ...tierDefs('customThemeUsage', 'sparkle', [1]),
+  ...tierDefs('inventoryOrTimetableUsage', 'layers', [1]),
+  // Threshold 2, not 1 — "tried multiple" means more than one distinct sound.
+  ...tierDefs('triedAmbientSounds', 'mug', [2]),
 ]
 
 const CATEGORY_BY_ID = new Map(ACHIEVEMENT_CATEGORIES.map((c) => [c.id, c]))
+
+// Whether a definition belongs to the Full-mode-gated category — looked up
+// via categoryId rather than duplicating `requiresMode` onto every
+// definition (tierDefs() has no such field, and only 3 categories need
+// this at all). AchievementGrid.jsx uses this to render a distinct
+// "switch to Full mode" locked state instead of the ordinary "not reached
+// yet" one.
+export function requiresFullMode(def) {
+  return CATEGORY_BY_ID.get(def.categoryId)?.requiresMode === 'full'
+}
 
 function metricForDefinition(def, snapshot, metricCache) {
   const override = DEFINITION_METRIC_OVERRIDES[def.id]

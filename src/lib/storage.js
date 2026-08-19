@@ -274,6 +274,30 @@ const DEFAULT_SETTINGS = {
   streakFreezeAvailable: false,
   streakFreezeGrantedAt: null,
   streakFreezeUsedDates: [],
+  // Progressive-disclosure UI density — 'simple' hides Timetable/Inventory/
+  // Reports/customization surfaces, 'full' is today's experience unchanged.
+  // This default ('full') only matters for guests and for a signed-in
+  // account whose row predates this field — resolveExperienceMode() in
+  // lib/experienceMode.js is the actual gate everywhere else in the app,
+  // and it forces guests to 'simple' unconditionally regardless of what's
+  // stored here, same "gate in the UI layer, not storage.js" precedent as
+  // fullscreenBackgroundPath above. A genuinely new signed-in account gets
+  // 'simple' explicitly written at row-creation time by remoteProvider.js's
+  // initializeRemoteData() instead of falling through to this default — see
+  // that file's comment. Same missing-column degrades-gracefully reasoning
+  // as seenCoachMarks above.
+  experienceMode: 'full',
+  // Three monotonic (set-once, never-unset) flags backing the "Full mode"
+  // achievement category in lib/achievements.js. Deliberately booleans/an
+  // array here rather than deriving live from Inventory/Timetable state —
+  // both of those collections shrink during normal use (items are removed
+  // on task completion, clearTodayTasks() wipes Timetable), and
+  // evaluateAchievements()'s `value >= threshold` check assumes a
+  // never-decreasing metric; a live count would let an already-unlocked-
+  // looking badge flicker back to locked mid-session.
+  customThemePomodoroCompleted: false,
+  usedInventoryOrTimetable: false,
+  triedAmbientSounds: [],
 }
 // The ticking toggle became a full ambient-sound picker ('none'/'ticking'/
 // 'rain'/'cafe'/'whiteNoise') — old boolean tickingSoundEnabled values map
@@ -753,6 +777,17 @@ export function hasSeenGuestOnboarding() {
 }
 export function markGuestOnboardingSeen() {
   localStorage.setItem(GUEST_ONBOARDING_SEEN_KEY, 'true')
+}
+
+// ExperienceModeToggle's guest-locked upsell card — same bypass-the-provider
+// reasoning as GUEST_SIGNUP_NUDGE_KEY above: guest-only by definition
+// (signed-in accounts always render the real toggle, never the nudge).
+const EXPERIENCE_MODE_NUDGE_SEEN_KEY = 'pomodoro_experience_mode_nudge_seen'
+export function hasSeenExperienceModeNudge() {
+  return localStorage.getItem(EXPERIENCE_MODE_NUDGE_SEEN_KEY) === 'true'
+}
+export function markExperienceModeNudgeSeen() {
+  localStorage.setItem(EXPERIENCE_MODE_NUDGE_SEEN_KEY, 'true')
 }
 
 // Guest Onboarding's account-creation handoff: the theme/name/goal/language

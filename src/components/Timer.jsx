@@ -9,7 +9,7 @@ import { useTranslation } from '../hooks/useTranslation'
 import { useAuth } from '../hooks/useAuth'
 import { useFullscreenBackgroundUrl } from '../hooks/useFullscreenBackgroundUrl'
 import { themeClassName } from '../lib/theme'
-import { pickCoachMark } from '../lib/constants'
+import { pickCoachMark, resolveCoachMarkCopy } from '../lib/constants'
 
 // Lazy-loaded: MotivationOverlay is ~1200 lines of card-draw animation/
 // pixel-art code, only ever rendered after a Pomodoro completes (see
@@ -107,6 +107,7 @@ function Timer({
   activeTask,
   addTask,
   theme,
+  experienceMode,
   onGoToPlanning,
   onNavigateTab,
   fullscreenBackgroundPath,
@@ -545,7 +546,7 @@ function Timer({
             ?
           </button>
         )}
-        {!isFullscreen && pipSupported && (
+        {!isFullscreen && pipSupported && experienceMode === 'full' && (
           <button
             type="button"
             onClick={togglePip}
@@ -592,25 +593,31 @@ function Timer({
   const chromeBelowRingRegion = (
     <>
       <div className="text-center flex flex-col items-center gap-3">
-        <div>
-          <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
-          {activeTask ? (
-            <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
-          ) : (
-            <div>
-              <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
-              {!isFullscreen && onGoToPlanning && (
-                <button
-                  type="button"
-                  onClick={onGoToPlanning}
-                  className="font-sans text-tomato-text text-xs underline decoration-dotted mt-1"
-                >
-                  {t('timer.goToPlanningButton')}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {/* Active-task callout — full mode only. Simple mode keeps the
+            cycle dots below (the core rhythm indicator) but drops "which
+            task" framing entirely, in line with Planning's own task-list
+            being de-emphasized there. */}
+        {experienceMode === 'full' && (
+          <div>
+            <p className="text-sage text-xs font-sans tracking-widest uppercase mb-1">{t('timer.currentTask')}</p>
+            {activeTask ? (
+              <p className="font-sans text-cream font-semibold">{activeTask.text}</p>
+            ) : (
+              <div>
+                <p className="font-sans text-cream font-semibold">{t('timer.noActiveTask')}</p>
+                {!isFullscreen && onGoToPlanning && (
+                  <button
+                    type="button"
+                    onClick={onGoToPlanning}
+                    className="font-sans text-tomato-text text-xs underline decoration-dotted mt-1"
+                  >
+                    {t('timer.goToPlanningButton')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex gap-2">
           {Array.from({ length: cycleLength }, (_, i) => (
@@ -671,8 +678,9 @@ function Timer({
             treatment. Shown whenever this session has been paused at
             least once, even after Pause is pressed again (isRunning
             false), so the count doesn't disappear the moment it's most
-            relevant to see. */}
-        {pauseCount > 0 && (
+            relevant to see. Full mode only — simple mode drops this kind
+            of session-detail tally. */}
+        {experienceMode === 'full' && pauseCount > 0 && (
           <p className="text-sage text-xs font-sans">{t('timer.pauseCount', { count: pauseCount })}</p>
         )}
 
@@ -684,7 +692,11 @@ function Timer({
         {isRunning && isWork && (
           <button
             type="button"
-            onClick={openVoidPrompt}
+            // Simple mode: a single click voids with no reason (already a
+            // fully-supported call shape — voidPomodoro('') is the same as
+            // submitting the panel below with an empty reason field). Full
+            // mode keeps the reason-collecting panel.
+            onClick={experienceMode === 'simple' ? () => voidPomodoro('') : openVoidPrompt}
             className="font-sans text-xs text-sage hover:text-tomato-text underline decoration-dotted underline-offset-4 transition-colors"
           >
             {t('timer.voidPomodoro')}
@@ -692,7 +704,7 @@ function Timer({
         )}
       </div>
 
-      {voidPromptOpen && (
+      {experienceMode === 'full' && voidPromptOpen && (
         <form
           onSubmit={confirmVoid}
           className="w-full bg-tomato/5 border border-tomato/20 rounded-xl p-3 flex flex-col gap-2"
@@ -734,32 +746,18 @@ function Timer({
       {isWork && isRunning && (
         <div className="flex flex-col items-center gap-2 pt-4 border-t border-cream/10 w-full">
           <p className="text-sage text-xs font-sans">{t('timer.hadInterruption')}</p>
-          <div className="flex gap-3">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => logInterruption('internal')}
-                className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
-              >
-                {t('timer.internalInterruption', { count: internalCount })}
-              </button>
-              <button
-                type="button"
-                onClick={() => undoInterruption('internal')}
-                disabled={internalCount === 0}
-                className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
-                aria-label={t('timer.undoInternalAria')}
-              >
-                -1
-              </button>
-            </div>
+          {experienceMode === 'simple' ? (
+            // No internal/external choice to surface — there's no automatic
+            // way to tell them apart, so simple mode picks one consistently
+            // (external) rather than guessing per-tap. Still logs a real
+            // interruption-external tick, still undoable.
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => logInterruption('external')}
                 className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
               >
-                {t('timer.externalInterruption', { count: externalCount })}
+                {t('timer.simpleInterruption', { count: externalCount })}
               </button>
               <button
                 type="button"
@@ -771,7 +769,46 @@ function Timer({
                 -1
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="flex gap-3">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => logInterruption('internal')}
+                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+                >
+                  {t('timer.internalInterruption', { count: internalCount })}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => undoInterruption('internal')}
+                  disabled={internalCount === 0}
+                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                  aria-label={t('timer.undoInternalAria')}
+                >
+                  -1
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => logInterruption('external')}
+                  className="font-sans px-4 py-2 rounded-full border border-cream/15 text-cream text-xs"
+                >
+                  {t('timer.externalInterruption', { count: externalCount })}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => undoInterruption('external')}
+                  disabled={externalCount === 0}
+                  className="font-sans w-6 h-6 rounded-full border border-cream/15 text-cream text-xs disabled:opacity-30"
+                  aria-label={t('timer.undoExternalAria')}
+                >
+                  -1
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
@@ -832,8 +869,8 @@ function Timer({
       {!isFullscreen && timerCoachMark && (
         <div className="fixed z-40 top-20 inset-x-4 lg:inset-x-auto lg:top-1/2 lg:-translate-y-1/2 lg:right-6 lg:w-80">
           <CoachMark
-            titleKey={timerCoachMark.titleKey}
-            bodyKey={timerCoachMark.bodyKey}
+            titleKey={resolveCoachMarkCopy(timerCoachMark, experienceMode).titleKey}
+            bodyKey={resolveCoachMarkCopy(timerCoachMark, experienceMode).bodyKey}
             onDismiss={() => onDismissCoachMark(timerCoachMark.id)}
             onLearnMore={() => onLearnMoreCoachMark(timerCoachMark.id)}
             className="max-w-sm mx-auto lg:max-w-none lg:mx-0 shadow-2xl"

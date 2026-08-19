@@ -85,6 +85,7 @@ export default {
     hadInterruption: 'Bir kesinti mi oldu?',
     internalInterruption: 'İç kesinti ({{count}})',
     externalInterruption: 'Dış kesinti ({{count}})',
+    simpleInterruption: 'Kesinti ({{count}})',
     undoInternalAria: 'iç kesintiyi geri al',
     undoExternalAria: 'dış kesintiyi geri al',
     keyboardShortcutsTitle: 'Klavye kısayolları',
@@ -351,6 +352,18 @@ export default {
         label: 'Düşünceli Mola',
         description: 'Bir Pomodoro planlandığı gibi gitmediğinde nedenini yaz.',
       },
+      customThemeUsage: {
+        label: 'Kişisel Dokunuş',
+        description: 'Özel bir temayla bir Pomodoro tamamla — sadece Tam modda.',
+      },
+      inventoryOrTimetableUsage: {
+        label: 'Planlayıcı',
+        description: 'Envanter veya Zaman Çizelgesi\'ni kullan — sadece Tam modda.',
+      },
+      triedAmbientSounds: {
+        label: 'Ses Kaşifi',
+        description: 'Birden fazla ortam sesi dene — sadece Tam modda.',
+      },
     },
     dailyPomodoroCount: {
       tier1: { title: 'İlk Pomodoro', description: 'Gününün ilk Pomodorosunu tamamla.' },
@@ -435,6 +448,24 @@ export default {
         description: 'Bir Pomodoro ilk kez planlandığı gibi gitmediğinde nedenini yaz.',
       },
     },
+    customThemeUsage: {
+      tier1: {
+        title: 'Kişisel Dokunuş',
+        description: 'Özel bir temayla bir Pomodoro tamamla.',
+      },
+    },
+    inventoryOrTimetableUsage: {
+      tier1: {
+        title: 'Planlayıcı',
+        description: 'Envanter veya Zaman Çizelgesi\'ni kullan.',
+      },
+    },
+    triedAmbientSounds: {
+      tier1: {
+        title: 'Ses Kaşifi',
+        description: 'Birden fazla ortam sesi dene.',
+      },
+    },
     progress: {
       countFormat: '{{value}}/{{threshold}}',
       hoursFormat: '{{value}} sa / {{threshold}} sa',
@@ -450,6 +481,10 @@ export default {
       allTiersDone: 'Tüm seviyeler tamamlandı',
       cardBadgesTitle: 'Kart Rozetleri',
       specialTitle: 'Özel',
+      lockedForModeAria: 'Kilitli — sadece Tam modda',
+      lockedForModeHint: 'Bunun için Tam moda geç.',
+      fullModeTitle: 'Tam Mod',
+      fullModeHint: "Bunlar için çalışmaya başlamak üzere Tam moda geç (Ayarlar > Genel).",
     },
   },
 
@@ -745,6 +780,8 @@ export default {
     timerFirstInterruption: {
       title: 'Az önce bir kesinti işaretledin',
       body: 'Amaç tam olarak bu. Bir dikkat dağınıklığını hemen tepki vermek yerine not ediyorsun. İçsel kesintiler senden gelir, dışsal olanlar başka birinden. Her iki durumda da Pomodoro\'n çalışmaya devam ediyor ve bu örüntüleri daha sonra Raporlar\'da göreceksin.',
+      simpleTitle: 'Az önce bir kesinti işaretledin',
+      simpleBody: 'Amaç tam olarak bu — bir dikkat dağınıklığını hemen tepki vermek yerine not ediyorsun ve Pomodoro\'n çalışmaya devam ediyor.',
     },
     timerFirstBreak: {
       title: 'Bu senin molan',
@@ -753,10 +790,14 @@ export default {
     planningIntro: {
       title: 'Gününü burada planla',
       body: 'Görevlerini Envanterine ekle. Bu, yapman gereken her şeyin biriktiği listedir. Sonra bugün gerçekten üzerinde çalışacaklarını seç ve her birinin kaç Pomodoro (25 dakikalık seans) süreceğini tahmin et.',
+      simpleTitle: 'Gününü burada planla',
+      simpleBody: 'Bugünün görevlerini ekle ve her birinin kaç Pomodoro (25 dakikalık seans) süreceğini tahmin et.',
     },
     planningFirstTodayTask: {
       title: 'Tahmin neden önemli',
       body: "Bir görev Bugün listesine girdiğinde, onu bitirdiğinde tahminin ne kadar isabetli olduğunu görebileceksin. Bu uygulama tahmin ettiğinle gerçekte olanı karşılaştırır ve bu karşılaştırma, Raporlar'ın zamanla daha iyi planlamana yardımcı olmak için kullandığı şeydir.",
+      simpleTitle: 'Tahmin neden önemli',
+      simpleBody: "Bir görev Bugün listesine girdiğinde, onu bitirdiğinde tahminin ne kadar isabetli olduğunu görebileceksin — zamanla tahmin etme konusunda gelişmenin iyi bir yolu.",
     },
     reportsIntro: {
       title: 'Bunlar bir skor tablosu değil, senin sayıların',
@@ -773,6 +814,8 @@ export default {
     settingsDataIntro: {
       title: 'Kategoriler örüntüleri görmeni sağlar',
       body: 'Görevleri bir kategoriyle (Iş veya Ders gibi) etiketlemek, Raporlar\'ın odak sürenin gerçekte nereye gittiğini göstermesini sağlar. Bu, özellikle sadece bugünü değil, haftaları karşılaştırırken işe yarar.',
+      simpleTitle: 'Kategoriler örüntüleri görmeni sağlar',
+      simpleBody: 'Görevleri bir kategoriyle (Iş veya Ders gibi) etiketlemek, odak sürenin gerçekte nereye gittiğini fark etmene yardımcı olur.',
     },
     motivationIntro: {
       title: 'Küçük bir an, senin zamanında',
@@ -904,6 +947,9 @@ export default {
     ambientWhiteNoise: 'Beyaz Gürültü',
     checkToBottomLabel: 'Tamamlananı alta taşı',
     checkToBottomHint: "Bir görev tamamlandı olarak işaretlendiğinde bugünün listesinin en altına taşınsın.",
+    experienceModeLabel: 'Deneyim modu',
+    experienceModeHint: "Sade mod; Envanter, Zaman Çizelgesi ve özel temalar gibi gelişmiş araçları gizler. Hiçbir şey silinmez, istediğin zaman geri dönebilirsin.",
+    experienceModeGuestHint: 'Tam mod ücretsiz bir hesap gerektirir. Sade mod misafirler için gayet iyi çalışır.',
     displayNameLabel: 'Adınız',
     displayNameHint: "Header'daki kişiselleştirilmiş selamda gösterilir.",
     displayNamePlaceholder: 'ör. Sanem',
@@ -1003,6 +1049,19 @@ export default {
   // — bir misafirin ilk kez bir Pomodoro başlattığı anda bir kez gösterilir.
   // Bilinçli olarak coachMarks isim alanının dışında: bu bir ürün ipucudur,
   // metodoloji ipucu değildir, ve giriş yapıldığında asla gösterilmez.
+  // ExperienceModeToggle.jsx — Sade/Tam kaydırmalı hap düğmesi, hem başlıkta
+  // hem de Ayarlar > Genel içinde gösterilir.
+  experienceMode: {
+    simpleShort: 'Sade',
+    fullShort: 'Tam',
+    fullLockedAria: 'Tam mod — ücretsiz bir hesap gerektirir',
+    nudge: {
+      title: 'Tam mod için hesap gerekir',
+      body: 'Özel temalar, Envanter, Zaman Çizelgesi ve detaylı Raporlar Tam moda ait — ileride bu modun arkasına bir üyelik seçeneği eklenebilmesi için ücretsiz bir hesap gerektiriyor. Sade mod her durumda kullanılabilir.',
+      dismissAria: 'Tam mod ipucunu kapat',
+    },
+  },
+
   guestNudge: {
     title: 'Hesapla daha fazlasını al',
     body: '- Görevlerini ve geçmişini her cihazda senkronize et\n- Sınırsız kategori oluştur\n- Özel tam ekran arka planları',
@@ -1040,6 +1099,14 @@ export default {
     welcomeGuest: {
       title: 'Nereden başlayalım?',
       body: 'Hızlıca birkaç tercih ayarlayalım. Her adım isteğe bağlıdır ve bunların hepsini daha sonra Ayarlar\'dan değiştirebilirsin.',
+    },
+    experienceMode: {
+      title: 'Pomodoro Tekniği\'ne ne kadar aşinasın?',
+      body: 'Bu sadece bir başlangıç noktası — istediğin zaman Ayarlar\'dan değiştirebilirsin.',
+      simpleLabel: 'Yeni başlıyorum',
+      simpleHint: 'Sadece temel özelliklerle daha sade bir görünüm. Hiçbir şey kalıcı olarak gizlenmiyor.',
+      fullLabel: 'Deneyimliyim',
+      fullHint: 'Tüm araçlar — özel temalar, görev listesi, zaman bloklama, detaylı raporlar ve daha fazlası.',
     },
     language: {
       title: 'Dilini seç',

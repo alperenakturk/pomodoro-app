@@ -4,6 +4,15 @@ import { SUPPORTED_LANGUAGES } from '../lib/i18n'
 import ThemePicker from './ThemePicker'
 
 const BASE_STEPS = ['welcome', 'language', 'name', 'theme', 'goal']
+// 'account' variant only — NOT spread into 'guestIntro's steps below. A
+// guest can't actually use 'full' mode yet (resolveExperienceMode forces
+// 'simple' for every guest regardless of what's picked here), so asking
+// during guestIntro would be a choice with no live effect to preview,
+// unlike theme. The guestIntro-then-signup path gets asked separately, via
+// App.jsx's single-step `steps={['experienceMode']}` override, at the one
+// moment the choice actually starts to matter — see App.jsx's
+// showExperienceModeOnly.
+const ACCOUNT_STEPS = ['welcome', 'experienceMode', 'language', 'name', 'theme', 'goal']
 
 // A first-time account setup wizard — deliberately a different mechanism
 // from the coach-mark system (see constants.js's COACH_MARKS): this is a
@@ -29,6 +38,7 @@ const BASE_STEPS = ['welcome', 'language', 'name', 'theme', 'goal']
 //     whatever the user picked in the earlier steps.
 function AccountSetupFlow({
   variant = 'account',
+  steps: stepsOverride,
   onFinish,
   onContinueAsGuest,
   onRequestSignUp,
@@ -36,12 +46,18 @@ function AccountSetupFlow({
   setDisplayName,
   theme,
   onSelectTheme,
+  experienceMode,
+  onSelectExperienceMode,
   dailyPomodoroGoal,
   setDailyPomodoroGoal,
 }) {
   const { t, language, setLanguage } = useTranslation()
   const [stepIndex, setStepIndex] = useState(0)
-  const STEPS = variant === 'guestIntro' ? [...BASE_STEPS, 'signup'] : BASE_STEPS
+  // stepsOverride lets a caller run a single named step in isolation (see
+  // App.jsx's showExperienceModeOnly) instead of the full variant-derived
+  // flow — stepIndex naturally stays 0/isLastStep for a one-entry array, so
+  // no other logic below needs to know this is a special case.
+  const STEPS = stepsOverride ?? (variant === 'guestIntro' ? [...BASE_STEPS, 'signup'] : ACCOUNT_STEPS)
   const step = STEPS[stepIndex]
   const isLastStep = stepIndex === STEPS.length - 1
   const isSignupStep = step === 'signup'
@@ -95,6 +111,40 @@ function AccountSetupFlow({
                 {t('accountSetup.welcome.dataNote')}
               </p>
             )}
+          </div>
+        )}
+
+        {step === 'experienceMode' && (
+          <div className="flex flex-col items-center gap-3 w-full">
+            <h1 className="font-warm text-cream font-bold text-lg tracking-wide">
+              {t('accountSetup.experienceMode.title')}
+            </h1>
+            <p className="font-sans text-sage text-sm leading-relaxed max-w-sm">
+              {t('accountSetup.experienceMode.body')}
+            </p>
+            <div className="flex flex-col gap-2 w-full max-w-sm mt-1">
+              {['simple', 'full'].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => onSelectExperienceMode(option)}
+                  aria-pressed={experienceMode === option}
+                  className={
+                    'flex flex-col items-start gap-0.5 text-left px-4 py-3 rounded-xl border transition-colors ' +
+                    (experienceMode === option
+                      ? 'border-tomato bg-tomato/10 text-cream'
+                      : 'border-cream/15 text-sage hover:text-cream')
+                  }
+                >
+                  <span className="font-sans font-semibold text-sm">
+                    {t(`accountSetup.experienceMode.${option}Label`)}
+                  </span>
+                  <span className="font-sans text-xs opacity-80">
+                    {t(`accountSetup.experienceMode.${option}Hint`)}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

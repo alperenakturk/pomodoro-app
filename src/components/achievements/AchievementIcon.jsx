@@ -100,6 +100,16 @@ const ICONS = {
       strokeLinejoin="round"
     />
   ),
+  // Full-mode-gated achievement tiles only (see AchievementBadge.jsx's
+  // lockedForMode) — a real padlock, distinct from the plain dimmed
+  // "not reached yet" locked state, which uses a category's normal icon.
+  lock: (
+    <path
+      d="M7 10.5V8a5 5 0 0 1 10 0v2.5M6 10.5h12A1.5 1.5 0 0 1 19.5 12v7A1.5 1.5 0 0 1 18 20.5H6A1.5 1.5 0 0 1 4.5 19v-7A1.5 1.5 0 0 1 6 10.5Zm6 4.25v2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
 }
 
 function AchievementIcon({ icon, className = 'w-5 h-5' }) {

@@ -1,4 +1,4 @@
-import { ACHIEVEMENT_CATEGORIES, ACHIEVEMENT_DEFINITIONS } from '../../lib/achievements'
+import { ACHIEVEMENT_CATEGORIES, ACHIEVEMENT_DEFINITIONS, requiresFullMode } from '../../lib/achievements'
 import { useTranslation } from '../../hooks/useTranslation'
 import AchievementBadge from './AchievementBadge'
 import StreakMilestones from '../StreakMilestones'
@@ -24,7 +24,21 @@ const PROGRESS_CATEGORY_IDS = [
   'categoryDiversity',
 ]
 const CARD_ACHIEVEMENT_CATEGORY_IDS = ['motivationCardsDraws', 'motivationCardsRare', 'motivationCardsDiscovery']
-const SPECIAL_DEFINITION_IDS = ['firsts-task-1', 'firsts-break-1', 'earlyBird-1', 'nightOwl-1', 'reflectivePause-1']
+// triedAmbientSounds-2 folds in here, not into the Full-mode panel below —
+// ambient sound is available in both modes (see lib/experienceMode.js), so
+// this one is a plain single-tier novelty achievement like its neighbors.
+const SPECIAL_DEFINITION_IDS = [
+  'firsts-task-1',
+  'firsts-break-1',
+  'earlyBird-1',
+  'nightOwl-1',
+  'reflectivePause-1',
+  'triedAmbientSounds-2',
+]
+// Full-mode-only achievements (see achievements.js's requiresFullMode) get
+// their own panel, not folded into Special above — they need panel-level
+// "switch to Full mode" context a per-badge tooltip alone doesn't give.
+const FULL_MODE_DEFINITION_IDS = ['customThemeUsage-1', 'inventoryOrTimetableUsage-1']
 
 const CATEGORY_BY_ID = new Map(ACHIEVEMENT_CATEGORIES.map((c) => [c.id, c]))
 const DEFINITIONS_BY_CATEGORY = ACHIEVEMENT_DEFINITIONS.reduce((map, def) => {
@@ -55,7 +69,7 @@ function ProgressLine({ category, progress, t }) {
   )
 }
 
-function CategoryPanel({ categoryId, unlockedIds, getCategoryProgress, t }) {
+function CategoryPanel({ categoryId, unlockedIds, experienceMode, getCategoryProgress, t }) {
   const category = CATEGORY_BY_ID.get(categoryId)
   const definitions = DEFINITIONS_BY_CATEGORY.get(categoryId) ?? []
   const progress = getCategoryProgress(categoryId)
@@ -72,6 +86,7 @@ function CategoryPanel({ categoryId, unlockedIds, getCategoryProgress, t }) {
             key={def.id}
             definition={def}
             unlocked={unlockedIds.has(def.id)}
+            lockedForMode={requiresFullMode(def) && experienceMode !== 'full'}
             title={t(def.titleKey)}
             description={t(def.descriptionKey)}
           />
@@ -81,7 +96,7 @@ function CategoryPanel({ categoryId, unlockedIds, getCategoryProgress, t }) {
   )
 }
 
-function CardAchievementsPanel({ unlockedIds, t }) {
+function CardAchievementsPanel({ unlockedIds, experienceMode, t }) {
   const definitions = CARD_ACHIEVEMENT_CATEGORY_IDS.flatMap((id) => DEFINITIONS_BY_CATEGORY.get(id) ?? [])
   return (
     <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4">
@@ -94,6 +109,7 @@ function CardAchievementsPanel({ unlockedIds, t }) {
             key={def.id}
             definition={def}
             unlocked={unlockedIds.has(def.id)}
+            lockedForMode={requiresFullMode(def) && experienceMode !== 'full'}
             title={t(def.titleKey)}
             description={t(def.descriptionKey)}
           />
@@ -103,7 +119,7 @@ function CardAchievementsPanel({ unlockedIds, t }) {
   )
 }
 
-function SpecialPanel({ unlockedIds, t }) {
+function SpecialPanel({ unlockedIds, experienceMode, t }) {
   const definitions = SPECIAL_DEFINITION_IDS.map((id) => ACHIEVEMENT_DEFINITIONS.find((d) => d.id === id)).filter(
     Boolean
   )
@@ -118,6 +134,38 @@ function SpecialPanel({ unlockedIds, t }) {
             key={def.id}
             definition={def}
             unlocked={unlockedIds.has(def.id)}
+            lockedForMode={requiresFullMode(def) && experienceMode !== 'full'}
+            title={t(def.titleKey)}
+            description={t(def.descriptionKey)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Its own panel (not folded into Special above) — these need panel-level
+// "switch to Full mode to work toward these" context, shown once above the
+// row, not just repeated per-badge in each tooltip.
+function FullModePanel({ unlockedIds, experienceMode, t }) {
+  const definitions = FULL_MODE_DEFINITION_IDS.map((id) => ACHIEVEMENT_DEFINITIONS.find((d) => d.id === id)).filter(
+    Boolean
+  )
+  return (
+    <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-4">
+      <p className="text-sage text-[10px] font-sans tracking-widest uppercase mb-1">
+        {t('achievements.grid.fullModeTitle')}
+      </p>
+      {experienceMode !== 'full' && (
+        <p className="text-sage text-[10px] font-sans mb-2">{t('achievements.grid.fullModeHint')}</p>
+      )}
+      <div className="flex flex-wrap gap-2 mt-2">
+        {definitions.map((def) => (
+          <AchievementBadge
+            key={def.id}
+            definition={def}
+            unlocked={unlockedIds.has(def.id)}
+            lockedForMode={requiresFullMode(def) && experienceMode !== 'full'}
             title={t(def.titleKey)}
             description={t(def.descriptionKey)}
           />
@@ -133,7 +181,7 @@ function SpecialPanel({ unlockedIds, t }) {
 // so their existing derive-from-source-data logic is reused verbatim, not
 // duplicated — this component only adds the net-new tier/badge sections
 // around them.
-function AchievementGrid({ unlockedIds, getCategoryProgress }) {
+function AchievementGrid({ unlockedIds, experienceMode, getCategoryProgress }) {
   const { t } = useTranslation()
   const unlockedCount = unlockedIds.size
   const totalCount = ACHIEVEMENT_DEFINITIONS.length
@@ -154,15 +202,18 @@ function AchievementGrid({ unlockedIds, getCategoryProgress }) {
           key={categoryId}
           categoryId={categoryId}
           unlockedIds={unlockedIds}
+          experienceMode={experienceMode}
           getCategoryProgress={getCategoryProgress}
           t={t}
         />
       ))}
 
       <CardCollectionStats />
-      <CardAchievementsPanel unlockedIds={unlockedIds} t={t} />
+      <CardAchievementsPanel unlockedIds={unlockedIds} experienceMode={experienceMode} t={t} />
 
-      <SpecialPanel unlockedIds={unlockedIds} t={t} />
+      <SpecialPanel unlockedIds={unlockedIds} experienceMode={experienceMode} t={t} />
+
+      <FullModePanel unlockedIds={unlockedIds} experienceMode={experienceMode} t={t} />
     </div>
   )
 }

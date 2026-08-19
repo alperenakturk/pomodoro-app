@@ -383,12 +383,20 @@ function TodoToday({
   finishTask,
   categories,
   onManageCategories,
+  // 'full' (default): the original boxed card, unchanged. 'simple': same
+  // data/handlers/TaskRow rendering, but the outer card (bg/border/shadow)
+  // is dropped in favor of sitting directly on the page background with
+  // more breathing room — soft dividers instead of nested boxes — per the
+  // "not boxed" direction requested for Simple mode's Planning tab. Only
+  // the container/header/spacing differ; nothing about task behavior does.
+  variant = 'full',
 }) {
   const [text, setText] = useState('')
   const [estimate, setEstimate] = useState('')
   const [categoryIds, setCategoryIds] = useState([])
   const [notes, setNotes] = useState('')
   const { t } = useTranslation()
+  const isSimple = variant === 'simple'
 
   // Bölüm ayrımı "urgent"a göre yapılıyor — "unplanned" sadece görevin kökenini
   // (bugün plan dışı çıktığını) belirtir, hangi bölümde görüneceğini değil.
@@ -409,9 +417,21 @@ function TodoToday({
   }
 
   return (
-    <div className="bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full">
-      <div className="flex items-center justify-between mb-4">
-        <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">
+    <div
+      className={
+        isSimple
+          ? 'w-full flex flex-col gap-6'
+          : 'bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full'
+      }
+    >
+      <div className={isSimple ? 'flex items-center justify-between' : 'flex items-center justify-between mb-4'}>
+        <p
+          className={
+            isSimple
+              ? 'font-display text-cream font-bold text-sm tracking-widest uppercase'
+              : 'font-display text-cream font-bold text-xs tracking-widest uppercase'
+          }
+        >
           {t('today.title')}
         </p>
         <TaskListMenu
@@ -422,7 +442,7 @@ function TodoToday({
         />
       </div>
 
-      <form onSubmit={handleAddPlanned} className="flex gap-2 mb-4 items-end">
+      <form onSubmit={handleAddPlanned} className={isSimple ? 'flex gap-2 items-end' : 'flex gap-2 mb-4 items-end'}>
         <input
           type="text"
           value={text}
@@ -453,7 +473,7 @@ function TodoToday({
         </button>
       </form>
 
-      <div className="flex gap-2 mb-4">
+      <div className={isSimple ? 'flex gap-2' : 'flex gap-2 mb-4'}>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -472,50 +492,64 @@ function TodoToday({
       </div>
 
       {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
-        <p className="text-tomato-text text-xs font-sans mb-4 -mt-2">
+        <p className={`text-tomato-text text-xs font-sans ${isSimple ? '-mt-4' : 'mb-4 -mt-2'}`}>
           {t('today.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
         </p>
       )}
 
-      <div className={`${ROW_GRID} px-2 mb-1`}>
-        <span />
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide">{t('today.colTask')}</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colEstimate')}</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colReal')}</span>
-        <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colDiff')}</span>
-        <span />
-        <span />
-        <span />
+      <div className={isSimple ? 'flex flex-col gap-2' : ''}>
+        <div className={`${ROW_GRID} px-2 ${isSimple ? '' : 'mb-1'}`}>
+          <span />
+          <span className="text-sage text-[10px] font-sans uppercase tracking-wide">{t('today.colTask')}</span>
+          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colEstimate')}</span>
+          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colReal')}</span>
+          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colDiff')}</span>
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <ul className={isSimple ? 'flex flex-col gap-2' : 'flex flex-col gap-1 mb-4'}>
+          {planned.length === 0 && (
+            <li className="text-sage text-sm font-sans text-center py-2">
+              {t('today.emptyState')}
+            </li>
+          )}
+          {planned.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              categories={categories}
+              isActive={task.id === activeTaskId}
+              onSelect={setActiveTaskId}
+              onFinish={finishTask}
+              onRemove={removeTask}
+              onUpdate={updateTask}
+              onReestimate={reestimateTask}
+              onManageCategories={onManageCategories}
+            />
+          ))}
+        </ul>
       </div>
 
-      <ul className="flex flex-col gap-1 mb-4">
-        {planned.length === 0 && (
-          <li className="text-sage text-sm font-sans text-center py-2">
-            {t('today.emptyState')}
-          </li>
-        )}
-        {planned.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            categories={categories}
-            isActive={task.id === activeTaskId}
-            onSelect={setActiveTaskId}
-            onFinish={finishTask}
-            onRemove={removeTask}
-            onUpdate={updateTask}
-            onReestimate={reestimateTask}
-            onManageCategories={onManageCategories}
-          />
-        ))}
-      </ul>
-
-      <div className="bg-tomato/5 border border-tomato/20 rounded-2xl p-3">
-        <p className="flex items-center gap-2 text-tomato text-xs font-sans uppercase tracking-wide mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-tomato" />
+      <div
+        className={
+          isSimple
+            ? 'flex flex-col gap-2 pt-4 border-t border-cream/10'
+            : 'bg-tomato/5 border border-tomato/20 rounded-2xl p-3'
+        }
+      >
+        <p
+          className={
+            isSimple
+              ? 'flex items-center gap-2 text-sage text-xs font-sans uppercase tracking-wide'
+              : 'flex items-center gap-2 text-tomato text-xs font-sans uppercase tracking-wide mb-3'
+          }
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${isSimple ? 'bg-sage' : 'bg-tomato'}`} />
           {t('today.unplannedUrgentTitle')}
         </p>
-        <UnplannedCapture addTask={addTask} className="mb-2" />
+        <UnplannedCapture addTask={addTask} className={isSimple ? '' : 'mb-2'} />
         <ul className="flex flex-col gap-1">
           {urgentTasks.map((task) => (
             <TaskRow

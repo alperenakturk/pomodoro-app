@@ -12,6 +12,8 @@ function renderFlow(props) {
         setDisplayName={vi.fn()}
         theme="dark"
         onSelectTheme={vi.fn()}
+        experienceMode="full"
+        onSelectExperienceMode={vi.fn()}
         dailyPomodoroGoal={null}
         setDailyPomodoroGoal={vi.fn()}
         {...props}
@@ -28,7 +30,9 @@ describe('AccountSetupFlow', () => {
 
   it('advances through every step via Continue, ending on the goal step with a Finish button', () => {
     renderFlow()
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // welcome -> language
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // welcome -> experienceMode
+    expect(screen.getByText('How familiar are you with the Pomodoro Technique?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // experienceMode -> language
     expect(screen.getByText('Choose your language')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // language -> name
     expect(screen.getByText('What should we call you?')).toBeInTheDocument()
@@ -41,7 +45,8 @@ describe('AccountSetupFlow', () => {
 
   it('never blocks Continue on an empty field', () => {
     renderFlow()
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // welcome -> experienceMode
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // experienceMode -> language
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     // Now on the name step with an empty displayName — Continue must still work.
     expect(screen.getByText('What should we call you?')).toBeInTheDocument()
@@ -60,7 +65,9 @@ describe('AccountSetupFlow', () => {
   it('"Skip this step" advances to the next step without exiting the whole flow', () => {
     const onFinish = vi.fn()
     renderFlow({ onFinish })
-    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // welcome -> language
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // welcome -> experienceMode
+    expect(screen.getByText('How familiar are you with the Pomodoro Technique?')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Skip this step' })) // experienceMode -> language
     expect(screen.getByText('Choose your language')).toBeInTheDocument()
     expect(onFinish).not.toHaveBeenCalled()
   })
@@ -83,6 +90,7 @@ describe('AccountSetupFlow', () => {
     renderFlow({ setDisplayName })
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.change(screen.getByPlaceholderText('e.g. Alex'), { target: { value: 'Alperen' } })
     expect(setDisplayName).toHaveBeenCalledWith('Alperen')
   })
@@ -93,11 +101,13 @@ describe('AccountSetupFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Light Sage' }))
     expect(onSelectTheme).toHaveBeenCalledWith('light-sage')
   })
 
   function goToGoalStep() {
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
@@ -127,12 +137,14 @@ describe('AccountSetupFlow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }))
     expect(onFinish).toHaveBeenCalledTimes(1)
   })
 
   it('Back returns to the previous step', () => {
     renderFlow()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // -> experienceMode
     fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // -> language
     fireEvent.click(screen.getByRole('button', { name: 'Continue' })) // -> name
     fireEvent.click(screen.getByRole('button', { name: 'Back' })) // -> language

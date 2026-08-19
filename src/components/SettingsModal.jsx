@@ -32,9 +32,10 @@ import CategoryManager from './CategoryManager'
 import DataTransfer from './DataTransfer'
 import AchievementGrid from './achievements/AchievementGrid'
 import CoachMark from './CoachMark'
+import ExperienceModeToggle from './ExperienceModeToggle'
 import ThemePicker from './ThemePicker'
 import { THEMES } from '../lib/theme'
-import { pickCoachMark } from '../lib/constants'
+import { pickCoachMark, resolveCoachMarkCopy } from '../lib/constants'
 import ChangePasswordModal from './ChangePasswordModal'
 import AuthModal from './AuthModal'
 import {
@@ -235,6 +236,10 @@ function SettingsModal({
   setDailyPomodoroGoal,
   theme,
   onSelectTheme,
+  experienceMode,
+  canUseFullMode,
+  onSelectExperienceMode,
+  onRequestExperienceModeUpgrade,
   customThemeGeneral,
   setCustomThemeGeneral,
   customThemeFocus,
@@ -479,8 +484,8 @@ function SettingsModal({
               margin only while actually rendered. */}
           {settingsCoachMark && (
             <CoachMark
-              titleKey={settingsCoachMark.titleKey}
-              bodyKey={settingsCoachMark.bodyKey}
+              titleKey={resolveCoachMarkCopy(settingsCoachMark, experienceMode).titleKey}
+              bodyKey={resolveCoachMarkCopy(settingsCoachMark, experienceMode).bodyKey}
               onDismiss={() => onDismissCoachMark(settingsCoachMark.id)}
               onLearnMore={() => onLearnMoreCoachMark(settingsCoachMark.id)}
               className="mb-4"
@@ -489,6 +494,21 @@ function SettingsModal({
 
           {activeCategory === 'general' && (
             <div className="bg-pine-dark border border-cream/10 rounded-2xl px-4 py-1">
+              <div className={rowClass}>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-cream">{t('settings.experienceModeLabel')}</label>
+                  <span className="text-sage text-[10px]">
+                    {t(canUseFullMode ? 'settings.experienceModeHint' : 'settings.experienceModeGuestHint')}
+                  </span>
+                </div>
+                <ExperienceModeToggle
+                  mode={experienceMode}
+                  onChange={onSelectExperienceMode}
+                  locked={!canUseFullMode}
+                  onRequestUpgrade={onRequestExperienceModeUpgrade}
+                />
+              </div>
+
               <div className={rowClass}>
                 <div className="flex flex-col gap-0.5">
                   <label htmlFor="display-name" className="text-cream">{t('settings.displayNameLabel')}</label>
@@ -542,21 +562,26 @@ function SettingsModal({
                       picks a *different* real palette for General vs. each
                       Timer session type (sub-pickers just below). No swatch
                       preview makes sense for it (there's no single color to
-                      show), so it's a plain labeled button. */}
-                  <button
-                    type="button"
-                    onClick={() => onSelectTheme('custom')}
-                    aria-pressed={theme === 'custom'}
-                    className={
-                      'flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ' +
-                      (theme === 'custom' ? 'border-tomato text-cream' : 'border-cream/15 text-sage hover:text-cream')
-                    }
-                  >
-                    {t('settings.themeCustom')}
-                  </button>
+                      show), so it's a plain labeled button. Hidden outright
+                      (not disabled) in simple mode, same as the sub-pickers
+                      it reveals — see lib/experienceMode.js's 'customTheme'
+                      feature id. */}
+                  {experienceMode === 'full' && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectTheme('custom')}
+                      aria-pressed={theme === 'custom'}
+                      className={
+                        'flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors ' +
+                        (theme === 'custom' ? 'border-tomato text-cream' : 'border-cream/15 text-sage hover:text-cream')
+                      }
+                    >
+                      {t('settings.themeCustom')}
+                    </button>
+                  )}
                 </div>
 
-                {theme === 'custom' && (
+                {experienceMode === 'full' && theme === 'custom' && (
                   <div className="flex flex-col gap-2 mt-2 pt-3 border-t border-cream/10">
                     <div className="flex items-center justify-between gap-3">
                       <label htmlFor="custom-theme-general" className="text-cream">{t('settings.customThemeGeneralLabel')}</label>
@@ -603,13 +628,13 @@ function SettingsModal({
                 )}
               </div>
 
-              {/* Always shown, even for guests — Fullscreen Focus Mode
-                  backgrounds are stored in Supabase Storage (see
-                  backgroundStorage.js), which guests have no account to
-                  store anything in, so the controls are visually disabled
-                  (dimmed, not a native `disabled` attribute — they still
-                  need to be clickable) and open AuthModal instead of the
-                  file picker/remove action until signed in. */}
+              {/* Always shown, even in simple mode and even for guests —
+                  Fullscreen Focus Mode backgrounds are stored in Supabase
+                  Storage (see backgroundStorage.js), which guests have no
+                  account to store anything in, so the controls are visually
+                  disabled (dimmed, not a native `disabled` attribute — they
+                  still need to be clickable) and open AuthModal instead of
+                  the file picker/remove action until signed in. */}
               <div className="flex flex-col gap-2 text-sage text-xs font-sans py-3 border-b border-cream/10">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col gap-0.5">
@@ -1035,6 +1060,7 @@ function SettingsModal({
           {activeCategory === 'achievements' && (
             <AchievementGrid
               unlockedIds={achievementUnlockedIds}
+              experienceMode={experienceMode}
               getCategoryProgress={getAchievementCategoryProgress}
             />
           )}

@@ -81,6 +81,7 @@ export default {
     hadInterruption: 'Had an interruption?',
     internalInterruption: 'Internal interruption ({{count}})',
     externalInterruption: 'External interruption ({{count}})',
+    simpleInterruption: 'Interruption ({{count}})',
     undoInternalAria: 'undo internal interruption',
     undoExternalAria: 'undo external interruption',
     keyboardShortcutsTitle: 'Keyboard shortcuts',
@@ -384,6 +385,18 @@ export default {
         label: 'Reflective Pause',
         description: "Write down why, when a Pomodoro doesn't go as planned.",
       },
+      customThemeUsage: {
+        label: 'Personal Touch',
+        description: 'Complete a Pomodoro with a custom theme — Full mode only.',
+      },
+      inventoryOrTimetableUsage: {
+        label: 'Planner',
+        description: 'Use the Inventory or Timetable — Full mode only.',
+      },
+      triedAmbientSounds: {
+        label: 'Sound Explorer',
+        description: 'Try more than one ambient sound — Full mode only.',
+      },
     },
     dailyPomodoroCount: {
       tier1: { title: 'First Pomodoro', description: 'Complete your first Pomodoro of the day.' },
@@ -468,6 +481,24 @@ export default {
         description: "Write down why, the first time a Pomodoro doesn't go as planned.",
       },
     },
+    customThemeUsage: {
+      tier1: {
+        title: 'Personal Touch',
+        description: 'Complete a Pomodoro with a custom theme.',
+      },
+    },
+    inventoryOrTimetableUsage: {
+      tier1: {
+        title: 'Planner',
+        description: 'Use the Inventory or Timetable.',
+      },
+    },
+    triedAmbientSounds: {
+      tier1: {
+        title: 'Sound Explorer',
+        description: 'Try more than one ambient sound.',
+      },
+    },
     progress: {
       countFormat: '{{value}}/{{threshold}}',
       hoursFormat: '{{value}}h / {{threshold}}h',
@@ -483,6 +514,10 @@ export default {
       allTiersDone: 'All tiers complete',
       cardBadgesTitle: 'Card Badges',
       specialTitle: 'Special',
+      lockedForModeAria: 'Locked — Full mode only',
+      lockedForModeHint: 'Switch to Full mode to work toward this.',
+      fullModeTitle: 'Full Mode',
+      fullModeHint: 'Switch to Full mode (Settings > General) to start working toward these.',
     },
   },
 
@@ -783,6 +818,8 @@ export default {
     timerFirstInterruption: {
       title: 'You just marked an interruption',
       body: "That's the point. You note a distraction instead of acting on it right away. Internal interruptions come from you; external ones come from someone else. Either way, your Pomodoro keeps running, and you'll see these patterns later in Reports.",
+      simpleTitle: 'You just marked an interruption',
+      simpleBody: "That's the point — you note a distraction instead of acting on it right away, and your Pomodoro keeps running.",
     },
     timerFirstBreak: {
       title: 'This is your break',
@@ -791,10 +828,14 @@ export default {
     planningIntro: {
       title: 'Plan your day here',
       body: "Add tasks to your Inventory, your running backlog of everything you need to do. Then pick what you'll actually work on today and estimate how many Pomodoros (25-minute sessions) each one will take.",
+      simpleTitle: 'Plan your day here',
+      simpleBody: "Add today's tasks and estimate how many Pomodoros (25-minute sessions) each one will take.",
     },
     planningFirstTodayTask: {
       title: 'Why the estimate matters',
       body: "Once a task is in Today's list, you'll be able to see how close your estimate was once you finish it. This app compares what you estimated to what actually happened, and that comparison is what Reports uses to help you plan better over time.",
+      simpleTitle: 'Why the estimate matters',
+      simpleBody: "Once a task is in Today's list, you'll be able to see how close your estimate was once you finish it — a good way to get better at estimating over time.",
     },
     reportsIntro: {
       title: 'Your numbers, not a scoreboard',
@@ -811,6 +852,8 @@ export default {
     settingsDataIntro: {
       title: 'Categories help you see patterns',
       body: "Tagging tasks with a category (like Work or Study) lets Reports show you where your focus time actually goes. This becomes especially useful once you're comparing weeks, not just today.",
+      simpleTitle: 'Categories help you see patterns',
+      simpleBody: 'Tagging tasks with a category (like Work or Study) helps you notice where your focus time actually goes.',
     },
     motivationIntro: {
       title: 'A small moment, on your terms',
@@ -942,6 +985,9 @@ export default {
     ambientWhiteNoise: 'White Noise',
     checkToBottomLabel: 'Check to bottom',
     checkToBottomHint: "Move a task to the bottom of today's list once it's checked off as done.",
+    experienceModeLabel: 'Experience mode',
+    experienceModeHint: 'Simple hides advanced tools like Inventory, Timetable, and custom themes. Nothing is ever deleted, and you can switch back anytime.',
+    experienceModeGuestHint: 'Full mode needs a free account. Simple mode works great for guests.',
     displayNameLabel: 'Your name',
     displayNameHint: 'Shown in a personalized greeting in the header.',
     displayNamePlaceholder: 'e.g. Alex',
@@ -1037,6 +1083,20 @@ export default {
     signUpSuccessMessage: 'Check your email to confirm your account.',
   },
 
+  // ExperienceModeToggle.jsx — the Simple/Full sliding pill, mounted in the
+  // header and again in Settings > General. Short pill labels (distinct
+  // from accountSetup.experienceMode's longer onboarding-step copy below).
+  experienceMode: {
+    simpleShort: 'Simple',
+    fullShort: 'Full',
+    fullLockedAria: 'Full mode — requires a free account',
+    nudge: {
+      title: 'Full mode needs an account',
+      body: 'Custom themes, Inventory, Timetable, and detailed Reports are part of Full mode, which needs a free account so it can be gated behind one later on. Simple mode stays available either way.',
+      dismissAria: 'dismiss Full mode nudge',
+    },
+  },
+
   // A one-time growth nudge for guests (see GuestSignupNudge.jsx) — shown
   // once, the first time a guest starts a Pomodoro. Deliberately not part
   // of the coachMarks namespace: this is a product nudge, not a methodology
@@ -1079,6 +1139,14 @@ export default {
     welcomeGuest: {
       title: 'Where should we start?',
       body: "Let's quickly set a few preferences. Every step is optional, and you can change any of this later in Settings.",
+    },
+    experienceMode: {
+      title: "How familiar are you with the Pomodoro Technique?",
+      body: 'This just picks a starting point — you can switch anytime in Settings.',
+      simpleLabel: "I'm just starting out",
+      simpleHint: 'A simpler view with just the essentials. Nothing is ever hidden for good.',
+      fullLabel: "I've done this before",
+      fullHint: 'The full toolkit — custom themes, task backlog, time-blocking, detailed reports, and more.',
     },
     language: {
       title: 'Choose your language',

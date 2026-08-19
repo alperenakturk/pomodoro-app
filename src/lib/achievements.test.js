@@ -7,7 +7,14 @@ import {
 } from './achievements'
 import { summarizeCardDraws } from './motivationCategories'
 
-const SETTINGS = { workMinutes: 25, shortBreakMinutes: 5, longBreakMinutes: 15 }
+const SETTINGS = {
+  workMinutes: 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  customThemePomodoroCompleted: false,
+  usedInventoryOrTimetable: false,
+  triedAmbientSounds: [],
+}
 
 function pom(date, timestamp = `${date}T12:00:00.000Z`) {
   return { id: `pom-${date}-${timestamp}`, type: 'pomodoro', date, timestamp }

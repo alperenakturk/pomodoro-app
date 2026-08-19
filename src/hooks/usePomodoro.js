@@ -222,7 +222,16 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
   const [ambientSound, setAmbientSoundState] = useState(() => loadSettings().ambientSound)
   const setAmbientSound = useCallback((value) => {
     setAmbientSoundState(value)
-    patchSettings({ ambientSound: value })
+    // Backs the "tried multiple ambient sounds" Full-mode-only achievement
+    // (lib/achievements.js) — a monotonic, dedup-appended history rather
+    // than the current single value, since achievements need "how many
+    // distinct sounds ever," not "which one is picked right now."
+    const settings = loadSettings()
+    const triedAmbientSounds =
+      value !== 'none' && !settings.triedAmbientSounds.includes(value)
+        ? [...settings.triedAmbientSounds, value]
+        : settings.triedAmbientSounds
+    patchSettings({ ambientSound: value, triedAmbientSounds })
   }, [])
 
   useEffect(() => {

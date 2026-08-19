@@ -80,6 +80,11 @@ export const COACH_MARKS = [
     section: 'timer',
     titleKey: 'coachMarks.timerFirstInterruption.title',
     bodyKey: 'coachMarks.timerFirstInterruption.body',
+    // Full-mode body explains the internal/external distinction; that choice
+    // doesn't exist in Simple mode (always logged as external), so the
+    // Simple copy just acknowledges the interruption instead.
+    simpleTitleKey: 'coachMarks.timerFirstInterruption.simpleTitle',
+    simpleBodyKey: 'coachMarks.timerFirstInterruption.simpleBody',
     guideSection: 'interruptions',
   },
   {
@@ -94,6 +99,9 @@ export const COACH_MARKS = [
     section: 'planning',
     titleKey: 'coachMarks.planningIntro.title',
     bodyKey: 'coachMarks.planningIntro.body',
+    // Full-mode body references Inventory, which Simple mode doesn't show.
+    simpleTitleKey: 'coachMarks.planningIntro.simpleTitle',
+    simpleBodyKey: 'coachMarks.planningIntro.simpleBody',
     guideSection: 'what-is-it',
   },
   {
@@ -101,6 +109,9 @@ export const COACH_MARKS = [
     section: 'planning',
     titleKey: 'coachMarks.planningFirstTodayTask.title',
     bodyKey: 'coachMarks.planningFirstTodayTask.body',
+    // Full-mode body references Reports, which Simple mode doesn't show.
+    simpleTitleKey: 'coachMarks.planningFirstTodayTask.simpleTitle',
+    simpleBodyKey: 'coachMarks.planningFirstTodayTask.simpleBody',
     guideSection: 'estimation',
   },
   {
@@ -129,6 +140,9 @@ export const COACH_MARKS = [
     section: 'settings',
     titleKey: 'coachMarks.settingsDataIntro.title',
     bodyKey: 'coachMarks.settingsDataIntro.body',
+    // Full-mode body references Reports, which Simple mode doesn't show.
+    simpleTitleKey: 'coachMarks.settingsDataIntro.simpleTitle',
+    simpleBodyKey: 'coachMarks.settingsDataIntro.simpleBody',
     guideSection: 'reports',
   },
   // MotivationOverlay isn't a tab like the other sections above — it's an
@@ -160,6 +174,18 @@ export function pickCoachMark(section, seenIds, conditions = {}) {
       (mark) => mark.section === section && !seenIds.includes(mark.id) && (conditions[mark.id] ?? true)
     ) ?? null
   )
+}
+
+// A handful of marks reference features hidden in Simple mode (Inventory,
+// Reports, the internal/external interruption choice) and carry an optional
+// simpleTitleKey/simpleBodyKey pair with mode-appropriate wording. Falls
+// back to the normal titleKey/bodyKey for every other mark, and for those
+// four when mode is 'full'.
+export function resolveCoachMarkCopy(mark, mode) {
+  if (mode === 'simple' && mark.simpleTitleKey && mark.simpleBodyKey) {
+    return { titleKey: mark.simpleTitleKey, bodyKey: mark.simpleBodyKey }
+  }
+  return { titleKey: mark.titleKey, bodyKey: mark.bodyKey }
 }
 
 // MethodologyGuideModal's content — a longer, structured, paraphrased

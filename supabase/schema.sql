@@ -813,3 +813,41 @@ alter table public.settings
     'vivid-coral', 'vivid-citrus', 'vivid-mint',
     'custom'
   ));
+
+-- ----------------------------------------------------------------------------
+-- Experience mode (experienceMode in DEFAULT_SETTINGS) — 'simple' | 'full'.
+-- Progressive-disclosure UI mode; account-gated (see src/lib/experienceMode.js
+-- resolveExperienceMode) — guests are always forced to 'simple' in the app
+-- layer regardless of what this column holds.
+--
+-- Column DEFAULT is 'full' so every EXISTING signed-in account (row predates
+-- this column) reads back as 'full' the instant this migration runs — never
+-- silently regresses a current user into the reduced Simple UI. A genuinely
+-- NEW account is written with experience_mode explicitly set to 'simple' at
+-- row-creation time by remoteProvider.js's initializeRemoteData() (the one
+-- place that already knows "this is a brand new account"), overriding this
+-- column default for that one insert. AccountSetupFlow's new step can then
+-- override to 'full' via the normal patchSettings() flow like every other step.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists experience_mode text not null default 'full';
+
+alter table public.settings drop constraint if exists settings_experience_mode_check;
+alter table public.settings
+  add constraint settings_experience_mode_check
+  check (experience_mode in ('simple', 'full'));
+
+-- ----------------------------------------------------------------------------
+-- Three monotonic (set-once, never-unset) flags backing the "Full mode"
+-- achievement category in lib/achievements.js — see DEFAULT_SETTINGS's own
+-- comment on why these are booleans/an array rather than derived live from
+-- Inventory/Timetable state. Same missing-column degrades-gracefully class
+-- as seen_coach_marks/daily_pomodoro_goal above: a signed-in user's flags
+-- just don't sync remotely until this migration runs, nothing else breaks.
+-- ----------------------------------------------------------------------------
+alter table public.settings
+  add column if not exists custom_theme_pomodoro_completed boolean not null default false;
+alter table public.settings
+  add column if not exists used_inventory_or_timetable boolean not null default false;
+alter table public.settings
+  add column if not exists tried_ambient_sounds jsonb not null default '[]'::jsonb;

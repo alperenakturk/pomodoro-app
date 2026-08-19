@@ -258,7 +258,16 @@ export async function initializeRemoteData(userId) {
         // a false-negative "no row" for an established account self-heals to
         // its real data within this same session instead of only fixing
         // itself server-side while the client stays wrong.
-        const created = await upsertSingletonAndFetch(table, userId, {})
+        // experienceMode: 'simple' here (not the DEFAULT_SETTINGS/column
+        // default of 'full') is deliberate — this branch only ever runs for
+        // `key === 'pomodoro_settings'` (checked just above), and this is
+        // the one place that already knows "this is a genuinely brand-new
+        // account." An existing account's row is never touched by this
+        // upsert (it already has a row, so fetchSingletonTableWithRetry
+        // above would have returned it), so 'full' stays the safe default
+        // for everyone else. See supabase/schema.sql's experience_mode
+        // column comment for the full picture.
+        const created = await upsertSingletonAndFetch(table, userId, { experienceMode: 'simple' })
         return { key, value: created, isNewAccount: true }
       } catch (error) {
         console.error(`Failed to load ${key} from Supabase:`, error)
