@@ -10,6 +10,7 @@ import {
   reconcileStreakFreeze,
   maybeGrantStreakFreeze,
 } from '../lib/streak'
+import { DEV_MODE } from '../lib/devMode'
 
 const FREEZE_GRANT_INTERVAL_DAYS = 7
 
@@ -91,5 +92,9 @@ export function useStreak() {
     recentDays: recentDayStatuses(ticks, settings.streakFreezeUsedDates, today, 14),
     celebration,
     clearCelebration,
+    // Developer Mode only — see lib/devMode.js. Sets the exact same
+    // `celebration` state StreakCelebrationScreen already renders off, so
+    // there's nothing new for that component to know about.
+    previewCelebration: DEV_MODE ? (kind) => setCelebration(kind) : undefined,
   }
 }

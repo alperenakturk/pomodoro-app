@@ -100,8 +100,11 @@ function weightedRandom(weights) {
 // Returns { category, subType, isRare, content }, where content is either
 // { type: 'text', text } or { type: 'guessIt', question, answer } — the only
 // two presentation shapes MotivationOverlay's reveal panel needs to handle.
-export function drawCard({ t, ticks = [], activityLog = [] }) {
-  if (Math.random() < RARE_CARD_CHANCE) {
+// `forceRare` is Developer Mode only (see lib/devMode.js's
+// consumeForceRareNextDraw) — stays a plain optional param rather than this
+// module importing devMode.js itself, so drawCard stays pure/side-effect-free.
+export function drawCard({ t, ticks = [], activityLog = [], forceRare = false }) {
+  if (forceRare || Math.random() < RARE_CARD_CHANCE) {
     return {
       category: RARE_CATEGORY_ID,
       subType: null,

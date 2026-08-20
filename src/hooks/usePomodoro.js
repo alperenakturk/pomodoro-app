@@ -7,6 +7,7 @@ import {
   loadTimerState,
   saveTimerState,
 } from '../lib/storage'
+import { DEV_MODE } from '../lib/devMode'
 import {
   unlockAudio,
   playChime,
@@ -518,5 +519,10 @@ export function usePomodoro({ onWorkComplete, onInterruption, onVoid, t = (key, 
     switchSession,
     logInterruption,
     undoInterruption,
+    // Developer Mode only — see lib/devMode.js. Calls the real completion
+    // functions directly (same sound/pulse/tick/achievement/streak side
+    // effects as a genuine completion), not a simulated stand-in, so there's
+    // nothing here to keep in sync if completeWork/completeBreak ever change.
+    devInstantComplete: DEV_MODE ? () => (sessionType === 'work' ? completeWork() : completeBreak()) : undefined,
   }
 }

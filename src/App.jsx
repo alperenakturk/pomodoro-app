@@ -25,11 +25,14 @@ import {
   getLastThemeHint,
   setLastThemeHint,
   markExperienceModeNudgeSeen,
+  resetGuestOnboardingSeen,
+  resetGuestSignupNudgeSeen,
 } from './lib/storage'
 import { useTranslation } from './hooks/useTranslation'
 import { LanguageProvider } from './lib/i18n/LanguageContext'
 import { themeClassName } from './lib/theme'
 import { resolveExperienceMode, canUseFullMode } from './lib/experienceMode'
+import { DEV_MODE } from './lib/devMode'
 import { totalTimetableHours } from './lib/timetable'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
@@ -52,6 +55,7 @@ import AuthModal from './components/AuthModal'
 import StreakCelebrationScreen from './components/StreakCelebrationScreen'
 import StreakDetailsModal from './components/StreakDetailsModal'
 import AchievementToastStack from './components/achievements/AchievementToastStack'
+import DevModePanel from './components/DevModePanel'
 import { COACH_MARKS, pickCoachMark, resolveCoachMarkCopy } from './lib/constants'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
@@ -672,6 +676,29 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
     t,
   })
 
+  // Developer Mode's action-style conveniences (see lib/devMode.js and
+  // DevModePanel.jsx) — assembled once here, since App is the shared
+  // ancestor that already holds pomodoro/achievements/streak. DEV_MODE-
+  // gated at construction, not just at the render site below, so this
+  // object (and its closures) never even gets created in a production
+  // build.
+  const devActions = DEV_MODE
+    ? {
+        instantComplete: pomodoro.devInstantComplete,
+        previewAchievementToast: achievements.previewToast,
+        previewStreakCelebration: streak.previewCelebration,
+        // hasSeenExperienceModeNudge() is deliberately not reset here —
+        // nothing in the app currently reads it to gate any visible
+        // behavior (see storage.js), so resetting it would be a no-op.
+        resetSeenFlags: () => {
+          replayCoachMarks()
+          resetGuestOnboardingSeen()
+          resetGuestSignupNudgeSeen()
+          window.location.reload()
+        },
+      }
+    : undefined
+
   // GuestSignupNudge's trigger: a guest's first-ever Pomodoro (work session)
   // actually starting — mirrors the 'timer-first-start' coach mark's own
   // condition, just additionally scoped to `!user` and gated on the
@@ -1191,6 +1218,8 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           onDone={() => setModeTransitionDirection(null)}
         />
       )}
+
+      {DEV_MODE && <DevModePanel actions={devActions} />}
     </div>
   )
 }

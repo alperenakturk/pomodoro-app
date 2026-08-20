@@ -5,6 +5,7 @@ import RichText from './RichText'
 import { drawCard, pickRandom } from '../lib/motivationCategories'
 import { addCardDraw, loadTicks, loadActivityLog } from '../lib/storage'
 import { unlockAudio, playCardShuffle, playCardPick, playCardMystery, playCategoryReveal } from '../lib/alert'
+import { devBypassActive, consumeForceRareNextDraw } from '../lib/devMode'
 
 const CARD_FLIP_MS = 700
 // How long the flipped card shows just its "?" before the actual category
@@ -1011,8 +1012,10 @@ function MotivationOverlay({
   // True only when the overlay was opened after the Pomodoro's one draw was
   // already used previously — NOT during the current draw's own flip/icon-
   // hold animation, even though `used` itself flips true the instant a card
-  // is clicked (see handlePick's onDraw() call).
-  const alreadyDrawn = used && pickedIndex === null
+  // is clicked (see handlePick's onDraw() call). Developer Mode can bypass
+  // this limit entirely (see lib/devMode.js) — used still flips true as
+  // normal, this just stops caring.
+  const alreadyDrawn = used && pickedIndex === null && !devBypassActive('motivationCardCooldown')
 
   // Easter egg: clicking the character's head shows a brief reaction
   // bubble. Purely decorative — no effect on pickedIndex/onDraw/`used` at
@@ -1062,8 +1065,13 @@ function MotivationOverlay({
   }, [onClose])
 
   function handlePick(index) {
-    if (used || pickedIndex !== null || shuffling) return
-    const result = drawCard({ t, ticks: loadTicks(), activityLog: loadActivityLog() })
+    if ((used && !devBypassActive('motivationCardCooldown')) || pickedIndex !== null || shuffling) return
+    const result = drawCard({
+      t,
+      ticks: loadTicks(),
+      activityLog: loadActivityLog(),
+      forceRare: consumeForceRareNextDraw(),
+    })
     setPickedIndex(index)
     setDraw(result)
     onDraw()

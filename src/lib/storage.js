@@ -766,6 +766,11 @@ export function hasSeenGuestSignupNudge() {
 export function markGuestSignupNudgeSeen() {
   localStorage.setItem(GUEST_SIGNUP_NUDGE_KEY, 'true')
 }
+// Developer Mode only (see lib/devMode.js) — lets a first-run nudge be
+// re-previewed without a full data wipe.
+export function resetGuestSignupNudgeSeen() {
+  localStorage.removeItem(GUEST_SIGNUP_NUDGE_KEY)
+}
 
 // Guest Onboarding's one-time "seen" flag (AccountSetupFlow's 'guestIntro'
 // variant, shown to a first-time guest before AppInner's normal UI) — same
@@ -777,6 +782,10 @@ export function hasSeenGuestOnboarding() {
 }
 export function markGuestOnboardingSeen() {
   localStorage.setItem(GUEST_ONBOARDING_SEEN_KEY, 'true')
+}
+// Developer Mode only (see lib/devMode.js).
+export function resetGuestOnboardingSeen() {
+  localStorage.removeItem(GUEST_ONBOARDING_SEEN_KEY)
 }
 
 // ExperienceModeToggle's guest-locked upsell card — same bypass-the-provider

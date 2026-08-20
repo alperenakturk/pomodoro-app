@@ -11,6 +11,7 @@ import {
 } from '../lib/storage'
 import { ACHIEVEMENT_DEFINITIONS, buildAchievementSnapshot, evaluateAchievements, getCategoryProgress } from '../lib/achievements'
 import { playAchievementUnlock } from '../lib/alert'
+import { DEV_MODE } from '../lib/devMode'
 
 const DEFINITIONS_BY_ID = new Map(ACHIEVEMENT_DEFINITIONS.map((d) => [d.id, d]))
 
@@ -88,5 +89,16 @@ export function useAchievements() {
     toastQueue,
     dismissToast,
     getCategoryProgress: (categoryId) => getCategoryProgress(categoryId, snapshot),
+    // Developer Mode only — see lib/devMode.js. Pushes straight onto the
+    // real toast queue AchievementToastStack already renders from (same
+    // shape newlyUnlockedDefs above produces), rather than writing a real
+    // unlock record — reviewing an achievement's toast copy/art shouldn't
+    // require actually earning it.
+    previewToast: DEV_MODE
+      ? (achievementId) => {
+          const def = DEFINITIONS_BY_ID.get(achievementId)
+          if (def) setToastQueue((queue) => [...queue, def])
+        }
+      : undefined,
   }
 }
