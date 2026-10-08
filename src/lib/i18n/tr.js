@@ -1131,4 +1131,9 @@ export default {
       continueLocallyButton: "Yerel depolamayla devam et",
     },
   },
+  errorBoundary: {
+    title: 'Bir şeyler ters gitti',
+    body: 'Uygulama beklenmedik bir hatayla karşılaştı. Verilerin güvende — sayfayı yenilemek genellikle sorunu çözer.',
+    reload: 'Yeniden yükle',
+  },
 }

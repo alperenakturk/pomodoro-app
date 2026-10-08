@@ -329,9 +329,24 @@ export function requestNotificationPermission() {
   if (Notification.permission === 'default') Notification.requestPermission()
 }
 
+// `new Notification()` throws a TypeError on most mobile browsers (Android
+// Chrome requires ServiceWorkerRegistration.showNotification instead) — and
+// notify() runs inside the timer-completion path, so an uncaught throw here
+// used to take the whole completion handler down with it. Failure to show a
+// notification is never worth breaking the timer for: try the constructor,
+// fall back to the service worker route, and swallow anything else.
 export function notify(title, body) {
-  if (!('Notification' in window)) return
-  if (Notification.permission === 'granted') {
-    new Notification(title, { body })
+  try {
+    if (!('Notification' in window)) return
+    if (Notification.permission !== 'granted') return
+    try {
+      new Notification(title, { body })
+    } catch {
+      navigator.serviceWorker?.ready
+        ?.then((registration) => registration.showNotification(title, { body }))
+        .catch(() => {})
+    }
+  } catch {
+    // Notification support is best-effort.
   }
 }

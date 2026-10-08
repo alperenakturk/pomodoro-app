@@ -1171,4 +1171,9 @@ export default {
       continueLocallyButton: 'Continue with local storage',
     },
   },
+  errorBoundary: {
+    title: 'Something went wrong',
+    body: 'The app hit an unexpected error. Your data is safe — reloading usually fixes it.',
+    reload: 'Reload',
+  },
 }

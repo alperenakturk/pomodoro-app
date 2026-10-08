@@ -22,6 +22,7 @@ import '@fontsource/calistoga/400.css'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './lib/auth/AuthContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 // LanguageProvider is instantiated inside App.jsx itself (keyed the same as
 // the rest of the per-account render tree) rather than here — see App.jsx's
@@ -30,8 +31,10 @@ import { AuthProvider } from './lib/auth/AuthContext.jsx'
 // of the whole app and never revisited.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
