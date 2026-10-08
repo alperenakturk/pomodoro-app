@@ -9,7 +9,14 @@ function createMockSupabase(responses) {
   const calls = []
 
   function makeChain(table) {
-    const resolveWith = (key, fallback) => Promise.resolve(responses[table]?.[key] ?? fallback)
+    // Set by .range(); lets an `arraySelect` given as a function behave like
+    // a real server that honors the requested window (and, in tests, caps it).
+    let rangeArgs = null
+    const resolveWith = (key, fallback) => {
+      const configured = responses[table]?.[key]
+      const value = typeof configured === 'function' ? configured(rangeArgs) : configured
+      return Promise.resolve(value ?? fallback)
+    }
 
     const chain = {
       eq(column, value) {
@@ -26,6 +33,15 @@ function createMockSupabase(responses) {
       },
       select(columns) {
         calls.push({ table, method: 'select', args: [columns] })
+        return chain
+      },
+      order(column) {
+        calls.push({ table, method: 'order', args: [column] })
+        return chain
+      },
+      range(from, to) {
+        calls.push({ table, method: 'range', args: [from, to] })
+        rangeArgs = [from, to]
         return chain
       },
       upsert(rows, options) {
@@ -100,6 +116,28 @@ describe('initializeRemoteData', () => {
     // this function only ever reads, except for creating a brand-new
     // account's settings row (see the isNewAccount tests below).
     expect(mockCalls.some((c) => c.table === 'inventory' && c.method === 'upsert')).toBe(false)
+  })
+
+  it('pages through a table larger than the server row cap instead of silently truncating at 1000', async () => {
+    const SERVER_CAP = 1000
+    const all = Array.from({ length: 2350 }, (_, i) => ({ id: `t${String(i).padStart(5, '0')}`, user_id: 'user-1' }))
+    const { initializeRemoteData, get } = await loadRemoteProviderWith({
+      ticks: {
+        // Like real PostgREST: honors the requested range, but never returns
+        // more than the cap in one response.
+        arraySelect: ([from, to]) => ({
+          data: all.slice(from, Math.min(to + 1, from + SERVER_CAP)),
+          error: null,
+        }),
+      },
+    })
+
+    const result = await initializeRemoteData('user-1')
+
+    expect(result.error).toBeNull()
+    expect(get('pomodoro_ticks', null)).toHaveLength(2350)
+    expect(mockCalls.filter((c) => c.table === 'ticks' && c.method === 'range')).toHaveLength(3)
+    expect(mockCalls.some((c) => c.table === 'ticks' && c.method === 'order')).toBe(true)
   })
 
   it('an existing account with its own settings keeps them, and reports isNewAccount: false', async () => {

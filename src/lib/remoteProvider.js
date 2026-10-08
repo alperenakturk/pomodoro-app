@@ -42,10 +42,28 @@ function nowIso() {
   return new Date().toISOString()
 }
 
+// PostgREST silently truncates a response to the project's "Max rows"
+// setting (1000 by default) with no error — an un-paginated select would
+// quietly drop every row past that, which for `ticks` means streaks,
+// achievements and the heatmap get computed from an incomplete history.
+// Pages are fetched with a stable, unique order (`id`) so rows can't be
+// skipped or repeated between pages; a short page marks the end.
+const PAGE_SIZE = 1000
+
 async function fetchArrayTable(table, userId) {
-  const { data, error } = await supabase.from(table).select('*').eq('user_id', userId)
-  if (error) throw error
-  return data.map(mapKeysToCamel)
+  const rows = []
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .eq('user_id', userId)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    rows.push(...data)
+    if (data.length < PAGE_SIZE) break
+  }
+  return rows.map(mapKeysToCamel)
 }
 
 async function fetchSingletonTable(table, userId) {
