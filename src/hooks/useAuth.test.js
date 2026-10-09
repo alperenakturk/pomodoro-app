@@ -9,9 +9,13 @@ const mockSignInWithOAuth = vi.fn()
 const mockSignInWithPassword = vi.fn()
 const mockSignUp = vi.fn()
 const mockSignOut = vi.fn()
+const mockRpc = vi.fn()
+const mockStorageRemove = vi.fn()
 
 vi.mock('../lib/supabaseClient', () => ({
   supabase: {
+    rpc: (...args) => mockRpc(...args),
+    storage: { from: () => ({ remove: (...args) => mockStorageRemove(...args) }) },
     auth: {
       getSession: (...args) => mockGetSession(...args),
       onAuthStateChange: (...args) => mockOnAuthStateChange(...args),
@@ -107,3 +111,45 @@ describe('useAuth', () => {
     expect(mockSignOut).toHaveBeenCalled()
   })
 })
+
+describe('deleteAccount', () => {
+  it("removes the user's Storage background before calling delete_user, then signs out", async () => {
+    mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    mockStorageRemove.mockResolvedValue({ error: null })
+    mockRpc.mockResolvedValue({ error: null })
+    mockSignOut.mockResolvedValue({})
+    const { result } = renderWithProvider()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let outcome
+    await act(async () => {
+      outcome = await result.current.deleteAccount()
+    })
+
+    expect(mockStorageRemove).toHaveBeenCalledWith(['u1/background'])
+    expect(mockStorageRemove.mock.invocationCallOrder[0]).toBeLessThan(mockRpc.mock.invocationCallOrder[0])
+    expect(mockRpc).toHaveBeenCalledWith('delete_user')
+    expect(mockSignOut).toHaveBeenCalled()
+    expect(outcome).toEqual({ error: null })
+  })
+
+  it('still attempts delete_user when the background cleanup fails, and reports its error', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: { user: { id: 'u1' } } } })
+    mockStorageRemove.mockResolvedValue({ error: { message: 'storage down' } })
+    mockRpc.mockResolvedValue({ error: { message: 'owns storage objects' } })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { result } = renderWithProvider()
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    let outcome
+    await act(async () => {
+      outcome = await result.current.deleteAccount()
+    })
+
+    expect(mockRpc).toHaveBeenCalledWith('delete_user')
+    expect(outcome.error).toEqual({ message: 'owns storage objects' })
+    expect(mockSignOut).not.toHaveBeenCalled()
+    vi.restoreAllMocks()
+  })
+})
+

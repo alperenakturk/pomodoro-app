@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
+import { removeFullscreenBackground } from '../backgroundStorage'
 import { AuthContext } from './context'
 
 const NOT_CONFIGURED_ERROR = { message: 'Sign-in is not available right now.' }
@@ -90,6 +91,20 @@ export function AuthProvider({ children }) {
   // invalidate the current session's client-side state.
   const deleteAccount = useCallback(async () => {
     if (!supabase) return { error: NOT_CONFIGURED_ERROR }
+    // Supabase refuses to delete an auth user who still owns Storage objects
+    // ("You cannot delete a user if they are the owner of any objects in
+    // Storage"), and even where it doesn't, the image would be orphaned. So
+    // the custom Fullscreen background goes first. A failure here is only
+    // logged: remove() on a missing file isn't an error, and if the object
+    // genuinely couldn't be deleted the delete_user call below is what
+    // reports the failure to the user — blocking account deletion on a
+    // cleanup step would be worse than surfacing that error.
+    const { data: sessionData } = await supabase.auth.getSession()
+    const userId = sessionData?.session?.user?.id
+    if (userId) {
+      const { error: removeError } = await removeFullscreenBackground(userId)
+      if (removeError) console.error('Failed to remove background before account deletion:', removeError)
+    }
     const { error } = await supabase.rpc('delete_user')
     if (error) return { error }
     await supabase.auth.signOut()
