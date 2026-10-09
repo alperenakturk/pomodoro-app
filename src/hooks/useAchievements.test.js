@@ -14,7 +14,14 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-function pom(id, date, timestamp = `${date}T12:00:00.000Z`) {
+// Local noon, not a fixed UTC hour: earlyBird/nightOwl read the timestamp's
+// LOCAL hour, so a hardcoded 12:00Z lands before 08:00 in e.g. US Pacific.
+function localNoonIso(date) {
+  const [y, m, d] = date.split('-').map(Number)
+  return new Date(y, m - 1, d, 12).toISOString()
+}
+
+function pom(id, date, timestamp = localNoonIso(date)) {
   return { id, type: 'pomodoro', date, timestamp }
 }
 

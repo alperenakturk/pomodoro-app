@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { loadTimetable, saveTimetable } from '../lib/storage'
+import { todayString } from '../lib/dateKey'
 
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 export function useTimetable() {
   const [blocks, setBlocks] = useState(() => loadTimetable())

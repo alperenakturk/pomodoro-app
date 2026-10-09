@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useStreak } from './useStreak'
 import { saveTicks, addTick, loadSettings } from '../lib/storage'
+import { todayString, localDateString } from '../lib/dateKey'
 
-const today = new Date().toISOString().slice(0, 10)
+const today = todayString()
 function daysAgo(n) {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return localDateString(d)
 }
 
 beforeEach(() => {

@@ -20,6 +20,7 @@ import {
   stopAmbientSound,
 } from '../lib/alert'
 import { translate } from '../lib/i18n'
+import { todayString } from '../lib/dateKey'
 
 export const DEFAULT_CYCLE_LENGTH = 4
 
@@ -46,10 +47,6 @@ export const DEFAULT_LONG_BREAK_MINUTES = 15
 export const LONG_BREAK_MIN = 15
 export const LONG_BREAK_MAX = 60
 export const LONG_BREAK_RECOMMENDED_MAX = 30
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 // `t` defaults to a plain English lookup (bypassing the LanguageContext
 // entirely) so this hook stays usable standalone — same reasoning as the

@@ -1,6 +1,6 @@
-export function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
+import { todayString, localDateString } from './dateKey'
+
+export { todayString }
 
 // Rolling window of `n` ISO date strings ending `offsetDays` ago (0 = today).
 // e.g. datesInWindow(7, 0) is today and the 6 days before it (this week);
@@ -11,7 +11,7 @@ function datesInWindow(n, offsetDays = 0) {
   for (let i = 0; i < n; i++) {
     const d = new Date()
     d.setDate(d.getDate() - offsetDays - i)
-    dates.push(d.toISOString().slice(0, 10))
+    dates.push(localDateString(d))
   }
   return dates
 }

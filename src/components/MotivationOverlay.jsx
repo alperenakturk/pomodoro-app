@@ -6,6 +6,7 @@ import { drawCard, pickRandom } from '../lib/motivationCategories'
 import { addCardDraw, loadTicks, loadActivityLog } from '../lib/storage'
 import { unlockAudio, playCardShuffle, playCardPick, playCardMystery, playCategoryReveal } from '../lib/alert'
 import { devBypassActive, consumeForceRareNextDraw } from '../lib/devMode'
+import { todayString } from '../lib/dateKey'
 
 const CARD_FLIP_MS = 700
 // How long the flipped card shows just its "?" before the actual category
@@ -26,10 +27,6 @@ const SHUFFLE_MS = 1100
 // Background music — see MUSIC_SRC's own comment just below.
 const MUSIC_VOLUME = 0.32
 const MUSIC_FADE_MS = 900
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 // Background music — unlike every other sound in this app (all synthesized
 // via Web Audio, see alert.js), an actual ambient music bed can't

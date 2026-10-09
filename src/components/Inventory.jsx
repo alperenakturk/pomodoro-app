@@ -5,6 +5,7 @@ import { formatDateLocalized } from '../lib/i18n'
 import CategoryTagPicker from './CategoryTagPicker'
 import CollapseToggle from './CollapseToggle'
 import { CategoryTags } from './CategoryTag'
+import { todayString } from '../lib/dateKey'
 
 // This row's own category-tag styling — passed to the shared CategoryTags
 // below so this list keeps rendering pixel-identical tags to before
@@ -14,7 +15,7 @@ const CATEGORY_TAG_CLASS = 'text-sage text-xs bg-cream/5 rounded px-1.5 py-0.5 f
 
 function isOverdue(deadline) {
   if (!deadline) return false
-  return deadline < new Date().toISOString().slice(0, 10)
+  return deadline < todayString()
 }
 
 function InventoryRow({

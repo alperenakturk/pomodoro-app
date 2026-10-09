@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { loadTodayTasks, saveTodayTasks, addActivityRecord, stampUpdated } from '../lib/storage'
 import { playTaskCompleteChime } from '../lib/alert'
+import { todayString } from '../lib/dateKey'
 
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function nowTime() {
   return new Date().toTimeString().slice(0, 5)

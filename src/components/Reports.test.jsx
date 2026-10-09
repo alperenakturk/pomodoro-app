@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import Reports from './Reports'
 import { LanguageProvider } from '../lib/i18n/LanguageContext.jsx'
 import { saveTicks, saveActivityLog } from '../lib/storage'
+import { todayString } from '../lib/dateKey'
 
 function renderReports(props) {
   return render(
@@ -12,7 +13,7 @@ function renderReports(props) {
   )
 }
 
-const today = new Date().toISOString().slice(0, 10)
+const today = todayString()
 
 function seedTicks(overrides = []) {
   saveTicks([

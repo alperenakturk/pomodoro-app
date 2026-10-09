@@ -57,6 +57,7 @@ import StreakDetailsModal from './components/StreakDetailsModal'
 import AchievementToastStack from './components/achievements/AchievementToastStack'
 import DevModePanel from './components/DevModePanel'
 import { COACH_MARKS, pickCoachMark, resolveCoachMarkCopy } from './lib/constants'
+import { todayString } from './lib/dateKey'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
 // `settingsOpen` is true (see its conditional render below), and never
@@ -65,10 +66,6 @@ import { COACH_MARKS, pickCoachMark, resolveCoachMarkCopy } from './lib/constant
 // guests who never open it in a session. See the <Suspense> wrapper below
 // for the fallback shown for the brief moment the chunk is still loading.
 const SettingsModal = lazy(() => import('./components/SettingsModal'))
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function nowTime() {
   return new Date().toTimeString().slice(0, 5)

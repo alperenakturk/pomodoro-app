@@ -29,6 +29,7 @@ import {
   avgPausesPerDay,
 } from '../lib/reportsMath'
 import DayReview from './DayReview'
+import { localDateString } from '../lib/dateKey'
 
 const PERIODS = [
   { id: 'today', labelKey: 'reports.periodToday' },
@@ -688,7 +689,7 @@ function ActivityHeatmap({ ticks }) {
   for (let i = totalDays - 1; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    days.push(d.toISOString().slice(0, 10))
+    days.push(localDateString(d))
   }
 
   const countByDate = {}

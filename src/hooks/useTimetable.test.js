@@ -2,10 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTimetable } from './useTimetable'
 import { loadTimetable, saveTimetable } from '../lib/storage'
-
-function todayString() {
-  return new Date().toISOString().slice(0, 10)
-}
+import { todayString } from '../lib/dateKey'
 
 beforeEach(() => {
   localStorage.clear()
