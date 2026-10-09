@@ -664,7 +664,7 @@ Life işi yok.
 | Q7 | 12×14 kuralı uygulama başına mı, hesap başına mı? | İkinci listeleme maliyeti | Mühendis "uygulama başına" dedi; red team doğrulayamadı |
 | Q8 | Art. 27 AB temsilcisi gerekli mi? KVKK aktarım mekanizması ne olacak? | Yasal maliyet | [AVUKAT] |
 | Q9 | Ürün adı? | ASO; "Life" çok genel | v0.5'ten önce |
-| Q10 | 48 günlük commit boşluğunun sebebi (okul, başka repo)? | Tempo tahminleri buna göre ayarlanır | Senin cevabın |
+| Q10 | 48 günlük commit boşluğunun sebebi (okul, başka repo)? | Tempo tahminleri buna göre ayarlanır | ✅ Cevap (2026-10-09): taşınma, üşenme, tatil ve işleri erteleme; okul sebebi değil. Alperen geri döndü, son sınıf ve yoğun çalışmak istiyor. Tempo tahmini okul dışı bir engel olmadığını varsayar, ama staj arama kuralı (§6.4) geçerli. |
 | Q11 | Lifetime satış olacak mı? | Gelir modeli | G3 öncesi karar (§12) |
 
 ---
