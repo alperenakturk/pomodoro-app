@@ -29,7 +29,7 @@ Hesabını oluşturmak, verilerini cihazlar arasında eşitlemek ve uygulamayı 
 Hesap verilerin **Supabase** altyapısında saklanır. Sunucular **Avrupa Birliği'nde (Frankfurt, Almanya)** bulunur. Supabase bizim adımıza veri işleyen (işleyici) taraftır. Google ile giriş yaparsan kimlik doğrulaması için Google da devreye girer. Uygulamanın arayüzü GitHub Pages üzerinden sunulur. GitHub, sayfayı sunarken standart sunucu kayıtlarını (IP adresi gibi) işleyebilir.
 
 ### 5. Verilerin ne kadar süre saklanır?
-Hesabın açık olduğu sürece. Hesabını sildiğinde hesabın ve tüm uygulama verilerin, yüklediğin arka plan görseliyle birlikte kalıcı olarak silinir. Yedeklerde kısa bir süre kalıntı olabilir **[YEDEK SÜRESİ: doğrula]**.
+Hesabın açık olduğu sürece. Hesabını sildiğinde hesabın ve tüm uygulama verilerin, yüklediğin arka plan görseliyle birlikte kalıcı olarak silinir. Şu anda ayrı bir yedek tutulmuyor, dolayısıyla silinen veri geri getirilemez.
 
 ### 6. Hakların
 Verilerine erişme, düzeltme, silme, dışa aktarma ve işlenmesine itiraz etme hakkın var.
@@ -70,7 +70,7 @@ To create your account, sync your data across devices and provide the app to you
 Account data is stored with **Supabase**, on servers in the **European Union (Frankfurt, Germany)**. Supabase acts as our data processor. If you sign in with Google, Google also takes part in authentication. The app's front end is served via GitHub Pages; GitHub may process standard server logs (such as IP address) when serving pages.
 
 ### 5. Retention
-For as long as your account exists. When you delete your account, your account and all app data, including any uploaded background image, are permanently deleted. Backups may retain residual copies for a short period **[BACKUP RETENTION: verify]**.
+For as long as your account exists. When you delete your account, your account and all app data, including any uploaded background image, are permanently deleted. We currently keep no separate backups, so deleted data cannot be recovered.
 
 ### 6. Your rights
 You can access, correct, delete, export your data and object to its processing.
@@ -90,7 +90,7 @@ We may update this policy and will notify you in the app of material changes.
 
 ## Yayın öncesi kontrol listesi (sana not)
 - [x] İletişim e-postası ve ad: Alperen kendi GitHub'ındaki bilgileri kullanmayı seçti (2026-10-09).
-- [ ] Supabase yedek saklama süresini doğrula (Free planda otomatik yedek yok olabilir, planın §6.1'ine bak).
+- [x] Yedekler: Free planda yedek yok (Supabase panelinden doğrulandı, 2026-10-09). **Pro plana geçince** (günlük, 7 gün yedek) bölüm 5'i güncelle: "silinen veri yedeklerde en fazla 7 gün kalabilir".
 - [ ] Sabit bir URL'ye koy (şimdilik GitHub Pages yolu olabilir; Google OAuth doğrulaması için özel domain gerekebilir, plan Q6).
 - [ ] Uygulamada giriş/kayıt ekranından ve Ayarlar'dan bağla (TR/EN metinleri `en.js` / `tr.js` üzerinden).
 - [ ] Hesap silme sayfasını web'de de erişilebilir yap (Play Store gereksinimi, plan §8.2).
