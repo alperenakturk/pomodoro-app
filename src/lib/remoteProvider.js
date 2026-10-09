@@ -96,10 +96,31 @@ async function fetchArrayTable(table, userId) {
   return rows.map(mapKeysToCamel)
 }
 
+// timer_state.end_at is `timestamptz` in Postgres, but the JS side keeps
+// `endAt` as an epoch-ms NUMBER (usePomodoro's absolute-timestamp countdown).
+// Sending the raw number made Postgres reject every timer_state write with
+// 22008 "date/time field value out of range" — silently, until the sync-
+// failure banner made it visible. Convert at the boundary only, so the rest
+// of the app (and guest localStorage) keeps working with plain numbers.
+function encodeRemoteRow(table, row) {
+  if (table === 'timer_state' && typeof row.end_at === 'number') {
+    return { ...row, end_at: new Date(row.end_at).toISOString() }
+  }
+  return row
+}
+
+function decodeRemoteRow(table, camelRow) {
+  if (table === 'timer_state' && typeof camelRow.endAt === 'string') {
+    const ms = Date.parse(camelRow.endAt)
+    return { ...camelRow, endAt: Number.isNaN(ms) ? null : ms }
+  }
+  return camelRow
+}
+
 async function fetchSingletonTable(table, userId) {
   const { data, error } = await supabase.from(table).select('*').eq('user_id', userId).maybeSingle()
   if (error) throw error
-  return data ? mapKeysToCamel(data) : null
+  return data ? decodeRemoteRow(table, mapKeysToCamel(data)) : null
 }
 
 function sleep(ms) {
@@ -167,7 +188,7 @@ async function upsertSingleton(table, userId, value) {
   // fills them in exactly like it does for array-collection rows.
   const { error } = await supabase
     .from(table)
-    .upsert(toRemoteRow(value, userId), { onConflict: 'user_id' })
+    .upsert(encodeRemoteRow(table, toRemoteRow(value, userId)), { onConflict: 'user_id' })
   if (error) throw error
 }
 
@@ -181,11 +202,11 @@ async function upsertSingleton(table, userId, value) {
 async function upsertSingletonAndFetch(table, userId, value) {
   const { data, error } = await supabase
     .from(table)
-    .upsert(toRemoteRow(value, userId), { onConflict: 'user_id' })
+    .upsert(encodeRemoteRow(table, toRemoteRow(value, userId)), { onConflict: 'user_id' })
     .select()
     .single()
   if (error) throw error
-  return mapKeysToCamel(data)
+  return decodeRemoteRow(table, mapKeysToCamel(data))
 }
 
 // Runs once, right after sign-in, before storage.js switches its active

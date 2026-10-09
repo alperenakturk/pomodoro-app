@@ -540,3 +540,44 @@ describe('sync failure status', () => {
   })
 })
 
+describe('timer_state endAt (epoch ms) <-> end_at (timestamptz)', () => {
+  it('sends endAt as an ISO string, not a raw epoch-ms number', async () => {
+    const mod = await loadRemoteProviderWith({
+      settings: { singleSelect: { data: { theme: 'dark', user_id: 'user-1' }, error: null } },
+    })
+    await mod.initializeRemoteData('user-1')
+
+    mod.set('pomodoro_timer_state', { sessionType: 'work', secondsLeft: 1500, isRunning: true, endAt: 1791546002690 })
+
+    const upsert = mockCalls.find((c) => c.table === 'timer_state' && c.method === 'upsert')
+    expect(upsert.args[0].end_at).toBe(new Date(1791546002690).toISOString())
+  })
+
+  it('leaves a null endAt alone', async () => {
+    const mod = await loadRemoteProviderWith({
+      settings: { singleSelect: { data: { theme: 'dark', user_id: 'user-1' }, error: null } },
+    })
+    await mod.initializeRemoteData('user-1')
+
+    mod.set('pomodoro_timer_state', { sessionType: 'work', secondsLeft: 1500, isRunning: false, endAt: null })
+
+    const upsert = mockCalls.find((c) => c.table === 'timer_state' && c.method === 'upsert')
+    expect(upsert.args[0].end_at).toBeNull()
+  })
+
+  it('reads end_at back as epoch-ms', async () => {
+    const mod = await loadRemoteProviderWith({
+      settings: { singleSelect: { data: { theme: 'dark', user_id: 'user-1' }, error: null } },
+      timer_state: {
+        singleSelect: {
+          data: { session_type: 'work', seconds_left: 10, is_running: true, end_at: '2026-10-09T12:00:00.000Z', user_id: 'user-1' },
+          error: null,
+        },
+      },
+    })
+    await mod.initializeRemoteData('user-1')
+
+    expect(mod.get('pomodoro_timer_state', null).endAt).toBe(Date.parse('2026-10-09T12:00:00.000Z'))
+  })
+})
+
