@@ -85,6 +85,8 @@ vi.mock('./lib/remoteProvider', () => ({
   remove: vi.fn((collection) => {
     remoteCache[collection] = []
   }),
+  hasSyncFailure: () => false,
+  subscribeSyncStatus: () => () => {},
 }))
 
 beforeEach(() => {

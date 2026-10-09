@@ -746,8 +746,13 @@ async function seedDefaultCategoriesRemotely() {
 // sign-in starts clean rather than reusing a previous user's data).
 // Whether the latest write to any remote collection failed (always false for
 // guests) — see remoteProvider.js's failedCollections for why this exists.
-export const hasSyncFailure = remoteProvider.hasSyncFailure
-export const subscribeSyncStatus = remoteProvider.subscribeSyncStatus
+export function hasSyncFailure() {
+  return remoteProvider.hasSyncFailure()
+}
+
+export function subscribeSyncStatus(listener) {
+  return remoteProvider.subscribeSyncStatus(listener)
+}
 
 export function signOutFromRemote() {
   remoteProvider.resetToLocalMode()
