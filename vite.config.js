@@ -9,6 +9,13 @@ export default defineConfig({
   // domain root — only rewrite the base when the CI workflow builds for Pages,
   // so local dev/build/preview keep working unprefixed.
   base: process.env.GITHUB_PAGES ? '/pomodoro-app/' : '/',
+  build: {
+    // Vite inlines assets under 4 KB as data: URIs by default — which the
+    // index.html CSP (`font-src 'self'`) blocks, so the small Fontsource
+    // subsets (rare unicode ranges) were rejected with a console error.
+    // Keep fonts as real files instead of loosening the CSP to allow data:.
+    assetsInlineLimit: (filePath) => (/\.woff2?$/.test(filePath) ? false : undefined),
+  },
   plugins: [
     react(),
     tailwindcss(),
