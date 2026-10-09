@@ -48,6 +48,7 @@ import CoachMark from './components/CoachMark'
 import MethodologyGuideModal from './components/MethodologyGuideModal'
 import AccountSetupFlow from './components/AccountSetupFlow'
 import GuestSignupNudge from './components/GuestSignupNudge'
+import SyncFailureBanner from './components/SyncFailureBanner'
 import ExperienceModeToggle from './components/ExperienceModeToggle'
 import ExperienceModeNudge from './components/ExperienceModeNudge'
 import ExperienceModeTransition from './components/ExperienceModeTransition'
@@ -1182,6 +1183,8 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           initialSectionId={guideInitialSection}
         />
       )}
+
+      <SyncFailureBanner />
 
       {showGuestNudge && (
         <GuestSignupNudge

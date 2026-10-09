@@ -495,3 +495,48 @@ describe('get/set/remove after initializeRemoteData', () => {
     expect(get('pomodoro_inventory', 'fallback')).toBe('fallback')
   })
 })
+
+describe('sync failure status', () => {
+  async function initWith(responses) {
+    const mod = await loadRemoteProviderWith({
+      settings: { singleSelect: { data: { theme: 'dark', user_id: 'user-1' }, error: null } },
+      ...responses,
+    })
+    await mod.initializeRemoteData('user-1')
+    return mod
+  }
+
+  it('flags a failed write, notifies subscribers, and clears once a later write to that collection succeeds', async () => {
+    const mod = await initWith({
+      inventory: { upsertResult: { error: { code: 'PGRST204', message: 'missing column' } } },
+    })
+    const seen = []
+    mod.subscribeSyncStatus((failed) => seen.push(failed))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    mod.set('pomodoro_inventory', [{ id: 'a', text: 'x', updatedAt: '1' }])
+    await vi.waitFor(() => expect(mod.hasSyncFailure()).toBe(true))
+    expect(seen).toEqual([true])
+
+    mockCalls.length = 0
+    // Same chain object reads responses lazily, so flip the configured result.
+    mockSupabase = createMockSupabase({ inventory: { upsertResult: { error: null } } }).supabase
+    mod.set('pomodoro_inventory', [{ id: 'a', text: 'y', updatedAt: '2' }])
+    await vi.waitFor(() => expect(mod.hasSyncFailure()).toBe(false))
+    expect(seen).toEqual([true, false])
+    vi.restoreAllMocks()
+  })
+
+  it('resetToLocalMode clears a pending failure', async () => {
+    const mod = await initWith({
+      inventory: { upsertResult: { error: { message: 'boom' } } },
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mod.set('pomodoro_inventory', [{ id: 'a', text: 'x', updatedAt: '1' }])
+    await vi.waitFor(() => expect(mod.hasSyncFailure()).toBe(true))
+    mod.resetToLocalMode()
+    expect(mod.hasSyncFailure()).toBe(false)
+    vi.restoreAllMocks()
+  })
+})
+

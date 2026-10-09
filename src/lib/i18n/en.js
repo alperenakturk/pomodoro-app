@@ -1176,4 +1176,7 @@ export default {
     body: 'The app hit an unexpected error. Your data is safe — reloading usually fixes it.',
     reload: 'Reload',
   },
+  syncFailure: {
+    message: "Some changes couldn't be saved to your account. Keep this tab open and check your connection — they may be lost if you reload.",
+  },
 }

@@ -38,6 +38,36 @@ const cache = {}
 const knownIds = {}
 let activeUserId = null
 
+// Collections whose most recent write to Supabase failed. Writes are
+// fire-and-forget (set() can't be awaited by its synchronous-looking
+// callers), so without this a rejected write — e.g. a PGRST204 from a
+// missing column — was only ever a console.error and the user believed
+// their changes were saved. The UI subscribes to this to show a banner.
+// A collection leaves the set when a later write to it succeeds.
+const failedCollections = new Set()
+const syncStatusListeners = new Set()
+
+function notifySyncStatus() {
+  const failed = failedCollections.size > 0
+  for (const listener of syncStatusListeners) listener(failed)
+}
+
+function markSyncResult(collection, ok) {
+  const had = failedCollections.has(collection)
+  if (ok) failedCollections.delete(collection)
+  else failedCollections.add(collection)
+  if (had !== !ok) notifySyncStatus()
+}
+
+export function hasSyncFailure() {
+  return failedCollections.size > 0
+}
+
+export function subscribeSyncStatus(listener) {
+  syncStatusListeners.add(listener)
+  return () => syncStatusListeners.delete(listener)
+}
+
 function nowIso() {
   return new Date().toISOString()
 }
@@ -313,6 +343,10 @@ export function resetToLocalMode() {
   activeUserId = null
   for (const key of Object.keys(cache)) delete cache[key]
   for (const key of Object.keys(knownIds)) delete knownIds[key]
+  if (failedCollections.size > 0) {
+    failedCollections.clear()
+    notifySyncStatus()
+  }
 }
 
 // --- The provider shape storage.js's loadJSON/saveJSON expect ------------
@@ -358,12 +392,19 @@ export function set(collection, value) {
 
     upsertArrayTable(table, activeUserId, changed)
       .then(() => deleteRows(table, activeUserId, idsToDelete))
-      .catch((error) => console.error(`Failed to sync ${collection} to Supabase:`, error))
+      .then(() => markSyncResult(collection, true))
+      .catch((error) => {
+        console.error(`Failed to sync ${collection} to Supabase:`, error)
+        markSyncResult(collection, false)
+      })
   } else if (SINGLETON_TABLES[collection]) {
     const table = SINGLETON_TABLES[collection]
-    upsertSingleton(table, activeUserId, value).catch((error) =>
-      console.error(`Failed to sync ${collection} to Supabase:`, error)
-    )
+    upsertSingleton(table, activeUserId, value)
+      .then(() => markSyncResult(collection, true))
+      .catch((error) => {
+        console.error(`Failed to sync ${collection} to Supabase:`, error)
+        markSyncResult(collection, false)
+      })
   }
 }
 

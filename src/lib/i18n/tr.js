@@ -1136,4 +1136,7 @@ export default {
     body: 'Uygulama beklenmedik bir hatayla karşılaştı. Verilerin güvende — sayfayı yenilemek genellikle sorunu çözer.',
     reload: 'Yeniden yükle',
   },
+  syncFailure: {
+    message: "Bazı değişiklikler hesabına kaydedilemedi. Bu sekmeyi açık tut ve bağlantını kontrol et — sayfayı yenilersen kaybolabilirler.",
+  },
 }

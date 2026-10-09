@@ -744,6 +744,11 @@ async function seedDefaultCategoriesRemotely() {
 // Called on sign-out — switches back to localStorage exactly as it was
 // (remoteProvider.resetToLocalMode() drops its in-memory cache so a later
 // sign-in starts clean rather than reusing a previous user's data).
+// Whether the latest write to any remote collection failed (always false for
+// guests) — see remoteProvider.js's failedCollections for why this exists.
+export const hasSyncFailure = remoteProvider.hasSyncFailure
+export const subscribeSyncStatus = remoteProvider.subscribeSyncStatus
+
 export function signOutFromRemote() {
   remoteProvider.resetToLocalMode()
   activeProvider = localStorageProvider
