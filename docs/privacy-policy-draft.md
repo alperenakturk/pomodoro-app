@@ -9,7 +9,7 @@
 ## Türkçe
 
 ### 1. Biz kimiz?
-Bu uygulamanın sorumlusu Alperen Aktürk'tür (bireysel geliştirici). İletişim: **[İLETİŞİM E-POSTASI]**.
+Bu uygulamanın sorumlusu Alperen Aktürk'tür (bireysel geliştirici). İletişim: **ahmetalperenakturk@gmail.com**.
 
 ### 2. Hangi verileri işliyoruz?
 
@@ -35,7 +35,7 @@ Hesabın açık olduğu sürece. Hesabını sildiğinde hesabın ve tüm uygulam
 Verilerine erişme, düzeltme, silme, dışa aktarma ve işlenmesine itiraz etme hakkın var.
 - **Dışa aktarma:** Ayarlar → Veri bölümünden JSON/CSV olarak.
 - **Silme:** Ayarlar → hesap silme (tüm verini kalıcı olarak siler).
-- Diğer talepler için: **[İLETİŞİM E-POSTASI]**.
+- Diğer talepler için: **ahmetalperenakturk@gmail.com**.
 
 KVKK (Türkiye) ve GDPR (AB) kapsamındaki haklarını kullanabilirsin. Şikâyet hakkın: Kişisel Verileri Koruma Kurumu ya da yaşadığın ülkenin veri koruma otoritesi.
 
@@ -50,7 +50,7 @@ Bu politika güncellenebilir. Önemli değişikliklerde uygulama içinde haber v
 ## English
 
 ### 1. Who we are
-This app is operated by Alperen Aktürk (individual developer). Contact: **[CONTACT EMAIL]**.
+This app is operated by Ahmet Alperen Aktürk (individual developer). Contact: **ahmetalperenakturk@gmail.com**.
 
 ### 2. What data we process
 
@@ -76,7 +76,7 @@ For as long as your account exists. When you delete your account, your account a
 You can access, correct, delete, export your data and object to its processing.
 - **Export:** Settings → Data, as JSON/CSV.
 - **Delete:** Settings → delete account (permanently removes all your data).
-- Other requests: **[CONTACT EMAIL]**.
+- Other requests: **ahmetalperenakturk@gmail.com**.
 
 You may exercise your rights under GDPR (EU) and KVKK (Türkiye). You may lodge a complaint with your local data protection authority.
 
@@ -89,7 +89,7 @@ We may update this policy and will notify you in the app of material changes.
 ---
 
 ## Yayın öncesi kontrol listesi (sana not)
-- [ ] İletişim e-postası belirle (kişisel Gmail yerine ayrı bir adres düşün).
+- [x] İletişim e-postası ve ad: Alperen kendi GitHub'ındaki bilgileri kullanmayı seçti (2026-10-09).
 - [ ] Supabase yedek saklama süresini doğrula (Free planda otomatik yedek yok olabilir, planın §6.1'ine bak).
 - [ ] Sabit bir URL'ye koy (şimdilik GitHub Pages yolu olabilir; Google OAuth doğrulaması için özel domain gerekebilir, plan Q6).
 - [ ] Uygulamada giriş/kayıt ekranından ve Ayarlar'dan bağla (TR/EN metinleri `en.js` / `tr.js` üzerinden).
