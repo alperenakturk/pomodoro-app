@@ -561,6 +561,14 @@ export default {
   },
 
   today: {
+    carriedTitle: 'From earlier days',
+    laterTitle: 'Postponed to later days',
+    moveToToday: 'Move to today',
+    postponeLabel: 'Postpone to',
+    postponeAria: 'Postpone this task to a later date',
+    postponeButton: 'Postpone',
+    fromDate: 'from {{date}}',
+    forDate: 'for {{date}}',
     title: "Today's Tasks",
     newTaskPlaceholder: 'New task...',
     newTaskAria: 'New task',

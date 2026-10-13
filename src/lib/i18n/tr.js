@@ -528,6 +528,14 @@ export default {
   },
 
   today: {
+    carriedTitle: 'Önceki günlerden',
+    laterTitle: 'Sonraki günlere ertelenenler',
+    moveToToday: 'Bugüne al',
+    postponeLabel: 'Şu tarihe ertele',
+    postponeAria: 'Bu görevi ileri bir tarihe ertele',
+    postponeButton: 'Ertele',
+    fromDate: '{{date}} tarihinden',
+    forDate: '{{date}} için',
     title: 'Bugünün Görevleri',
     newTaskPlaceholder: 'Yeni görev...',
     newTaskAria: 'Yeni görev',

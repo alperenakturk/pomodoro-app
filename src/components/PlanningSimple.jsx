@@ -16,6 +16,9 @@ import TodoToday from './TodoToday'
 // cell," not literal 100% viewport width.
 function PlanningSimple({
   tasks,
+  carriedTasks,
+  laterTasks,
+  moveTaskToDate,
   activeTaskId,
   setActiveTaskId,
   addTask,
@@ -33,6 +36,9 @@ function PlanningSimple({
       <TodoToday
         variant="simple"
         tasks={tasks}
+        carriedTasks={carriedTasks}
+        laterTasks={laterTasks}
+        moveTaskToDate={moveTaskToDate}
         activeTaskId={activeTaskId}
         setActiveTaskId={setActiveTaskId}
         addTask={addTask}

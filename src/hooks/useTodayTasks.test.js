@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useTodayTasks } from './useTodayTasks'
-import { loadActivityLog } from '../lib/storage'
+import { useTodayTasks, bucketTasksByDay } from './useTodayTasks'
+import { loadActivityLog, loadTodayTasks } from '../lib/storage'
+import { todayString } from '../lib/dateKey'
 import { playTaskCompleteChime } from '../lib/alert'
 
 vi.mock('../lib/alert', () => ({
@@ -291,3 +292,99 @@ describe('useTodayTasks', () => {
     })
   })
 })
+
+describe('dated tasks', () => {
+  it('stamps new tasks with today', () => {
+    const { result } = renderHook(() => useTodayTasks())
+    act(() => result.current.addTask('A', 1))
+    expect(result.current.tasks[0].date).toBe(todayString())
+  })
+
+  it('stamps a pre-date-era task (date: null) with the day it is first seen, and persists it', () => {
+    localStorage.setItem('pomodoro_today_tasks', JSON.stringify([{ id: 'old', text: 'Old task' }]))
+    const { result } = renderHook(() => useTodayTasks())
+    expect(result.current.tasks[0].date).toBe(todayString())
+    expect(loadTodayTasks()[0].date).toBe(todayString())
+  })
+
+  it("moves yesterday's unfinished task into carriedTasks when the day rolls over, and keeps it out of today's list", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 10, 12))
+    const { result, rerender } = renderHook(() => useTodayTasks())
+    act(() => result.current.addTask('Unfinished', 1))
+    expect(result.current.tasks).toHaveLength(1)
+
+    vi.setSystemTime(new Date(2026, 5, 11, 9))
+    rerender()
+
+    expect(result.current.tasks).toHaveLength(0)
+    expect(result.current.carriedTasks.map((t) => t.text)).toEqual(['Unfinished'])
+    vi.useRealTimers()
+  })
+
+  it('moveTaskToDate brings a carried task to today, or postpones it to a later date', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 10, 12))
+    const { result, rerender } = renderHook(() => useTodayTasks())
+    act(() => {
+      result.current.addTask('A', 1)
+      result.current.addTask('B', 1)
+    })
+    vi.setSystemTime(new Date(2026, 5, 11, 9))
+    rerender()
+    const [a, b] = result.current.carriedTasks
+
+    act(() => result.current.moveTaskToDate(a.id, '2026-06-11'))
+    act(() => result.current.moveTaskToDate(b.id, '2026-06-15'))
+
+    expect(result.current.tasks.map((t) => t.text)).toEqual(['A'])
+    expect(result.current.laterTasks.map((t) => t.text)).toEqual(['B'])
+    expect(result.current.carriedTasks).toHaveLength(0)
+    vi.useRealTimers()
+  })
+
+  it('a postponed task shows up in today list on its date, and moving it clears it as the active task', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2026, 5, 10, 12))
+    const { result, rerender } = renderHook(() => useTodayTasks())
+    let id
+    act(() => {
+      id = result.current.addTask('A', 1)
+    })
+    act(() => result.current.setActiveTaskId(id))
+    act(() => result.current.moveTaskToDate(id, '2026-06-15'))
+    expect(result.current.activeTaskId).toBeNull()
+
+    vi.setSystemTime(new Date(2026, 5, 15, 8))
+    rerender()
+    expect(result.current.tasks.map((t) => t.text)).toEqual(['A'])
+    expect(result.current.laterTasks).toHaveLength(0)
+    vi.useRealTimers()
+  })
+})
+
+describe('bucketTasksByDay', () => {
+  const today = '2026-06-10'
+  const t = (id, date, done = false) => ({ id, date, done })
+
+  it('splits tasks into today / carried / later', () => {
+    const { todayTasks, carriedTasks, laterTasks } = bucketTasksByDay(
+      [t('a', today), t('b', null), t('c', '2026-06-09'), t('d', '2026-06-12')],
+      today
+    )
+    expect(todayTasks.map((x) => x.id)).toEqual(['a', 'b'])
+    expect(carriedTasks.map((x) => x.id)).toEqual(['c'])
+    expect(laterTasks.map((x) => x.id)).toEqual(['d'])
+  })
+
+  it('drops a finished task from a past day (it already lives in the activity log)', () => {
+    const { todayTasks, carriedTasks } = bucketTasksByDay([t('a', '2026-06-09', true)], today)
+    expect(todayTasks).toHaveLength(0)
+    expect(carriedTasks).toHaveLength(0)
+  })
+
+  it('keeps a finished task from today visible', () => {
+    expect(bucketTasksByDay([t('a', today, true)], today).todayTasks).toHaveLength(1)
+  })
+})
+

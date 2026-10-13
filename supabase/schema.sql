@@ -851,3 +851,17 @@ alter table public.settings
   add column if not exists used_inventory_or_timetable boolean not null default false;
 alter table public.settings
   add column if not exists tried_ambient_sounds jsonb not null default '[]'::jsonb;
+
+-- ----------------------------------------------------------------------------
+-- today_tasks.date — the local calendar day a task is planned for (v0.2
+-- "dated tasks"). NULLABLE on purpose: rows created before this column
+-- existed stay NULL, and the app treats NULL as "today" and stamps it on
+-- first load. Additive and safe to re-run. MUST be applied before deploying
+-- the client that sends `date`, or every today_tasks write is rejected
+-- (PGRST204) — see AGENTS.md's missing-column gotcha.
+-- ----------------------------------------------------------------------------
+alter table public.today_tasks
+  add column if not exists date date;
+
+create index if not exists today_tasks_user_date_idx on public.today_tasks(user_id, date);
+

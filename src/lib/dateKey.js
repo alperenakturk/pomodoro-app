@@ -12,3 +12,9 @@ export function localDateString(date = new Date()) {
 export function todayString() {
   return localDateString(new Date())
 }
+
+export function tomorrowString() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  return localDateString(d)
+}

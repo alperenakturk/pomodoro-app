@@ -926,6 +926,9 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
           {experienceMode === 'simple' ? (
             <PlanningSimple
               tasks={todayApi.tasks}
+              carriedTasks={todayApi.carriedTasks}
+              laterTasks={todayApi.laterTasks}
+              moveTaskToDate={todayApi.moveTaskToDate}
               activeTaskId={todayApi.activeTaskId}
               setActiveTaskId={todayApi.setActiveTaskId}
               addTask={todayApi.addTask}
@@ -964,6 +967,9 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                 <TodoToday
                   tasks={todayApi.tasks}
+                  carriedTasks={todayApi.carriedTasks}
+                  laterTasks={todayApi.laterTasks}
+                  moveTaskToDate={todayApi.moveTaskToDate}
                   activeTaskId={todayApi.activeTaskId}
                   setActiveTaskId={todayApi.setActiveTaskId}
                   addTask={todayApi.addTask}

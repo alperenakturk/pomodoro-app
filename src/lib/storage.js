@@ -145,6 +145,10 @@ function normalizeTodayTask(task) {
     inventoryId: task.inventoryId ?? null,
     reestimate1: task.reestimate1 ?? null,
     reestimate2: task.reestimate2 ?? null,
+    // The local calendar day ('YYYY-MM-DD') this task is planned for. null =
+    // a pre-date-era task; useTodayTasks stamps those with the day they're
+    // first seen. Maps to today_tasks.date (see schema.sql).
+    date: task.date ?? null,
     ...normalizeMeta(task),
   }
 }

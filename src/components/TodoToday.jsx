@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, memo } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
+import { todayString } from '../lib/dateKey'
 import UnplannedCapture from './UnplannedCapture'
 import CategoryTagPicker from './CategoryTagPicker'
+import DatedTaskGroup from './DatedTaskGroup'
 import { CategoryTags } from './CategoryTag'
 
 // This row's own category-tag styling (padding/margin/inline-flex) — passed
@@ -372,6 +374,9 @@ function TaskListMenu({ hasFinished, hasAny, onClearFinished, onClearAll }) {
 
 function TodoToday({
   tasks,
+  carriedTasks = [],
+  laterTasks = [],
+  moveTaskToDate,
   activeTaskId,
   setActiveTaskId,
   addTask,
@@ -441,6 +446,19 @@ function TodoToday({
           onClearAll={clearAllTasks}
         />
       </div>
+
+      {carriedTasks.length > 0 && (
+        <div className={isSimple ? '' : 'mb-4'}>
+          <DatedTaskGroup
+            titleKey="today.carriedTitle"
+            kind="carried"
+            tasks={carriedTasks}
+            onMoveToToday={(id) => moveTaskToDate(id, todayString())}
+            onPostpone={moveTaskToDate}
+            onRemove={removeTask}
+          />
+        </div>
+      )}
 
       <form onSubmit={handleAddPlanned} className={isSimple ? 'flex gap-2 items-end' : 'flex gap-2 mb-4 items-end'}>
         <input
@@ -567,6 +585,17 @@ function TodoToday({
           ))}
         </ul>
       </div>
+
+      {laterTasks.length > 0 && (
+        <DatedTaskGroup
+          titleKey="today.laterTitle"
+          kind="later"
+          tasks={laterTasks}
+          onMoveToToday={(id) => moveTaskToDate(id, todayString())}
+          onPostpone={moveTaskToDate}
+          onRemove={removeTask}
+        />
+      )}
     </div>
   )
 }

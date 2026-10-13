@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { loadTodayTasks, saveTodayTasks, addActivityRecord, stampUpdated } from '../lib/storage'
 import { playTaskCompleteChime } from '../lib/alert'
 import { todayString } from '../lib/dateKey'
@@ -8,13 +8,47 @@ function nowTime() {
   return new Date().toTimeString().slice(0, 5)
 }
 
+// A task is in one of three buckets relative to today. Pure, so it's tested
+// directly. `date: null` (pre-date-era task not yet stamped) counts as today.
+//   today   — date is today (or null)                       -> the live list
+//   carried — date before today AND not done                -> "from earlier"
+//   later   — date after today                              -> postponed
+// A finished task from a past day belongs to none of them: it's already
+// recorded in the activity log, and a new day starts a fresh list.
+export function bucketTasksByDay(tasks, today) {
+  const todayTasks = []
+  const carriedTasks = []
+  const laterTasks = []
+  for (const task of tasks) {
+    if (!task.date || task.date === today) todayTasks.push(task)
+    else if (task.date < today) {
+      if (!task.done) carriedTasks.push(task)
+    } else laterTasks.push(task)
+  }
+  return { todayTasks, carriedTasks, laterTasks }
+}
+
 export function useTodayTasks() {
-  const [tasks, setTasks] = useState(() => loadTodayTasks())
+  // Pre-date-era tasks (date: null) get the day they're first seen, so they
+  // roll into "from earlier" tomorrow instead of staying "today" forever.
+  // stampUpdated is what makes remoteProvider's set() actually upsert them.
+  const [allTasks, setTasks] = useState(() => {
+    const today = todayString()
+    return loadTodayTasks().map((t) => (t.date ? t : stampUpdated({ ...t, date: today })))
+  })
   const [activeTaskId, setActiveTaskId] = useState(null)
 
   useEffect(() => {
-    saveTodayTasks(tasks)
-  }, [tasks])
+    saveTodayTasks(allTasks)
+  }, [allTasks])
+
+  // Recomputed each render (cheap) so the list rolls over at midnight on the
+  // next tick; the timer re-renders the app every second.
+  const today = todayString()
+  const { todayTasks: tasks, carriedTasks, laterTasks } = useMemo(
+    () => bucketTasksByDay(allTasks, today),
+    [allTasks, today]
+  )
 
   const addTask = useCallback((text, estimate, options = {}) => {
     const task = {
@@ -33,6 +67,7 @@ export function useTodayTasks() {
       urgent: options.urgent || false,
       done: false,
       inventoryId: options.inventoryId || null,
+      date: todayString(),
       // Re-estimates when a task runs long — Diff I / Diff II track successive
       // estimation errors against the real count, distinct from the original diff.
       reestimate1: null,
@@ -52,10 +87,10 @@ export function useTodayTasks() {
   // but the check below is kept anyway as a defensive guard rather than an
   // assumed invariant.
   const clearFinishedTasks = useCallback(() => {
-    const remainingIds = new Set(tasks.filter((t) => !t.done).map((t) => t.id))
+    const remainingIds = new Set(allTasks.filter((t) => !t.done).map((t) => t.id))
     setTasks((prev) => prev.filter((t) => !t.done))
     setActiveTaskId((cur) => (cur && remainingIds.has(cur) ? cur : null))
-  }, [tasks])
+  }, [allTasks])
 
   const clearAllTasks = useCallback(() => {
     setTasks([])
@@ -102,7 +137,7 @@ export function useTodayTasks() {
   // so the caller (TaskRow) can warn the user.
   const reestimateTask = useCallback((id, value) => {
     if (!Number.isFinite(value) || value <= 0) return false
-    const task = tasks.find((t) => t.id === id)
+    const task = allTasks.find((t) => t.id === id)
     if (task && task.reestimate1 != null && task.reestimate2 != null) return false
     setTasks((prev) =>
       prev.map((t) => {
@@ -112,7 +147,7 @@ export function useTodayTasks() {
       })
     )
     return true
-  }, [tasks])
+  }, [allTasks])
 
   const addInterruption = useCallback((id, kind, delta = 1) => {
     setTasks((prev) =>
@@ -132,7 +167,7 @@ export function useTodayTasks() {
   // lives in a separate hook instance) — finishing a task early must not stop
   // a running Pomodoro; the remaining time is still available for overlearning.
   const finishTask = useCallback((id) => {
-    const task = tasks.find((t) => t.id === id)
+    const task = allTasks.find((t) => t.id === id)
     if (task) {
       // Tahmin girilmediyse fark hesaplanamaz — sahte bir 0 yerine null yazılır.
       const diff = task.estimate != null ? task.realized - task.estimate : null
@@ -160,10 +195,20 @@ export function useTodayTasks() {
     }
     setTasks((prev) => prev.map((t) => (t.id === id ? stampUpdated({ ...t, done: true }) : t)))
     setActiveTaskId((cur) => (cur === id ? null : cur))
-  }, [tasks])
+  }, [allTasks])
+
+  // Moves a task to another day: today = "bring it to today", a later date =
+  // "postpone". The task leaves the live list, so it can't stay the active one.
+  const moveTaskToDate = useCallback((id, date) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? stampUpdated({ ...t, date }) : t)))
+    setActiveTaskId((cur) => (cur === id ? null : cur))
+  }, [])
 
   return {
     tasks,
+    carriedTasks,
+    laterTasks,
+    moveTaskToDate,
     activeTaskId,
     setActiveTaskId,
     addTask,
