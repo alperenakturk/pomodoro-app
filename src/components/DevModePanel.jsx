@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { ACHIEVEMENT_DEFINITIONS } from '../lib/achievements'
-import { setForceRareNextDraw } from '../lib/devMode'
+import { setForceRareNextDraw, isDevUnlockLimits, setDevUnlockLimits } from '../lib/devMode'
 
 // Developer Mode's one UI surface — both the always-visible proof it's
 // active (so dev-mode behavior never gets mistaken for a real bug while
@@ -26,11 +26,33 @@ function DevModePanel({ actions }) {
     setForceRareNextDraw(next)
   }
 
+  const limitsUnlocked = isDevUnlockLimits()
+
+  // Reloads: hooks read settings/mode once at mount (see AGENTS.md), so the
+  // new limit state only takes effect on a fresh mount.
+  function toggleUnlockLimits() {
+    setDevUnlockLimits(!limitsUnlocked)
+    window.location.reload()
+  }
+
   return (
     <div className="fixed bottom-4 left-4 z-[60] font-sans text-xs">
       {open && (
         <div className="mb-2 w-64 bg-pine-dark border border-amber/40 rounded-xl p-3 shadow-2xl flex flex-col gap-2">
           <p className="text-amber-text font-bold tracking-wide uppercase text-[10px] mb-1">Developer Mode</p>
+
+          <button
+            type="button"
+            onClick={toggleUnlockLimits}
+            className={
+              'text-left px-2 py-1.5 rounded-lg border ' +
+              (limitsUnlocked ? 'border-amber bg-amber/10 text-amber-text' : 'border-cream/15 text-cream hover:bg-cream/10')
+            }
+          >
+            {limitsUnlocked
+              ? 'Account limits: UNLOCKED (click to lock, reloads)'
+              : 'Account limits: locked like production (click to unlock, reloads)'}
+          </button>
 
           <button
             type="button"

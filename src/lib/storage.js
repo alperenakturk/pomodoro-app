@@ -780,6 +780,18 @@ export function hasSeenGuestSignupNudge() {
 export function markGuestSignupNudgeSeen() {
   localStorage.setItem(GUEST_SIGNUP_NUDGE_KEY, 'true')
 }
+// Developer Mode only (see lib/devMode.js) — whether guest/account limits
+// (Simple-only mode, no category creation, sign-up nudges) are lifted. Raw
+// localStorage like the nudge flags above: a dev preference, never account
+// data. `defaultValue` applies until the dev first flips it.
+const DEV_UNLOCK_LIMITS_KEY = 'pomodoro_dev_unlock_limits'
+export function loadDevUnlockLimits(defaultValue) {
+  const raw = localStorage.getItem(DEV_UNLOCK_LIMITS_KEY)
+  return raw === null ? defaultValue : raw === 'true'
+}
+export function saveDevUnlockLimits(value) {
+  localStorage.setItem(DEV_UNLOCK_LIMITS_KEY, String(value))
+}
 // Developer Mode only (see lib/devMode.js) — lets a first-run nudge be
 // re-previewed without a full data wipe.
 export function resetGuestSignupNudgeSeen() {

@@ -32,7 +32,7 @@ import { useTranslation } from './hooks/useTranslation'
 import { LanguageProvider } from './lib/i18n/LanguageContext'
 import { themeClassName } from './lib/theme'
 import { resolveExperienceMode, canUseFullMode } from './lib/experienceMode'
-import { DEV_MODE } from './lib/devMode'
+import { DEV_MODE, isDevUnlockLimits } from './lib/devMode'
 import { totalTimetableHours } from './lib/timetable'
 import Timer from './components/Timer'
 import Inventory from './components/Inventory'
@@ -486,7 +486,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // GUEST_SIGNUP_NUDGE_KEY is (guest-only concept, never part of a synced
   // account's settings).
   const [showGuestOnboarding, setShowGuestOnboarding] = useState(
-    () => !user && !hasSeenGuestOnboarding()
+    () => !user && !hasSeenGuestOnboarding() && !isDevUnlockLimits()
   )
   const [guestOnboardingAuthModalOpen, setGuestOnboardingAuthModalOpen] = useState(false)
 
@@ -704,7 +704,7 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   // fixed corner card (see GuestSignupNudge.jsx) independent of activeTab,
   // so it persists across tab switches like a normal toast/notification
   // until dismissed or acted on.
-  const showGuestNudge = !user && !guestNudgeSeen && pomodoro.isRunning && pomodoro.sessionType === 'work'
+  const showGuestNudge = !user && !isDevUnlockLimits() && !guestNudgeSeen && pomodoro.isRunning && pomodoro.sessionType === 'work'
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {

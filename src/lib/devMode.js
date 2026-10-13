@@ -1,3 +1,5 @@
+import { loadDevUnlockLimits, saveDevUnlockLimits } from './storage'
+
 // Developer Mode — a small set of dev-only conveniences (bypass the
 // motivation card's draw cooldown, instantly complete the running timer,
 // force a Rare card draw, preview an achievement toast or the streak
@@ -12,6 +14,23 @@
 // account-based (user.id) check, which would ship the gate itself into the
 // public JS. See the "Developer Mode" plan for the full reasoning.
 export const DEV_MODE = import.meta.env.DEV
+
+// Whether guest/account limits are lifted for local development (Full mode
+// for guests, category creation, no sign-up nudges/onboarding), so features
+// can be tried without signing in or fighting "create an account" prompts.
+// ON by default in dev — but never under Vitest (MODE === 'test'), so the
+// real guest behavior stays what the tests assert. Always false in a
+// production build: DEV_MODE is the literal `false` there, so this and every
+// branch it guards are dead-code-eliminated. Toggled from DevModePanel,
+// which reloads the page (hooks read settings once at mount).
+let unlockLimits = DEV_MODE ? loadDevUnlockLimits(import.meta.env.MODE !== 'test') : false
+export function isDevUnlockLimits() {
+  return DEV_MODE && unlockLimits
+}
+export function setDevUnlockLimits(value) {
+  unlockLimits = value
+  saveDevUnlockLimits(value)
+}
 
 // Boolean "skip this limit" gates — the same declarative-registry shape as
 // experienceMode.js's FULL_MODE_ONLY_FEATURES Set + isFeatureVisible().

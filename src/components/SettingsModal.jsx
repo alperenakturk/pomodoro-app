@@ -38,6 +38,7 @@ import { THEMES } from '../lib/theme'
 import { pickCoachMark, resolveCoachMarkCopy } from '../lib/constants'
 import ChangePasswordModal from './ChangePasswordModal'
 import AuthModal from './AuthModal'
+import { isDevUnlockLimits } from '../lib/devMode'
 import {
   validateBackgroundFile,
   uploadFullscreenBackground,
@@ -1016,7 +1017,7 @@ function SettingsModal({
                 addCategory={addCategory}
                 updateCategory={updateCategory}
                 removeCategory={removeCategory}
-                canCreateCategories={Boolean(user)}
+                canCreateCategories={Boolean(user) || isDevUnlockLimits()}
                 onRequireSignIn={() => openAuthModal('signUp')}
               />
 

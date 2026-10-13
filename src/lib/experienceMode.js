@@ -1,3 +1,5 @@
+import { isDevUnlockLimits } from './devMode'
+
 // Central, declarative registry of every UI surface hidden in Simple mode —
 // same "derive, don't scatter conditionals" philosophy as achievements.js.
 // Nothing here holds achievement-specific gating (see that file's own
@@ -34,7 +36,7 @@ export function isFeatureVisible(mode, featureId) {
 // (App.jsx, SettingsModal.jsx, Timer.jsx, AchievementGrid, coach-mark
 // callers) resolves through this, never reads settings.experienceMode raw.
 export function resolveExperienceMode(settings, user) {
-  if (!user) return 'simple'
+  if (!user && !isDevUnlockLimits()) return 'simple'
   return settings.experienceMode === 'simple' ? 'simple' : 'full'
 }
 
@@ -42,5 +44,5 @@ export function resolveExperienceMode(settings, user) {
 // Settings toggle and the AccountSetupFlow step to decide locked-vs-active
 // rendering.
 export function canUseFullMode(user) {
-  return Boolean(user)
+  return Boolean(user) || isDevUnlockLimits()
 }
