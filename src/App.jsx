@@ -58,7 +58,7 @@ import StreakDetailsModal from './components/StreakDetailsModal'
 import AchievementToastStack from './components/achievements/AchievementToastStack'
 import DevModePanel from './components/DevModePanel'
 import { COACH_MARKS, pickCoachMark, resolveCoachMarkCopy } from './lib/constants'
-import { todayString } from './lib/dateKey'
+import { todayString, localDateString } from './lib/dateKey'
 
 // Lazy-loaded: SettingsModal is ~1100 lines, only ever rendered once
 // `settingsOpen` is true (see its conditional render below), and never
@@ -683,6 +683,15 @@ function AppInner({ isNewAccount, hadOnboardingTransfer }) {
   const devActions = DEV_MODE
     ? {
         instantComplete: pomodoro.devInstantComplete,
+        // Backdates every task on today's list by one day, so the "From
+        // earlier days" group (and its move/postpone/delete buttons) can be
+        // tried without waiting for midnight or editing localStorage.
+        backdateTodayTasks: () => {
+          const d = new Date()
+          d.setDate(d.getDate() - 1)
+          const yesterday = localDateString(d)
+          for (const task of todayApi.tasks) todayApi.moveTaskToDate(task.id, yesterday)
+        },
         previewAchievementToast: achievements.previewToast,
         previewStreakCelebration: streak.previewCelebration,
         // hasSeenExperienceModeNudge() is deliberately not reset here —

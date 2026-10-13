@@ -64,6 +64,14 @@ function DevModePanel({ actions }) {
 
           <button
             type="button"
+            onClick={actions.backdateTodayTasks}
+            className="text-left px-2 py-1.5 rounded-lg border border-cream/15 text-cream hover:bg-cream/10"
+          >
+            Backdate today&apos;s tasks by 1 day
+          </button>
+
+          <button
+            type="button"
             onClick={toggleForceRare}
             className={
               'text-left px-2 py-1.5 rounded-lg border ' +
