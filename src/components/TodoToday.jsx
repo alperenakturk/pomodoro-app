@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, memo } from 'react'
 import { useTranslation } from '../hooks/useTranslation'
 import { MAX_RECOMMENDED_ESTIMATE, inputClass } from '../lib/constants'
 import { diffClass, diffLabel } from '../lib/diffHelpers'
-import { todayString } from '../lib/dateKey'
+import { todayString, tomorrowString } from '../lib/dateKey'
 import UnplannedCapture from './UnplannedCapture'
 import CategoryTagPicker from './CategoryTagPicker'
 import DatedTaskGroup from './DatedTaskGroup'
@@ -24,7 +24,7 @@ const CATEGORY_TAG_CLASS = 'text-sage text-xs bg-cream/5 rounded px-1 ml-1 inlin
 // every row's cells lined up. Fixed widths also mean any text wider than
 // its column isn't clipped, just overflows into the neighbor — which is
 // exactly what was happening with the Turkish labels at 26px.
-const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_40px_40px_40px_16px_16px_16px] gap-1.5 items-center'
+const ROW_GRID = 'grid grid-cols-[14px_minmax(0,1fr)_40px_40px_40px_16px_16px_16px_16px] gap-1.5 items-center'
 
 function diffOf(task) {
   return task.estimate != null ? task.realized - task.estimate : null
@@ -39,6 +39,7 @@ function TaskRow({
   onRemove,
   onUpdate,
   onReestimate,
+  onPostpone,
   onManageCategories,
 }) {
   const diff = diffOf(task)
@@ -50,7 +51,15 @@ function TaskRow({
   const [reestimating, setReestimating] = useState(false)
   const [reestimateValue, setReestimateValue] = useState('')
   const [notesExpanded, setNotesExpanded] = useState(false)
+  const [moving, setMoving] = useState(false)
+  const [moveDate, setMoveDate] = useState('')
   const { t } = useTranslation()
+
+  function submitMove(e) {
+    e.preventDefault()
+    if (!moveDate) return
+    onPostpone(task.id, moveDate)
+  }
 
   function handleSave() {
     if (!text.trim()) return
@@ -228,6 +237,20 @@ function TaskRow({
           ✓
         </span>
       )}
+      {task.done ? (
+        <span />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setMoving((prev) => !prev)}
+          className="text-cream text-xs leading-none"
+          title={t('today.postponeTaskTitle')}
+          aria-label={t('today.postponeTaskAria')}
+          aria-expanded={moving}
+        >
+          📅
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setEditing(true)}
@@ -254,6 +277,36 @@ function TaskRow({
     {notesExpanded && task.notes && (
       <li className="px-2 pb-2 -mt-1">
         <p className="text-sage text-xs whitespace-pre-wrap pl-6">{task.notes}</p>
+      </li>
+    )}
+    {moving && (
+      <li className="flex items-center gap-2 px-2 py-2 -mt-1 mb-1 bg-cream/5 border border-cream/15 rounded-xl">
+        <form onSubmit={submitMove} className="flex items-center gap-2 flex-1 flex-wrap">
+          <span className="text-sage text-xs">{t('today.postponePrompt', { text: task.text })}</span>
+          <input
+            type="date"
+            autoFocus
+            min={tomorrowString()}
+            value={moveDate}
+            onChange={(e) => setMoveDate(e.target.value)}
+            aria-label={t('today.postponeAria')}
+            className={`text-xs ${inputClass}`}
+          />
+          <button
+            type="submit"
+            disabled={!moveDate}
+            className="font-sans text-xs px-3 py-1 rounded-lg bg-tomato text-on-tomato disabled:opacity-40"
+          >
+            {t('today.postponeButton')}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMoving(false)}
+            className="font-sans text-xs px-3 py-1 rounded-lg border border-cream/20 text-cream"
+          >
+            {t('today.cancelButton')}
+          </button>
+        </form>
       </li>
     )}
     {reestimating && (
@@ -400,6 +453,7 @@ function TodoToday({
   const [estimate, setEstimate] = useState('')
   const [categoryIds, setCategoryIds] = useState([])
   const [notes, setNotes] = useState('')
+  const [date, setDate] = useState('')
   const { t } = useTranslation()
   const isSimple = variant === 'simple'
 
@@ -414,187 +468,209 @@ function TodoToday({
     addTask(text.trim(), estimate ? Number(estimate) : null, {
       categoryIds,
       notes: notes.trim(),
+      // '' = today; a later date files it under "Postponed or planned ahead".
+      date: date || undefined,
     })
+    setDate('')
     setText('')
     setEstimate('')
     setCategoryIds([])
     setNotes('')
   }
 
+  const rowProps = {
+    categories,
+    onSelect: setActiveTaskId,
+    onFinish: finishTask,
+    onRemove: removeTask,
+    onUpdate: updateTask,
+    onReestimate: reestimateTask,
+    onPostpone: moveTaskToDate,
+    onManageCategories,
+  }
+  const sectionTitleClass = 'text-sage text-xs font-sans uppercase tracking-wide'
+
   return (
-    <div
-      className={
-        isSimple
-          ? 'w-full flex flex-col gap-6'
-          : 'bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full'
-      }
-    >
-      <div className={isSimple ? 'flex items-center justify-between' : 'flex items-center justify-between mb-4'}>
-        <p
-          className={
-            isSimple
-              ? 'font-display text-cream font-bold text-sm tracking-widest uppercase'
-              : 'font-display text-cream font-bold text-xs tracking-widest uppercase'
-          }
-        >
-          {t('today.title')}
-        </p>
-        <TaskListMenu
-          hasFinished={tasks.some((task) => task.done)}
-          hasAny={tasks.length > 0}
-          onClearFinished={clearFinishedTasks}
-          onClearAll={clearAllTasks}
-        />
-      </div>
-
-      {carriedTasks.length > 0 && (
-        <div className={isSimple ? '' : 'mb-4'}>
-          <DatedTaskGroup
-            titleKey="today.carriedTitle"
-            kind="carried"
-            tasks={carriedTasks}
-            onMoveToToday={(id) => moveTaskToDate(id, todayString())}
-            onPostpone={moveTaskToDate}
-            onRemove={removeTask}
-          />
-        </div>
-      )}
-
-      <form onSubmit={handleAddPlanned} className={isSimple ? 'flex gap-2 items-end' : 'flex gap-2 mb-4 items-end'}>
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={t('today.newTaskPlaceholder')}
-          aria-label={t('today.newTaskAria')}
-          className={`flex-1 min-w-0 ${inputClass}`}
-        />
-        <div className="flex flex-col gap-1">
-          <label htmlFor="today-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
-            {t('today.estimateLabel')}
-          </label>
-          <input
-            id="today-estimate"
-            type="number"
-            min="1"
-            value={estimate}
-            onChange={(e) => setEstimate(e.target.value)}
-            placeholder={t('today.estimatePlaceholder')}
-            className={`w-20 px-2 ${inputClass}`}
-          />
-        </div>
-        <button
-          type="submit"
-          className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato"
-        >
-          {t('today.addButton')}
-        </button>
-      </form>
-
-      <div className={isSimple ? 'flex gap-2' : 'flex gap-2 mb-4'}>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder={t('common.descriptionPlaceholder')}
-          aria-label={t('common.descriptionAria')}
-          rows={2}
-          className={`flex-1 text-xs resize-y ${inputClass}`}
-        />
-        <CategoryTagPicker
-          categories={categories}
-          value={categoryIds}
-          onChange={setCategoryIds}
-          onAddCategory={onManageCategories}
-          className="w-36"
-        />
-      </div>
-
-      {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
-        <p className={`text-tomato-text text-xs font-sans ${isSimple ? '-mt-4' : 'mb-4 -mt-2'}`}>
-          {t('today.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
-        </p>
-      )}
-
-      <div className={isSimple ? 'flex flex-col gap-2' : ''}>
-        <div className={`${ROW_GRID} px-2 ${isSimple ? '' : 'mb-1'}`}>
-          <span />
-          <span className="text-sage text-[10px] font-sans uppercase tracking-wide">{t('today.colTask')}</span>
-          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colEstimate')}</span>
-          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colReal')}</span>
-          <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colDiff')}</span>
-          <span />
-          <span />
-          <span />
-        </div>
-
-        <ul className={isSimple ? 'flex flex-col gap-2' : 'flex flex-col gap-1 mb-4'}>
-          {planned.length === 0 && (
-            <li className="text-sage text-sm font-sans text-center py-2">
-              {t('today.emptyState')}
-            </li>
-          )}
-          {planned.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              categories={categories}
-              isActive={task.id === activeTaskId}
-              onSelect={setActiveTaskId}
-              onFinish={finishTask}
-              onRemove={removeTask}
-              onUpdate={updateTask}
-              onReestimate={reestimateTask}
-              onManageCategories={onManageCategories}
-            />
-          ))}
-        </ul>
-      </div>
-
+    <div className="w-full flex flex-col gap-4">
       <div
         className={
           isSimple
-            ? 'flex flex-col gap-2 pt-4 border-t border-cream/10'
-            : 'bg-tomato/5 border border-tomato/20 rounded-2xl p-3'
+            ? 'w-full flex flex-col gap-6'
+            : 'bg-pine-dark border border-cream/10 rounded-3xl px-6 py-6 shadow-lg w-full flex flex-col gap-4'
         }
       >
-        <p
-          className={
-            isSimple
-              ? 'flex items-center gap-2 text-sage text-xs font-sans uppercase tracking-wide'
-              : 'flex items-center gap-2 text-tomato text-xs font-sans uppercase tracking-wide mb-3'
-          }
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${isSimple ? 'bg-sage' : 'bg-tomato'}`} />
-          {t('today.unplannedUrgentTitle')}
-        </p>
-        <UnplannedCapture addTask={addTask} className={isSimple ? '' : 'mb-2'} />
-        <ul className="flex flex-col gap-1">
-          {urgentTasks.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              categories={categories}
-              isActive={task.id === activeTaskId}
-              onSelect={setActiveTaskId}
-              onFinish={finishTask}
-              onRemove={removeTask}
-              onUpdate={updateTask}
-              onReestimate={reestimateTask}
-              onManageCategories={onManageCategories}
-            />
-          ))}
-        </ul>
-      </div>
+        <div className="flex items-center justify-between">
+          <p className="font-display text-cream font-bold text-xs tracking-widest uppercase">{t('today.title')}</p>
+          <TaskListMenu
+            hasFinished={tasks.some((task) => task.done)}
+            hasAny={tasks.length > 0}
+            onClearFinished={clearFinishedTasks}
+            onClearAll={clearAllTasks}
+          />
+        </div>
 
-      {laterTasks.length > 0 && (
+        <form onSubmit={handleAddPlanned} className="flex gap-2 items-end flex-wrap">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={t('today.newTaskPlaceholder')}
+            aria-label={t('today.newTaskAria')}
+            className={`flex-1 min-w-[10rem] ${inputClass}`}
+          />
+          <div className="flex flex-col gap-1">
+            <label htmlFor="today-estimate" className="text-sage text-[10px] font-sans uppercase tracking-wide">
+              {t('today.estimateLabel')}
+            </label>
+            <input
+              id="today-estimate"
+              type="number"
+              min="1"
+              value={estimate}
+              onChange={(e) => setEstimate(e.target.value)}
+              placeholder={t('today.estimatePlaceholder')}
+              className={`w-20 px-2 ${inputClass}`}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="today-date" className="text-sage text-[10px] font-sans uppercase tracking-wide">
+              {t('today.dateLabel')}
+            </label>
+            <input
+              id="today-date"
+              type="date"
+              min={todayString()}
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={`px-2 ${inputClass}`}
+            />
+          </div>
+          <button type="submit" className="font-sans text-sm px-4 py-2 rounded-xl bg-tomato text-on-tomato">
+            {t('today.addButton')}
+          </button>
+        </form>
+
+        <div className="flex gap-2">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t('common.descriptionPlaceholder')}
+            aria-label={t('common.descriptionAria')}
+            rows={2}
+            className={`flex-1 text-xs resize-y ${inputClass}`}
+          />
+          <CategoryTagPicker
+            categories={categories}
+            value={categoryIds}
+            onChange={setCategoryIds}
+            onAddCategory={onManageCategories}
+            className="w-36"
+          />
+        </div>
+
+        {Number(estimate) > MAX_RECOMMENDED_ESTIMATE && (
+          <p className="text-tomato-text text-xs font-sans -mt-2">
+            {t('today.moreThanWarning', { max: MAX_RECOMMENDED_ESTIMATE })}
+          </p>
+        )}
+
+        <section aria-label={t('today.todaySection')} className="flex flex-col gap-2">
+          <p className={sectionTitleClass}>
+            {t('today.todaySection')} ({planned.length})
+          </p>
+          <div className={`${ROW_GRID} px-2`}>
+            <span />
+            <span className="text-sage text-[10px] font-sans uppercase tracking-wide">{t('today.colTask')}</span>
+            <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colEstimate')}</span>
+            <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colReal')}</span>
+            <span className="text-sage text-[10px] font-sans uppercase tracking-wide text-right">{t('today.colDiff')}</span>
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          <ul className="flex flex-col gap-1">
+            {planned.length === 0 && (
+              <li className="text-sage text-sm font-sans text-center py-2">{t('today.emptyState')}</li>
+            )}
+            {planned.map((task) => (
+              <TaskRow key={task.id} task={task} isActive={task.id === activeTaskId} {...rowProps} />
+            ))}
+          </ul>
+        </section>
+
+        <DatedTaskGroup
+          titleKey="today.carriedTitle"
+          emptyKey="today.carriedEmpty"
+          kind="carried"
+          tasks={carriedTasks}
+          onMoveToToday={(id) => moveTaskToDate(id, todayString())}
+          onPostpone={moveTaskToDate}
+          onRemove={removeTask}
+        />
+
         <DatedTaskGroup
           titleKey="today.laterTitle"
+          emptyKey="today.laterEmpty"
           kind="later"
           tasks={laterTasks}
           onMoveToToday={(id) => moveTaskToDate(id, todayString())}
           onPostpone={moveTaskToDate}
           onRemove={removeTask}
         />
+      </div>
+
+      <UnplannedUrgentPanel
+        isSimple={isSimple}
+        urgentTasks={urgentTasks}
+        activeTaskId={activeTaskId}
+        addTask={addTask}
+        rowProps={rowProps}
+      />
+    </div>
+  )
+}
+
+// "Unplanned & Urgent" lives in its own collapsible card, apart from the
+// day-organized task list above: it's an interruption log for the current
+// day (UnplannedCapture + its tasks), not part of planning ahead/behind.
+// Opens by default only when there's something in it.
+function UnplannedUrgentPanel({ isSimple, urgentTasks, activeTaskId, addTask, rowProps }) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(urgentTasks.length > 0)
+
+  return (
+    <div
+      className={
+        isSimple
+          ? 'flex flex-col gap-2 pt-4 border-t border-cream/10'
+          : 'bg-tomato/5 border border-tomato/20 rounded-2xl p-3 flex flex-col gap-2'
+      }
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+        className={
+          'flex items-center gap-2 text-xs font-sans uppercase tracking-wide w-full text-left ' +
+          (isSimple ? 'text-sage' : 'text-tomato')
+        }
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${isSimple ? 'bg-sage' : 'bg-tomato'}`} />
+        <span className="flex-1">
+          {t('today.unplannedUrgentTitle')} ({urgentTasks.length})
+        </span>
+        <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <>
+          <UnplannedCapture addTask={addTask} />
+          <ul className="flex flex-col gap-1">
+            {urgentTasks.map((task) => (
+              <TaskRow key={task.id} task={task} isActive={task.id === activeTaskId} {...rowProps} />
+            ))}
+          </ul>
+        </>
       )}
     </div>
   )

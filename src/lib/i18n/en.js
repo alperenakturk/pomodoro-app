@@ -561,8 +561,15 @@ export default {
   },
 
   today: {
-    carriedTitle: 'From earlier days',
-    laterTitle: 'Postponed to later days',
+    carriedTitle: 'Left over from earlier days',
+    laterTitle: 'Postponed or planned ahead',
+    carriedEmpty: 'Nothing left over from earlier days.',
+    laterEmpty: 'Nothing scheduled for later days.',
+    todaySection: 'Today\'s tasks',
+    dateLabel: 'Date',
+    postponeTaskTitle: 'Move to another day',
+    postponeTaskAria: 'Move this task to another day',
+    postponePrompt: 'Move "{{text}}" to:',
     moveToToday: 'Move to today',
     postponeLabel: 'Postpone to',
     postponeAria: 'Postpone this task to a later date',

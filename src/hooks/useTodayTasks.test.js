@@ -388,3 +388,13 @@ describe('bucketTasksByDay', () => {
   })
 })
 
+describe('adding a task for another day', () => {
+  it('a task added with a future date goes to laterTasks, not today', () => {
+    const { result } = renderHook(() => useTodayTasks())
+    act(() => result.current.addTask('Dentist', 1, { date: '2099-01-02' }))
+    expect(result.current.tasks).toHaveLength(0)
+    expect(result.current.laterTasks.map((t) => t.text)).toEqual(['Dentist'])
+    expect(result.current.laterTasks[0].date).toBe('2099-01-02')
+  })
+})
+

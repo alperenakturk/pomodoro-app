@@ -14,9 +14,16 @@ function renderGroup(props) {
 const task = { id: 't1', text: 'Leftover task', date: '2026-06-09' }
 
 describe('DatedTaskGroup', () => {
-  it('renders nothing when there are no tasks', () => {
-    const { container } = renderGroup({ tasks: [], onMoveToToday: vi.fn(), onPostpone: vi.fn(), onRemove: vi.fn() })
-    expect(container.firstChild).toBeNull()
+  it('still shows its title and an empty-state line when there are no tasks', () => {
+    renderGroup({
+      emptyKey: 'today.carriedEmpty',
+      tasks: [],
+      onMoveToToday: vi.fn(),
+      onPostpone: vi.fn(),
+      onRemove: vi.fn(),
+    })
+    expect(screen.getByText('Left over from earlier days (0)')).toBeTruthy()
+    expect(screen.getByText('Nothing left over from earlier days.')).toBeTruthy()
   })
 
   it('"move to today" and "delete" call back with the task id', () => {

@@ -528,8 +528,15 @@ export default {
   },
 
   today: {
-    carriedTitle: 'Önceki günlerden',
-    laterTitle: 'Sonraki günlere ertelenenler',
+    carriedTitle: 'Geçmişte kalmışlar',
+    laterTitle: 'İleriye ertelenmiş veya planlanmış',
+    carriedEmpty: 'Önceki günlerden kalan görev yok.',
+    laterEmpty: 'İleri bir güne planlanmış görev yok.',
+    todaySection: 'Bugünün görevleri',
+    dateLabel: 'Tarih',
+    postponeTaskTitle: 'Başka bir güne taşı',
+    postponeTaskAria: 'Bu görevi başka bir güne taşı',
+    postponePrompt: '"{{text}}" görevini şuraya taşı:',
     moveToToday: 'Bugüne al',
     postponeLabel: 'Şu tarihe ertele',
     postponeAria: 'Bu görevi ileri bir tarihe ertele',

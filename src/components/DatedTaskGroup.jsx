@@ -62,15 +62,15 @@ function DatedTaskRow({ task, kind, onMoveToToday, onPostpone, onRemove }) {
   )
 }
 
-function DatedTaskGroup({ titleKey, kind, tasks, onMoveToToday, onPostpone, onRemove }) {
+function DatedTaskGroup({ titleKey, emptyKey, kind, tasks, onMoveToToday, onPostpone, onRemove }) {
   const { t } = useTranslation()
-  if (tasks.length === 0) return null
 
   return (
     <section aria-label={t(titleKey)} className="flex flex-col gap-2">
       <p className="text-sage text-xs font-sans uppercase tracking-wide">
         {t(titleKey)} ({tasks.length})
       </p>
+      {tasks.length === 0 && <p className="text-sage/70 text-sm font-sans py-1">{t(emptyKey)}</p>}
       <ul className="flex flex-col gap-2">
         {tasks.map((task) => (
           <DatedTaskRow

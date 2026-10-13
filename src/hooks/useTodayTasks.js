@@ -67,7 +67,7 @@ export function useTodayTasks() {
       urgent: options.urgent || false,
       done: false,
       inventoryId: options.inventoryId || null,
-      date: todayString(),
+      date: options.date || todayString(),
       // Re-estimates when a task runs long — Diff I / Diff II track successive
       // estimation errors against the real count, distinct from the original diff.
       reestimate1: null,
